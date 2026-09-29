@@ -14,6 +14,26 @@ declare module 'axios' {
      * rota pública (login, troca de código), em que 401 é "credencial errada".
      */
     skipAuth?: boolean
+    /**
+     * Mesmo autenticado, não dispara `onUnauthorized` neste 401: usado pelo
+     * refresh do token (uma chamada interna que decide a sessão, não pede).
+     * Recebe `getToken`/`skipAuth`/`headers`, etc. normalmente.
+     */
+    skipSessionExpiry?: boolean
+    /**
+     * `X-Request-Id` desta requisição (o backend devolve o mesmo valor em
+     * `x-request-id`; é o código para suporte que a tela de erro mostra).
+     * Vazio/não-string = sem correlation id.
+     */
+    requestId?: string
+    /**
+     * Quando o cliente tenta de novo por conta própria após `refreshSession`,
+     * a retried tem `__retried: true` para não entrar em loop (refresh
+     * falhou → 401 → refresh de novo é reentrada).
+     */
+    __retried?: boolean
+    /** Marca de "já rodei o `getHeaders`/`getToken` neste config" para a retry não duplicar. */
+    getHeadersUsed?: boolean
   }
 }
 
@@ -30,7 +50,10 @@ export const LONG_REQUEST_TIMEOUT_MS = 120_000
 /** Cabeçalho de correlação que o backend devolve em toda resposta. */
 export const REQUEST_ID_HEADER = 'x-request-id'
 
-/** O que o `onUnauthorized` recebe. */
+/** Cabeçalho que o app envia para correlacionar a resposta (espelha `x-request-id`). */
+export const REQUEST_ID_REQUEST_HEADER = 'X-Request-Id'
+
+/** O que o `onUnauthorized` recebe (só chamado quando não há auto-refresh). */
 export interface UnauthorizedContext {
   /** O erro já normalizado (status 401). */
   error: ApiError
@@ -38,32 +61,57 @@ export interface UnauthorizedContext {
   sentToken: string | null
 }
 
+/** Cabeçalhos extras que o app injeta em cada requisição (CSRF, versionamento, etc.). */
+export type HeaderSource = () => Record<string, string> | Promise<Record<string, string>>
+
 export interface HttpClientOptions {
   /** URL base da API (ex.: `https://api.exemplo.com/api`), sem barra no fim. */
   baseURL: string
   /**
-   * Token da sessão para o `Authorization: Bearer`. Lido a cada requisição
-   * (ex.: `() => useSessionStore.getState().token`). Sem ele nenhum Bearer é
-   * enviado (sessão por cookie: use `withCredentials`).
+   * Token da sessão para o `Authorization: Bearer`. Lido a cada requisição,
+   * síncrono ou assíncrono (Conta: access token em memória, sem cookie):
+   * `async () => session.accessToken`. Sem ele, nenhum Bearer é enviado
+   * (sessão por cookie: use `withCredentials`).
    */
-  getToken?: () => string | null | undefined
+  getToken?: () => string | null | undefined | Promise<string | null | undefined>
   /**
-   * Sessão vencida (401). Chamado uma vez por resposta 401, nunca para
-   * requisição `skipAuth`. Com `getToken`, só quando a requisição levou o
-   * token ATUAL: um 401 de uma chamada feita com o token anterior (a pessoa já
-   * entrou de novo) não derruba o login novo. Encerre a sessão aqui (o guard
-   * de rotas leva ao login) ou redirecione para o login da Conta.
+   * Cabeçalhos extras para cada requisição (CSRF, versão do app, etc.). Os
+   * nomes já vão normalizados em maiúsculas; os fixos de `options.headers`
+   * entram aqui também (com prioridade sobre o default).
+   *
+   * ```ts
+   * getHeaders: () => ({ 'X-CSRF-Token': readCookie('csrf') })
+   * ```
+   */
+  getHeaders?: HeaderSource
+  /**
+   * Renova a sessão após um 401 (Conta: refresh do access token). Chamado no
+   * MÁXIMO uma vez por 401 que carrega o token ATUAL: a próxima tentativa da
+   * MESMA requisição repete a chamada com o token novo. Concorrentes do
+   * mesmo refresh entram em fila (single-flight) para não bater no IdP 5×.
+   *
+   * Lançar aqui significa "refresh falhou" — o `onUnauthorized` recebe o 401
+   * original. Devolver `Promise<void>` resolvida = repetir a requisição.
+   */
+  refreshSession?: () => Promise<void>
+  /**
+   * Sessão vencida (401) sem auto-refresh, ou após um refresh que falhou.
+   * Nunca para requisição `skipAuth` ou `skipSessionExpiry`. Com `getToken`,
+   * só quando a requisição levou o token ATUAL: um 401 de uma chamada feita
+   * com o token anterior (a pessoa já entrou de novo) não derruba o login
+   * novo. Encerre a sessão aqui (o guard de rotas leva ao login) ou
+   * redirecione para o login da Conta.
    */
   onUnauthorized?: (context: UnauthorizedContext) => void
   /** Chamado a cada resposta HTTP (sucesso ou erro): prova de que o backend está de pé. */
   onResponse?: (status: number) => void
-  /** Chamado quando a requisição não recebeu resposta (ERR_NETWORK): o backend pode ter caído. */
+  /** Chamado quando a requisição não recebeu resposta (ERR_NETWORK): o backend pode ter caiu. */
   onNetworkError?: (error: ApiError) => void
   /** Prazo padrão das requisições (ms). */
   timeout?: number
   /** Envia cookies em chamadas de outra origem (sessão por cookie). */
   withCredentials?: boolean
-  /** Cabeçalhos fixos extras. */
+  /** Cabeçalhos fixos extras (enviados em toda requisição). */
   headers?: Record<string, string>
   /** Qualquer outro padrão do `axios.create`. */
   axios?: Omit<CreateAxiosDefaults, 'baseURL' | 'timeout' | 'withCredentials' | 'headers'>
@@ -107,25 +155,53 @@ function bodyMessage(data: unknown): string | undefined {
   if (!data || typeof data !== 'object') return undefined
   const { message, detail } = data as ErrorBody
   if (typeof message === 'string' && message) return message
-  // RFC 9457: `detail` é o texto para o humano quando não há `message`.
   if (typeof detail === 'string' && detail) return detail
   return undefined
 }
 
+/** Pega o valor de um cabeçalho, seja ele `AxiosHeaders` ou um objeto simples. */
+function headerValue(
+  config: InternalAxiosRequestConfig | AxiosRequestConfig | undefined,
+  name: string,
+): string | undefined {
+  const headers = config?.headers as
+    { get?: (n: string) => unknown } | Record<string, unknown> | undefined
+  if (!headers) return undefined
+  if (typeof (headers as { get?: unknown }).get === 'function') {
+    const value = (headers as { get: (n: string) => unknown }).get(name)
+    return typeof value === 'string' && value ? value : undefined
+  }
+  const raw =
+    (headers as Record<string, unknown>)[name] ??
+    (headers as Record<string, unknown>)[name.toLowerCase()]
+  return typeof raw === 'string' && raw ? raw : undefined
+}
+
+/** Sinal para o interceptor de resposta: "não me processe, já tentei outra vez". */
+const RETRIED = '__retried'
+
 /**
- * Cliente HTTP da API (axios), igual ao `src/api/client.ts` do agent-package
+ * Cliente HTTP da API (axios), igual ao `src/api/client.ts` do agent-package,
  * sem nada do produto:
  *
  * - `Authorization: Bearer <getToken()>` só para URLs do próprio backend (uma
  *   URL absoluta de outro host nunca leva o token), salvo `skipAuth` ou quando
- *   quem chama já mandou a própria credencial.
- * - Todo erro vira `ApiError` com mensagem em pt-BR (`message`/`detail` do
- *   corpo ou, sem eles, o texto do status), `details` e `requestId`.
+ *   quem chama já mandou a própria credencial. `getToken` pode ser assíncrono.
+ * - `X-Request-Id` por requisição (`requestId: 'uuid-…'` na chamada, ou
+ *   `getHeaders` para um valor global). O backend devolve o mesmo valor em
+ *   `x-request-id` (ou `errorId` no corpo); o `ApiError.requestId` carrega.
+ * - Cabeçalhos extras por requisição via `getHeaders` (CSRF, etc.).
  * - Resposta HTML onde se espera JSON (build sem a URL da API caindo no
  *   fallback de SPA) vira erro na hora, em vez de falhar longe dali.
- * - 401 → `onUnauthorized` (tratamento central da sessão vencida).
+ * - 401 → opcionalmente `refreshSession()` (single-flight) e repete a
+ *   requisição uma vez. Sem refresh, ou com refresh que falhou, o 401 vai
+ *   para `onUnauthorized` (sessão vencida).
+ * - `skipSessionExpiry: true` em uma chamada que decide a sessão (o próprio
+ *   refresh): o 401 não dispara `onUnauthorized` e não entra em refresh.
+ * - `onResponse`/`onNetworkError` ligam o monitor de conectividade do app
+ *   (agent-package: pausa queries/mutations enquanto o backend está fora).
  *
- * Também é a instância que o client gerado pelo `@hey-api/openapi-ts` usa
+ * A MESMA instância é o `axios` do client gerado pelo `@hey-api/openapi-ts`
  * (ver `generatedClientConfig`).
  */
 export function createHttpClient(options: HttpClientOptions): HttpClient {
@@ -138,6 +214,7 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
     headers: { 'Content-Type': 'application/json', ...options.headers },
   })
   let lastRequestId: string | undefined
+  let refreshInFlight: Promise<void> | null = null
 
   const isBackendUrl = (url: string | undefined): boolean => {
     if (!url || !/^([a-z][a-z\d+.-]*:)?\/\//i.test(url)) return true
@@ -150,15 +227,37 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
     return id
   }
 
-  instance.interceptors.request.use((config) => {
-    const token = options.getToken?.()
+  /**
+   * Tenta uma vez mais a mesma requisição: o token já mudou (refresh
+   * rodou), o corpo não. O axios pega a config e refaz com a mesma URL/body.
+   */
+  function retry(config: InternalAxiosRequestConfig): Promise<AxiosResponse> {
+    config[RETRIED] = true
+    delete config.getHeadersUsed
+    delete config.headers.Authorization
+    return instance.request(config)
+  }
+
+  instance.interceptors.request.use(async (config) => {
+    if (config.getHeadersUsed) return config
+    config.getHeadersUsed = true
+    const token = options.getToken ? await options.getToken() : undefined
     if (
       token &&
       !config.skipAuth &&
       isBackendUrl(config.url) &&
-      !config.headers.has('Authorization')
+      !headerValue(config, 'Authorization')
     ) {
       config.headers.set('Authorization', `Bearer ${token}`)
+    }
+    if (options.getHeaders) {
+      const extra = await options.getHeaders()
+      for (const [name, value] of Object.entries(extra)) {
+        if (typeof value === 'string' && value) config.headers.set(name, value)
+      }
+    }
+    if (typeof config.requestId === 'string' && config.requestId) {
+      config.headers.set(REQUEST_ID_REQUEST_HEADER, config.requestId)
     }
     return config
   })
@@ -180,7 +279,7 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
       }
       return response
     },
-    (error: unknown) => {
+    async (error: unknown) => {
       if (error instanceof ApiError || !axios.isAxiosError(error)) return Promise.reject(error)
       const response = error.response
       const requestId = remember(response)
@@ -196,11 +295,34 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
       if (response) options.onResponse?.(response.status)
       else if (error.code === 'ERR_NETWORK') options.onNetworkError?.(apiError)
 
-      if (status === 401 && options.onUnauthorized && !error.config?.skipAuth) {
+      if (
+        status === 401 &&
+        options.refreshSession &&
+        !error.config?.skipAuth &&
+        !error.config?.skipSessionExpiry &&
+        !error.config?.[RETRIED]
+      ) {
         const sentToken = bearerOf(error.config)
-        const current = options.getToken?.() ?? null
-        // Com Bearer: só o 401 do token atual encerra a sessão. Sem Bearer
-        // (sessão por cookie): todo 401 encerra.
+        const current = options.getToken ? await options.getToken() : undefined
+        const isCurrentSession = sentToken !== null && sentToken === current
+        if (isCurrentSession) {
+          refreshInFlight ??= options.refreshSession().finally(() => {
+            refreshInFlight = null
+          })
+          try {
+            await refreshInFlight
+            // Reinterceptor cobre o Bearer novo do getToken() e refaz
+            // getHeaders (CSRF pode ter virado outra vez).
+            return retry(error.config as InternalAxiosRequestConfig)
+          } catch {
+            // Refresh falhou: cai no `onUnauthorized` abaixo.
+          }
+        }
+      }
+
+      if (status === 401 && options.onUnauthorized && !error.config?.skipSessionExpiry) {
+        const sentToken = bearerOf(error.config)
+        const current = options.getToken ? await options.getToken() : null
         const isCurrentSession = options.getToken
           ? sentToken !== null && sentToken === current
           : true

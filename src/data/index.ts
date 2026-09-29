@@ -19,8 +19,9 @@ export {
   generatedClientConfig,
   LONG_REQUEST_TIMEOUT_MS,
   REQUEST_ID_HEADER,
+  REQUEST_ID_REQUEST_HEADER,
 } from './httpClient'
-export type { HttpClient, HttpClientOptions, UnauthorizedContext } from './httpClient'
+export type { HeaderSource, HttpClient, HttpClientOptions, UnauthorizedContext } from './httpClient'
 export {
   clearCacheOnSessionChange,
   createQueryClient,

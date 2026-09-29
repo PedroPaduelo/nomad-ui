@@ -53,6 +53,71 @@ describe('createHttpClient', () => {
     expect(onResponse).toHaveBeenCalledWith(200)
   })
 
+  it('getToken assíncrono (Conta: access token em memória) é esperado pelo interceptor', async () => {
+    let calls = 0
+    let auth: string | null = null
+    server.use(
+      mock.get(`${API}/me`, ({ request }) => {
+        calls += 1
+        auth = request.headers.get('authorization')
+        return HttpResponse.json({ id: 'u1' })
+      }),
+    )
+    const client = createHttpClient({
+      baseURL: API,
+      getToken: async () => {
+        await new Promise((r) => setTimeout(r, 5))
+        return 'async-tok'
+      },
+    })
+
+    const response = await client.get('/me')
+
+    expect(response.data).toEqual({ id: 'u1' })
+    expect(calls).toBe(1)
+    expect(auth).toBe('Bearer async-tok')
+  })
+
+  it('getHeaders injeta cabeçalhos extras (CSRF, versão…) em cada requisição', async () => {
+    const seen: Array<Record<string, string>> = []
+    server.use(
+      mock.get(`${API}/x`, ({ request }) => {
+        seen.push({
+          'x-csrf-token': request.headers.get('x-csrf-token') ?? '',
+          'x-app-version': request.headers.get('x-app-version') ?? '',
+        })
+        return HttpResponse.json({})
+      }),
+    )
+    const client = createHttpClient({
+      baseURL: API,
+      getHeaders: () => ({ 'X-CSRF-Token': 'csrf-1', 'X-App-Version': '1.2.3' }),
+    })
+
+    await client.get('/x')
+    await client.get('/x')
+
+    expect(seen).toEqual([
+      { 'x-csrf-token': 'csrf-1', 'x-app-version': '1.2.3' },
+      { 'x-csrf-token': 'csrf-1', 'x-app-version': '1.2.3' },
+    ])
+  })
+
+  it('requestId por requisição vai no X-Request-Id e volta no x-request-id', async () => {
+    let sent: string | null = null
+    server.use(
+      mock.get(`${API}/me`, ({ request }) => {
+        sent = request.headers.get('x-request-id')
+        return HttpResponse.json({}, { headers: { 'x-request-id': 'corr-1' } })
+      }),
+    )
+    const { client } = setup()
+    await client.get('/me', { requestId: 'corr-1' })
+
+    expect(sent).toBe('corr-1')
+    expect(client.getLastRequestId()).toBe('corr-1')
+  })
+
   it('não manda o token para outro host nem com skipAuth', async () => {
     const seen: (string | null)[] = []
     server.use(
@@ -115,7 +180,7 @@ describe('createHttpClient', () => {
     expect(boom.message).toBe('Falha no banco')
   })
 
-  it('401 com o token atual: chama onUnauthorized uma vez', async () => {
+  it('401 com o token atual: chama onUnauthorized uma vez (sem refresh)', async () => {
     server.use(
       mock.get(`${API}/me`, () =>
         HttpResponse.json({ message: 'Token expirado' }, { status: 401 }),
@@ -130,25 +195,144 @@ describe('createHttpClient', () => {
     expect(onUnauthorized).toHaveBeenCalledWith({ error, sentToken: 'tok-1' })
   })
 
-  it('401 de um token anterior ou de rota skipAuth não derruba a sessão', async () => {
-    server.use(
-      mock.get(`${API}/me`, () => new HttpResponse(null, { status: 401 })),
-      mock.post(`${API}/auth/login`, () =>
-        HttpResponse.json({ message: 'Senha errada' }, { status: 401 }),
-      ),
-    )
-    const { client, session, onUnauthorized } = setup()
+  it('skipSessionExpiry: 401 não dispara onUnauthorized (a chamada decide a sessão)', async () => {
+    server.use(mock.get(`${API}/internal`, () => new HttpResponse(null, { status: 401 })))
+    const onUnauthorized = vi.fn()
+    const client = createHttpClient({ baseURL: API, getToken: () => 'tok-1', onUnauthorized })
 
-    const pending = client.get('/me', { headers: { Authorization: 'Bearer tok-velho' } })
-    session.token = 'tok-2'
-    await rejection(pending)
-    const login = await rejection(client.post('/auth/login', {}, { skipAuth: true }))
+    const error = await rejection(client.get('/internal', { skipSessionExpiry: true }))
 
-    expect(login.message).toBe('Senha errada')
+    expect(error.message).toBe('Sua sessão expirou. Entre de novo.')
     expect(onUnauthorized).not.toHaveBeenCalled()
   })
 
-  it('401 em sessão por cookie (sem getToken): sempre chama onUnauthorized', async () => {
+  it('refreshSession: 401 do token atual → refresh → repete a requisição uma vez', async () => {
+    let calls = 0
+    let auth: string | null = null
+    server.use(
+      mock.get(`${API}/me`, ({ request }) => {
+        calls += 1
+        auth = request.headers.get('authorization')
+        if (calls === 1) return HttpResponse.json({ message: 'expirado' }, { status: 401 })
+        return HttpResponse.json({ id: 'u1' })
+      }),
+    )
+    const onUnauthorized = vi.fn()
+    const session = { token: 'tok-1' }
+    const refresh = vi.fn().mockImplementation(async () => {
+      session.token = 'tok-2'
+    })
+    const client = createHttpClient({
+      baseURL: API,
+      getToken: () => session.token,
+      onUnauthorized,
+      refreshSession: refresh,
+    })
+
+    const response = await client.get('/me')
+
+    expect(response.status).toBe(200)
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(auth).toBe('Bearer tok-2')
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('refreshSession: single-flight — 5 chamadas simultâneas batem no refresh uma vez só', async () => {
+    let calls = 0
+    let resolveRefresh!: () => void
+    let refreshCalls = 0
+    server.use(
+      mock.get(`${API}/me`, () => {
+        calls += 1
+        if (calls <= 5) return HttpResponse.json({ message: 'expirado' }, { status: 401 })
+        return HttpResponse.json({ id: 'u1' })
+      }),
+    )
+    const client = createHttpClient({
+      baseURL: API,
+      getToken: () => 'tok-1',
+      refreshSession: async () => {
+        refreshCalls += 1
+        await new Promise<void>((r) => {
+          resolveRefresh = r
+        })
+      },
+    })
+
+    const pending = Promise.all(Array.from({ length: 5 }, () => client.get('/me')))
+    await new Promise((r) => setTimeout(r, 10))
+    resolveRefresh()
+    await pending
+
+    expect(refreshCalls).toBe(1)
+    expect(calls).toBe(10) // 5 iniciais + 5 retries
+  })
+
+  it('refreshSession falha → cai no onUnauthorized com o 401 original', async () => {
+    server.use(
+      mock.get(`${API}/me`, () => HttpResponse.json({ message: 'expirado' }, { status: 401 })),
+    )
+    const onUnauthorized = vi.fn()
+    const client = createHttpClient({
+      baseURL: API,
+      getToken: () => 'tok-1',
+      onUnauthorized,
+      refreshSession: async () => {
+        throw new Error('refresh off')
+      },
+    })
+
+    const error = await rejection(client.get('/me'))
+
+    expect(error.message).toBe('expirado')
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
+  })
+
+  it('refreshSession: 401 de um token VELHO (não atual) não dispara refresh nem onUnauthorized', async () => {
+    server.use(mock.get(`${API}/me`, () => new HttpResponse(null, { status: 401 })))
+    const refresh = vi.fn()
+    const onUnauthorized = vi.fn()
+    const session = { token: 'tok-2' }
+    const client = createHttpClient({
+      baseURL: API,
+      getToken: () => session.token,
+      refreshSession: refresh,
+      onUnauthorized,
+    })
+
+    const pending = client.get('/me', { headers: { Authorization: 'Bearer tok-velho' } })
+    await rejection(pending)
+
+    expect(refresh).not.toHaveBeenCalled()
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('refreshSession não roda em chamadas skipAuth nem skipSessionExpiry', async () => {
+    server.use(
+      mock.get(`${API}/login-check`, () =>
+        HttpResponse.json({ message: 'senha errada' }, { status: 401 }),
+      ),
+      mock.post(`${API}/refresh`, () => new HttpResponse(null, { status: 401 })),
+    )
+    const refresh = vi.fn()
+    const onUnauthorized = vi.fn()
+    const client = createHttpClient({
+      baseURL: API,
+      getToken: () => 'tok-1',
+      refreshSession: refresh,
+      onUnauthorized,
+    })
+
+    const login = await rejection(client.get('/login-check', { skipAuth: true }))
+    const refreshCall = await rejection(client.post('/refresh', {}, { skipSessionExpiry: true }))
+
+    expect(login.message).toBe('senha errada')
+    expect(refreshCall.message).toBe('Sua sessão expirou. Entre de novo.')
+    expect(refresh).not.toHaveBeenCalled()
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('401 de uma sessão por cookie (sem getToken): onUnauthorized sempre', async () => {
     server.use(mock.get(`${API}/me`, () => new HttpResponse(null, { status: 401 })))
     const onUnauthorized = vi.fn()
     const client = createHttpClient({ baseURL: API, withCredentials: true, onUnauthorized })

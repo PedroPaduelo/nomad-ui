@@ -29,6 +29,8 @@ export default defineConfig({
       formats: ['es'],
       entry: {
         index: path.resolve(import.meta.dirname, 'src/index.ts'),
+        markdown: path.resolve(import.meta.dirname, 'src/markdown.ts'),
+        'theme-boot': path.resolve(import.meta.dirname, 'src/lib/themeBoot.ts'),
         data: path.resolve(import.meta.dirname, 'src/data/index.ts'),
         topbar: path.resolve(import.meta.dirname, 'src/topbar/index.ts'),
       },

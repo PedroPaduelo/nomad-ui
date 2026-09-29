@@ -20,6 +20,16 @@
       "types": "./dist/types/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./theme.css": "./src/theme/theme.css",
+    "./responsive.css": "./src/theme/responsive.css",
+    "./markdown": {
+      "types": "./dist/types/markdown.d.ts",
+      "import": "./dist/markdown.js"
+    },
+    "./theme-boot": {
+      "types": "./dist/types/lib/themeBoot.d.ts",
+      "import": "./dist/theme-boot.js"
+    },
     "./data": {
       "types": "./dist/types/data/index.d.ts",
       "import": "./dist/data.js"
@@ -35,7 +45,6 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "prepare": "npm run build",
     "build": "rm -rf dist && vite build && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -45,7 +54,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:a11y": "vitest run -c vitest.a11y.config.ts",
-    "gates": "npm run typecheck && npm run lint && npm test && npm run build"
+    "gates": "npm run typecheck && npm run lint && npm test && npm run build",
+    "showcase:dev": "vite --config examples/showcase/vite.config.ts",
+    "showcase:build": "vite build --config examples/showcase/vite.config.ts"
   },
   "prettier": {
     "printWidth": 100,
@@ -87,6 +98,7 @@
     "prettier": "^3.9.9",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "react-markdown": "^10.1.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.70.1",
@@ -99,6 +111,12 @@
     "react-dom": "^19.0.0",
     "@tanstack/react-query": "^5.62.0",
     "zod": "^4.0.0",
-    "tailwindcss": "^4.1.0"
+    "tailwindcss": "^4.1.0",
+    "react-markdown": "^10.1.0"
+  },
+  "peerDependenciesMeta": {
+    "react-markdown": {
+      "optional": true
+    }
   }
 }

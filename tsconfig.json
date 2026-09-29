@@ -1,0 +1,27 @@
+{
+  // Typecheck de todo o TypeScript do repo (pacote, testes e configs), usado
+  // também pelo ESLint type-aware. O build de tipos usa o tsconfig.build.json.
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true,
+    "types": ["node", "vitest/globals", "@testing-library/jest-dom"]
+    // Sem alias `@/`: dentro de src/ os imports são relativos, senão os .d.ts
+    // publicados apontariam para caminhos que não existem no app que instala.
+  },
+  "include": ["src", "presets", "vite.config.ts", "vitest.config.ts", "vitest.a11y.config.ts"]
+}

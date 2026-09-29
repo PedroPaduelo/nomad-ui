@@ -65,6 +65,93 @@ A barra não busca dados e não gerencia sessão. O backend do app é o único c
 
 A migração elimina a cópia em `src/shared/nomad-topbar/` e torna obsoleto `scripts/sync-nomad-topbar.sh` da Conta quando os apps consumirem esta entrada; a remoção do script cabe à task da Conta.
 
+## Shell lateral (sidebar + header)
+
+O `@nomad/ui` também exporta o shell lateral do app (sidebar à esquerda + header no topo + conteúdo à direita) usado pelo agent-package. As peças são desacopladas do produto: a nav vem por prop, o estado da sidebar é do caller, atalhos/toasts/banner ficam no app.
+
+```tsx
+import {
+  MainLayout,
+  Sidebar,
+  Header,
+  Breadcrumb,
+  HeaderUserMenu,
+  ThemeSwitcher,
+  ThemeProvider,
+  PaletteProvider,
+  type SidebarSection,
+  type SidebarItem,
+} from '@nomad/ui'
+import { TopBarBrand } from '@nomad/ui/topbar'
+import { useState } from 'react'
+import { Folder, Home, Puzzle, Settings } from 'lucide-react'
+
+const sections: SidebarSection[] = [
+  {
+    items: [
+      { key: 'home', label: 'Início', icon: <Home />, href: '/', current: true },
+      { key: 'projects', label: 'Projetos', icon: <Folder />, href: '/projects' },
+    ],
+  },
+  {
+    label: 'Catálogo',
+    items: [
+      { key: 'skills', label: 'Skills', icon: <Puzzle />, href: '/catalog/skills' },
+    ],
+  },
+]
+
+const footerItems: SidebarItem[] = [
+  { key: 'settings', label: 'Configurações', icon: <Settings />, href: '/settings' },
+]
+
+function App({ children }: { children: React.ReactNode }) {
+  const [collapsed, setCollapsed] = useState(false)
+  return (
+    <ThemeProvider>
+      <PaletteProvider>
+        <MainLayout
+          sidebar={{
+            sections,
+            footerItems,
+            brand: { initial: 'A', name: 'AgentPack', subtitle: 'Empresa · 3 projetos' },
+            ariaLabel: 'Navegação principal',
+          }}
+          sidebarCollapsed={collapsed}
+          onToggleSidebar={() => setCollapsed((v) => !v)}
+          breadcrumb={[
+            { label: 'Projetos', href: '/projects' },
+            { label: 'AgentPack', href: '/projects/abc' },
+            { label: 'Memórias' },
+          ]}
+          header={{
+            brand: <TopBarBrand logo={<Logo />} name="Nommand" product="AgentPack" />,
+            actions: (
+              <>
+                <ThemeSwitcher />
+                <HeaderUserMenu
+                  user={{ name: 'Ana Souza', email: 'ana@nomad.dev' }}
+                  onSignOut={() => { /* limpar sessão */ }}
+                />
+              </>
+            ),
+          }}
+        >
+          {children}
+        </MainLayout>
+      </PaletteProvider>
+    </ThemeProvider>
+  )
+}
+```
+
+`MainLayout` é dono do estado do drawer mobile (`onToggleSidebar`) e do `onNavigate` da sidebar (fecha o drawer quando um item é clicado). Componha as peças diretamente (`<Sidebar> + <Header>`) quando precisar de mais controle (ex.: um shell sem breadcrumb ou com `contentMax` desligado). Slots opcionais:
+
+- `beforeHeader` / `beforeMain` — banners ou barras auxiliares.
+- `contentPadding` (`'p-6' | 'p-4' | 'p-0' | false`) e `contentMax` (`'max-w-(--content-max)' | false`).
+
+Tokens usados pelo shell: `--sidebar-width`, `--sidebar-collapsed-width`, `--content-max`, `--backdrop-bg`, `--surface-*`, `--color-*`, `--text-*`, `--border-*`. Tudo vem com o tema.
+
 ## Desenvolvimento
 
 ```bash

@@ -46,7 +46,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && vite build && tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p examples/showcase",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

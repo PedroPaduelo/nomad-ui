@@ -192,7 +192,7 @@ const section: ShowcaseSection = {
             pelo seu gatilho no portal normal.
           </p>
           <div className="grid min-h-0 grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <InlinePanelCard title="Barra Nomad" subtitle="modo padrão (portal)">
+            <InlinePanelCard title="Barra Nomad" subtitle="modo padrão">
               <BarPlayground product="Loadbalance" />
             </InlinePanelCard>
             <InlinePanelCard title="Seletor de empresa" subtitle="OrgSwitcher · inlinePanel">
@@ -276,6 +276,7 @@ function AccountExample() {
         manageAccountHref={DATA.accountUrl}
         onSwitchOrganization={() => {}}
         onSignOut={() => {}}
+        width={240}
         open
         inlinePanel
         onOpenChange={() => {}}

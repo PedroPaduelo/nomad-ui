@@ -66,7 +66,7 @@ function DrawerExample() {
 
 function MenuExample() {
   return (
-    <Menu button={<Button variant="secondary">Abrir menu</Button>} ariaLabel="Ações">
+    <Menu button={<span className="ui-btn inline-flex items-center justify-center rounded-md border border-border bg-surface-raised px-3 py-1.5 text-body font-medium text-text-secondary hover:bg-surface-hover">Abrir menu</span>} ariaLabel="Ações">
       <MenuLabel>Ações</MenuLabel>
       <MenuItem onClick={() => {}}>Renomear</MenuItem>
       <MenuItem onClick={() => {}}>Duplicar</MenuItem>
@@ -80,7 +80,7 @@ function MenuExample() {
 function PopoverExample() {
   return (
     <Popover
-      button={<Button variant="secondary">Abrir popover</Button>}
+      button={<span className="ui-btn inline-flex items-center justify-center rounded-md border border-border bg-surface-raised px-3 py-1.5 text-body font-medium text-text-secondary hover:bg-surface-hover">Abrir popover</span>}
       ariaLabel="Atalhos"
     >
       <ul className="flex flex-col gap-1 p-3 text-body">

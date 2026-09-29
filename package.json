@@ -39,6 +39,9 @@
       "import": "./dist/topbar.js"
     },
     "./topbar.css": "./src/topbar/topbar.css",
+    "./tsconfig": "./presets/tsconfig.json",
+    "./eslint": "./presets/eslint.js",
+    "./prettier": "./presets/prettier.json",
     "./package.json": "./package.json"
   },
   "engines": {

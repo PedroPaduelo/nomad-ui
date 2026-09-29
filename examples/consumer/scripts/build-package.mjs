@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Builda o @nomad/ui a partir do clone em node_modules (o pacote ainda não traz
-// o `dist/` por padrão). Quando a `prepare` voltar para o upstream, troque isto
-// por `npm install --ignore-scripts=false`.
+// Garante o `dist/` do @nomad/ui linkado (file:../..): com instalação por
+// dependência git o `prepare` do pacote já gera o build; no link local o
+// postinstall/prebuild passam por aqui. Idempotente.
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'

@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
-import { Label } from '@nomad/ui'
 
-/** Um exemplo dentro de uma seção: rótulo em caixa alta e a peça numa superfície. */
+/** Um exemplo dentro de uma seção: rótulo e a peça numa superfície. */
 export function Demo({
   title,
   children,
@@ -13,7 +12,7 @@ export function Demo({
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <Label as="h3">{title}</Label>
+      <h3 className="text-body font-semibold text-text-primary">{title}</h3>
       <div
         className={
           'flex min-w-0 items-start gap-3 rounded-lg border border-border bg-surface-base p-4 ' +

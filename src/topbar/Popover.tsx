@@ -220,7 +220,11 @@ export function Popover({
           role={kind}
           aria-label={label}
           tabIndex={-1}
-          style={inlinePanel ? { width: '100%', maxWidth: panelWidth } : { width: panelWidth }}
+          style={
+            inlinePanel
+              ? { width: '100%', maxWidth: `min(${panelWidth}px, 100%)` }
+              : { width: panelWidth }
+          }
           onKeyDown={onPanelKey}
         >
           <CloseCtx.Provider value={close}>{children}</CloseCtx.Provider>

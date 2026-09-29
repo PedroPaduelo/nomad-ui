@@ -45,6 +45,7 @@
     "node": ">=22.12"
   },
   "scripts": {
+    "prepare": "npm run build",
     "build": "rm -rf dist && vite build && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit && tsc --noEmit -p examples/showcase",
     "lint": "eslint .",

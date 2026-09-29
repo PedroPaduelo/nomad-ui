@@ -110,3 +110,24 @@ export { SectionTitle } from './SectionTitle'
 export type { SectionTitleProps } from './SectionTitle'
 export { HeaderIcon } from './HeaderIcon'
 export type { HeaderIconProps, HeaderIconSize, HeaderIconTone } from './HeaderIcon'
+
+// ── Shell lateral (sidebar + header + breadcrumb + composição) ──
+export {
+  Sidebar,
+  SIDEBAR_MOBILE_ID,
+  SIDEBAR_MOBILE_QUERY,
+} from './Sidebar'
+export type {
+  SidebarProps,
+  SidebarSection,
+  SidebarItem,
+  SidebarBrand,
+} from './Sidebar'
+export { Header } from './Header'
+export type { HeaderProps } from './Header'
+export { Breadcrumb } from './Breadcrumb'
+export type { BreadcrumbProps, BreadcrumbItem } from './Breadcrumb'
+export { HeaderUserMenu } from './HeaderUserMenu'
+export type { HeaderUserMenuProps, HeaderUserMenuUser } from './HeaderUserMenu'
+export { MainLayout } from './MainLayout'
+export type { MainLayoutProps } from './MainLayout'

@@ -34,7 +34,9 @@ export function App() {
       <h1>Nomad UI · Consumer</h1>
       <p>
         Projetos:{' '}
-        {list.data ? list.data.map((p) => p.name).join(', ') : (list.error?.message ?? 'carregando…')}
+        {list.data
+          ? list.data.map((p) => p.name).join(', ')
+          : (list.error?.message ?? 'carregando…')}
       </p>
     </main>
   )

@@ -6,11 +6,14 @@ App Vite + React mínimo que instala o `@nomad/ui` por **dependência git** (de 
 API do `@nomad/ui/data` antes da `v1.0.0`.
 
 ```bash
-# Instalação (no clone do repo, este diretório é examples/consumer)
-npm install            # roda `prepare` no pacote: build + tipos em dist
-npm run gates          # typecheck + lint + format:check + test + build
-npm run dev            # servidor em http://localhost:5175
+# Instalação reproduzível: substitua SHA_ORIGIN_MAIN pelo SHA publicado na main.
+npm install --package-lock-only --ignore-scripts
+npm install             # prepare do pacote git executa build + gera os tipos em dist
+npm run gates           # typecheck + lint + format:check + test + build
+npm run dev             # servidor em http://localhost:5176
 ```
 
-Quando o tech lead trocar o `#<sha-da-main>` por `#v1.0.0` (depois da tag), basta `npm install`
-de novo: o `prepare` gera o `dist` da tag.
+No repo do pacote, `file:../../` é usado para desenvolvimento rápido. Para provar o fluxo
+real, defina `@nomad/ui` como `git+https://github.com/PedroPaduelo/nomad-ui.git#<sha origin/main>`
+no `package.json` do consumer e instale do zero. A versão fixa de lançamento usa `#vX.Y.Z`; o
+`prepare` do pacote sempre produz o `dist`, que não é commitado.

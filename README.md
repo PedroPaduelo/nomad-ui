@@ -170,23 +170,45 @@ export const useBoardView = createScreenStore(
 Estado do servidor (listas, detalhes, o usuário da sessão) é sempre TanStack Query; o Zustand
 guarda preferências, painéis, seleção, rascunho, o token.
 
-## ESLint: 9 e 10
+## Presets
 
-Os plugins do preset aceitam ESLint 9 e 10 (`^8.57.0 || ^9.0.0 || ^10.0.0` na maioria). O motor
-já está no 10; agent-package/Conta/loadbalance ainda no 9. O `@eslint/js` segue a versão major
-do ESLint, então o peer dela é o que decide: 9.x para ESLint 9, 10.x para ESLint 10. Cada app
-instala o par coerente. Se um plugin travar no 9 (problema conhecido: `eslint-plugin-jsx-a11y`
-ainda não publicou suporte a 10 no momento desta release), sobe o peer do app para 10 e espera o
-plugin.
+Cada preset é uma subentrada do pacote: `@nomad/ui/tsconfig`, `@nomad/ui/eslint` e
+`@nomad/ui/prettier`. O consumer executável em `examples/consumer` demonstra os três.
+
+```jsonc
+// tsconfig.json
+{ "extends": "@nomad/ui/tsconfig", "compilerOptions": { "noEmit": true } }
+```
+
+```js
+// eslint.config.js (flat config)
+import nomad from '@nomad/ui/eslint'
+import { defineConfig } from 'eslint/config'
+export default defineConfig(nomad)
+```
+
+```json
+// .prettierrc
+"@nomad/ui/prettier"
+```
+
+ESLint 9 é a base suportada atualmente; o preset usa flat config e combina
+`typescript-eslint`, React Hooks, jsx-a11y, TanStack Query e `eslint-config-prettier`.
+O app deve instalar o ESLint e esses plugins/configs nas devDependencies em versões compatíveis.
+O suporte a ESLint 10 depende da compatibilidade publicada de cada plugin e não é prometido pelo
+preset atual.
 
 ## Tailwind no app
 
 O tema é CSS do Tailwind 4 e mora no pacote. O app faz:
 
 ```css
-/* src/index.css */
+/* src/index.css — Tailwind CSS 4 */
 @import '@nomad/ui/theme.css';
+/* O tema já importa Tailwind, os tokens e @source relativo ao dist do pacote. */
 ```
 
-Nenhuma config de Tailwind no app: o `@source` do tema aponta para o `dist/` do pacote, então
-todas as classes do kit são lidas. Outros CSS do app entram depois do `@import`.
+O CSS de tema exportado importa a base Tailwind e declara `@source` para o pacote. Não precisa de
+`tailwind.config.js` nem de um `@source` próprio para o kit; adicione `@source` apenas para outros
+pacotes locais cujas classes Tailwind devam ser varridas. O CSS específico da aplicação vem depois
+do tema, sempre usando os tokens Nomad.

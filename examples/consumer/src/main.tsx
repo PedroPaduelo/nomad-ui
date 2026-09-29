@@ -29,5 +29,5 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-// eslint-disable-next-line no-console -- exemplo de uso da env validada
+// Exemplo de uso da env validada.
 console.log('API base:', env.VITE_API_URL)

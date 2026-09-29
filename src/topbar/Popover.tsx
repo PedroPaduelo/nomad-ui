@@ -53,12 +53,21 @@ export type PopoverProps = {
   trigger: (props: PopoverTriggerProps) => ReactNode
   children: ReactNode
   className?: string
+  /**
+   * Em vez de flutuar como popover (position: absolute), renderiza o painel em fluxo (position: static) dentro do
+   * ancestral. Mantém largura, conteúdo, navegação por teclado (Esc, setas) e fechamento por clique fora. Pensado para
+   * a vitrine empilhar 4 estados sem portal; apps reais continuam usando o portal (default `false`).
+   */
+  inlinePanel?: boolean
 }
 
 /**
  * Popover da barra (sem portal, sem dependência): o painel abre 4 px abaixo do gatilho, alinhado ao início ou ao
  * fim, e encolhe para caber na janela. Clique fora e `Esc` fecham e devolvem o foco ao gatilho; sair com `Tab`
  * fecha. Aberto pelo teclado (Enter, Espaço, ↓), o foco vai para o 1º item; ↑ no gatilho vai para o último.
+ *
+ * Com `inlinePanel`, o painel é renderizado em fluxo (position: static) — a vitrine usa para empilhar os 4 estados
+ * sem portal.
  */
 export function Popover({
   kind,
@@ -70,6 +79,7 @@ export function Popover({
   trigger,
   children,
   className,
+  inlinePanel = false,
 }: PopoverProps) {
   const [inner, setInner] = useState(false)
   const open = controlled ?? inner
@@ -188,7 +198,9 @@ export function Popover({
 
   return (
     <div
-      className={`ntb ntb-pop-root${className ? ` ${className}` : ''}`}
+      className={`ntb ntb-pop-root${className ? ` ${className}` : ''}${
+        inlinePanel ? ' ntb-pop-root--inline' : ''
+      }`}
       ref={root}
       onBlur={onBlur}
     >
@@ -204,11 +216,11 @@ export function Popover({
         <div
           ref={panel}
           id={panelId}
-          className={`ntb-panel ntb-panel--${align}`}
+          className={`ntb-panel ntb-panel--${align}${inlinePanel ? ' ntb-panel--inline' : ''}`}
           role={kind}
           aria-label={label}
           tabIndex={-1}
-          style={{ width: panelWidth }}
+          style={inlinePanel ? { width: '100%', maxWidth: panelWidth } : { width: panelWidth }}
           onKeyDown={onPanelKey}
         >
           <CloseCtx.Provider value={close}>{children}</CloseCtx.Provider>

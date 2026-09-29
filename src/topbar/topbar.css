@@ -254,6 +254,12 @@
   display: inline-flex;
   flex: none;
 }
+.ntb-pop-root--inline {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
 .ntb-panel {
   position: absolute;
   top: calc(100% + var(--ntb-popover-gap, 4px));
@@ -273,6 +279,12 @@
 }
 .ntb-panel--start {
   left: 0;
+}
+/* Variante inline (vitrine): painel em fluxo, sem absolute, sem sombra flutuante. */
+.ntb-panel--inline {
+  position: static;
+  box-shadow: none;
+  max-width: 100%;
 }
 .ntb-panel:focus {
   outline: none;

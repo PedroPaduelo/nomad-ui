@@ -70,6 +70,8 @@ export type AccountMenuProps = {
    */
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  /** Renderiza o painel em fluxo (sem absolute) — usado pela vitrine; apps reais não passam. */
+  inlinePanel?: boolean
 }
 
 /**
@@ -92,6 +94,7 @@ export function AccountMenu({
   width = 300,
   open,
   onOpenChange,
+  inlinePanel = false,
 }: AccountMenuProps) {
   const role = organization ? formatRole(organization.role) : null
   return (
@@ -102,6 +105,7 @@ export function AccountMenu({
       align="end"
       open={open}
       onOpenChange={onOpenChange}
+      inlinePanel={inlinePanel}
       trigger={(p) => (
         <button
           type="button"

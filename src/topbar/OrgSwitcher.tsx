@@ -55,6 +55,8 @@ export type OrgSwitcherProps = {
   open?: boolean
   onOpenChange?: (open: boolean) => void
   width?: number
+  /** Renderiza o painel em fluxo (sem absolute) — usado pela vitrine; apps reais não passam. */
+  inlinePanel?: boolean
 }
 
 /**
@@ -73,6 +75,7 @@ export function OrgSwitcher({
   open,
   onOpenChange,
   width = 320,
+  inlinePanel = false,
 }: OrgSwitcherProps) {
   const current = organizations.find((o) => o.id === currentOrgId) ?? null
   return (
@@ -83,6 +86,7 @@ export function OrgSwitcher({
       align="start"
       open={open}
       onOpenChange={onOpenChange}
+      inlinePanel={inlinePanel}
       trigger={(p) => (
         <button
           type="button"

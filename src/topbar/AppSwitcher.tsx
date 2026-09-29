@@ -86,6 +86,8 @@ export type AppSwitcherProps = {
   align?: 'start' | 'end'
   /** Conteúdo do botão (padrão: grade 3×3). */
   buttonContent?: ReactNode
+  /** Renderiza o painel em fluxo (sem absolute) — usado pela vitrine; apps reais não passam. */
+  inlinePanel?: boolean
 }
 
 function monogram(name: string): string {
@@ -341,6 +343,7 @@ export function AppSwitcher({
   width = 336,
   align = 'end',
   buttonContent,
+  inlinePanel = false,
 }: AppSwitcherProps) {
   const [inner, setOpen] = useState(false)
   const open = controlled ?? inner
@@ -373,6 +376,7 @@ export function AppSwitcher({
       align={align}
       open={open}
       onOpenChange={changeOpen}
+      inlinePanel={inlinePanel}
       trigger={(p) => (
         <button type="button" className="ntb-btn ntb-icon-btn" aria-label={triggerLabel} {...p}>
           {buttonContent ?? <GridIcon />}

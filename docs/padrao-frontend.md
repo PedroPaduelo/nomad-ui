@@ -21,18 +21,18 @@
 
 ## 2. Stack e versões
 
-| Peça | Versão | Observação |
-|---|---|---|
-| Node | 24 LTS (`.nvmrc` = `24`, `engines: ^24.11.0`) | o `@nomad/ui` aceita ≥ 22.12, mas o padrão é 24 |
-| React / React DOM | 19.3 | |
-| Vite | 8.3 (`@vitejs/plugin-react` 6) | |
-| TypeScript | 6.0 (`~6.0.3`) | `strict`, `noUnusedLocals`, `noUnusedParameters`; sem `baseUrl` |
-| Tailwind CSS | 4.3 (`@tailwindcss/vite`) | configuração em CSS (`@theme inline`), sem `tailwind.config.js` |
-| Kit | `@base-ui/react` 1.8, `class-variance-authority` 0.7, `tailwind-merge` 3.7, `clsx` 2, `lucide-react` 1.48 | tudo via `@nomad/ui` |
-| Rotas | `react-router-dom` 7.18 | data router (`createBrowserRouter`) |
-| Dados | `@tanstack/react-query` 5, `axios` 1, `zod` 4.6, `zustand` 5 | cliente gerado com `@hey-api/openapi-ts` onde o backend publica OpenAPI |
-| Testes | `vitest` 5, Testing Library (react 16, user-event 14, jest-dom 7), `jsdom`, `msw` 2, `axe-core` 4, `@vitest/browser-playwright` 5 | |
-| Qualidade | ESLint 9 (flat) + `typescript-eslint` 8 type-aware, `eslint-plugin-react-hooks` 7, `eslint-plugin-jsx-a11y` 6, `@tanstack/eslint-plugin-query` 5, `eslint-config-prettier`, Prettier 3.9, `madge` 8 | presets do `@nomad/ui` |
+| Peça              | Versão                                                                                                                                                                                              | Observação                                                              |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Node              | 24 LTS (`.nvmrc` = `24`, `engines: ^24.11.0`)                                                                                                                                                       | o `@nomad/ui` aceita ≥ 22.12, mas o padrão é 24                         |
+| React / React DOM | 19.3                                                                                                                                                                                                |                                                                         |
+| Vite              | 8.3 (`@vitejs/plugin-react` 6)                                                                                                                                                                      |                                                                         |
+| TypeScript        | 6.0 (`~6.0.3`)                                                                                                                                                                                      | `strict`, `noUnusedLocals`, `noUnusedParameters`; sem `baseUrl`         |
+| Tailwind CSS      | 4.3 (`@tailwindcss/vite`)                                                                                                                                                                           | configuração em CSS (`@theme inline`), sem `tailwind.config.js`         |
+| Kit               | `@base-ui/react` 1.8, `class-variance-authority` 0.7, `tailwind-merge` 3.7, `clsx` 2, `lucide-react` 1.48                                                                                           | tudo via `@nomad/ui`                                                    |
+| Rotas             | `react-router-dom` 7.18                                                                                                                                                                             | data router (`createBrowserRouter`)                                     |
+| Dados             | `@tanstack/react-query` 5, `axios` 1, `zod` 4.6, `zustand` 5                                                                                                                                        | cliente gerado com `@hey-api/openapi-ts` onde o backend publica OpenAPI |
+| Testes            | `vitest` 5, Testing Library (react 16, user-event 14, jest-dom 7), `jsdom`, `msw` 2, `axe-core` 4, `@vitest/browser-playwright` 5                                                                   |                                                                         |
+| Qualidade         | ESLint 9 (flat) + `typescript-eslint` 8 type-aware, `eslint-plugin-react-hooks` 7, `eslint-plugin-jsx-a11y` 6, `@tanstack/eslint-plugin-query` 5, `eslint-config-prettier`, Prettier 3.9, `madge` 8 | presets do `@nomad/ui`                                                  |
 
 Fora do padrão (sair ao migrar): Astryx (`@astryxdesign/*`), StyleX, shadcn/Radix, `sonner`, `react-query-devtools` em produção,
 cliente HTTP escrito à mão com `fetch` quando o `createHttpClient` resolve.
@@ -53,14 +53,14 @@ cliente HTTP escrito à mão com `fetch` quando o `createHttpClient` resolve.
 
 ### O que vem de lá
 
-| Import | Conteúdo | Substitui no app |
-|---|---|---|
-| `@nomad/ui` | kit (`Button`, `Modal`, `Drawer`, `Menu`, `Popover`, `Tabs`, `Field`, `Input`, `Select`, `ConfirmDialog`, `EmptyState`…) e tema (`ThemeProvider`, `PaletteProvider`, `ThemeSwitcher`, hooks de tema e paleta, boot sem flash) | `src/components/ui/`, `providers/ThemeProvider`, `lib/theme*`, `styles/palettes.ts` |
-| `@nomad/ui/theme.css` | o `globals.css` do agent-package: tokens, `@theme inline`, 10 paletas × claro/escuro, e o `@source` do pacote | `src/styles/globals.css` e `palettes.css` |
-| `@nomad/ui/topbar` | `TopBar`, `OrgSwitcher`, `AppSwitcher`, `AccountMenu` (Padrão SSO Nomad v1, §10) | `src/shared/nomad-topbar/` + `scripts/sync-nomad-topbar.sh` |
-| `@nomad/ui/data` | `createQueryClient`, `createHttpClient({ baseURL, onUnauthorized })`, `ApiError`, helpers de Zod e fábrica de query keys | `lib/queryClient.ts`, o miolo de `api/client.ts` |
-| `@nomad/ui/markdown` | leitor de markdown do kit **(revisar na v1.0.0)** | `components/ui/Markdown.tsx` |
-| `@nomad/ui/tsconfig`, `@nomad/ui/eslint`, `@nomad/ui/prettier` | presets | configs copiadas |
+| Import                                                         | Conteúdo                                                                                                                                                                                                                      | Substitui no app                                                                    |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `@nomad/ui`                                                    | kit (`Button`, `Modal`, `Drawer`, `Menu`, `Popover`, `Tabs`, `Field`, `Input`, `Select`, `ConfirmDialog`, `EmptyState`…) e tema (`ThemeProvider`, `PaletteProvider`, `ThemeSwitcher`, hooks de tema e paleta, boot sem flash) | `src/components/ui/`, `providers/ThemeProvider`, `lib/theme*`, `styles/palettes.ts` |
+| `@nomad/ui/theme.css`                                          | o `globals.css` do agent-package: tokens, `@theme inline`, 10 paletas × claro/escuro, e o `@source` do pacote                                                                                                                 | `src/styles/globals.css` e `palettes.css`                                           |
+| `@nomad/ui/topbar`                                             | `TopBar`, `OrgSwitcher`, `AppSwitcher`, `AccountMenu` (Padrão SSO Nomad v1, §10)                                                                                                                                              | `src/shared/nomad-topbar/` + `scripts/sync-nomad-topbar.sh`                         |
+| `@nomad/ui/data`                                               | `createQueryClient`, `createHttpClient({ baseURL, onUnauthorized })`, `ApiError`, helpers de Zod e fábrica de query keys                                                                                                      | `lib/queryClient.ts`, o miolo de `api/client.ts`                                    |
+| `@nomad/ui/markdown`                                           | leitor de markdown do kit **(revisar na v1.0.0)**                                                                                                                                                                             | `components/ui/Markdown.tsx`                                                        |
+| `@nomad/ui/tsconfig`, `@nomad/ui/eslint`, `@nomad/ui/prettier` | presets                                                                                                                                                                                                                       | configs copiadas                                                                    |
 
 ```css
 /* src/styles/globals.css do app: primeira linha */
@@ -194,7 +194,9 @@ export const memoriesApi = {
   get: (projectId: string, id: string) =>
     api.get(`/projects/${projectId}/memories/${id}`).then((r) => MemorySchema.parse(r.data)),
   update: (projectId: string, id: string, input: { title: string }) =>
-    api.patch(`/projects/${projectId}/memories/${id}`, input).then((r) => MemorySchema.parse(r.data)),
+    api
+      .patch(`/projects/${projectId}/memories/${id}`, input)
+      .then((r) => MemorySchema.parse(r.data)),
 }
 ```
 
@@ -209,7 +211,10 @@ export const memoryKeys = {
 }
 
 export const memoryQuery = (projectId: string, id: string) =>
-  queryOptions({ queryKey: memoryKeys.detail(projectId, id), queryFn: () => memoriesApi.get(projectId, id) })
+  queryOptions({
+    queryKey: memoryKeys.detail(projectId, id),
+    queryFn: () => memoriesApi.get(projectId, id),
+  })
 
 export const useMemory = (projectId: string, id: string) => useQuery(memoryQuery(projectId, id))
 
@@ -226,11 +231,14 @@ export function useUpdateMemory(projectId: string, id: string) {
 ```
 
 Regras:
+
 - Key sempre pela fábrica da entidade (nunca `['providers']` solto no componente). Hierárquica: `all` → `list(params)` → `detail(id)`.
 - Toda mutation invalida (ou atualiza com `setQueryData`) as keys que mudaram. Nada de `refetch()` manual depois de salvar.
 - Lista que troca de filtro usa `placeholderData: keepPreviousData`.
 - Onde o backend publica OpenAPI, o `@hey-api/openapi-ts` gera tipos, SDK e `queryOptions` em `src/api/generated/`
   (sobre o `api` acima); não se escreve à mão interface que o gerado já tem, e o CI roda `api:check`.
+- Tempo real (WebSocket, SSE): o cliente mora em `src/api/` (ex. `ws.ts`); o hook que assina aplica cada evento no
+  cache (`setQueryData` ou `invalidateQueries`). Nada de store paralelo com cópia dos dados.
 
 ### Fronteira de import (ESLint, erro)
 
@@ -240,11 +248,11 @@ Import só de tipo e `ApiError`/predicados `is*Error` estão liberados. Também:
 
 ### Zod nas bordas
 
-| Borda | Onde | Como |
-|---|---|---|
-| Resposta da API | `features/<d>/api/*.ts` (ou o gerado) | `Schema.parse(r.data)`; o tipo sai de `z.infer` |
-| Formulário | `features/<d>/components/<x>Form.ts` | `safeParse` no submit, mensagens em pt-BR |
-| Ambiente | `src/config/endpoints.ts` | `z.object({ VITE_API_URL: z.url().optional(), … }).parse(import.meta.env)` no boot |
+| Borda           | Onde                                  | Como                                                                               |
+| --------------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
+| Resposta da API | `features/<d>/api/*.ts` (ou o gerado) | `Schema.parse(r.data)`; o tipo sai de `z.infer`                                    |
+| Formulário      | `features/<d>/components/<x>Form.ts`  | `safeParse` no submit, mensagens em pt-BR                                          |
+| Ambiente        | `src/config/endpoints.ts`             | `z.object({ VITE_API_URL: z.url().optional(), … }).parse(import.meta.env)` no boot |
 
 Mensagens em pt-BR no próprio schema. Os helpers de Zod do `@nomad/ui/data` padronizam o erro de parse como `ApiError`
 **(revisar na v1.0.0: nomes)**.
@@ -312,17 +320,17 @@ Scripts com estes nomes em todo app (o preset do `@nomad/ui` traz as configs):
 "gates": "npm run typecheck && npm run lint && npm run cycles && npm test && npm run build"
 ```
 
-| Gate | Falha quando |
-|---|---|
-| `typecheck` | qualquer erro de tipo (app, testes e configs do Vite/Vitest) |
-| `lint` | erro: segurança (`no-eval`, `no-implied-eval`, `no-new-func`, `no-script-url`), fronteira de dados, `max-lines`. Presets entram como aviso e sobem para erro quando zeram |
-| `cycles` | qualquer ciclo de import |
-| `test` + cobertura | teste vermelho ou cobertura abaixo do piso |
-| `test:a11y` | violação do axe (contraste) no Chromium |
-| `build` | `tsc` do build ou `vite build` falha |
-| `api:check` (se usa openapi-ts) | `src/api/generated` diferente do backend |
-| `npm audit --audit-level=high` | vulnerabilidade high/critical |
-| `format:check` | arquivo fora do Prettier (entra no CI quando o app estiver todo formatado; até lá, lint-staged no pre-commit) |
+| Gate                            | Falha quando                                                                                                                                                              |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `typecheck`                     | qualquer erro de tipo (app, testes e configs do Vite/Vitest)                                                                                                              |
+| `lint`                          | erro: segurança (`no-eval`, `no-implied-eval`, `no-new-func`, `no-script-url`), fronteira de dados, `max-lines`. Presets entram como aviso e sobem para erro quando zeram |
+| `cycles`                        | qualquer ciclo de import                                                                                                                                                  |
+| `test` + cobertura              | teste vermelho ou cobertura abaixo do piso                                                                                                                                |
+| `test:a11y`                     | violação do axe (contraste) no Chromium                                                                                                                                   |
+| `build`                         | `tsc` do build ou `vite build` falha                                                                                                                                      |
+| `api:check` (se usa openapi-ts) | `src/api/generated` diferente do backend                                                                                                                                  |
+| `npm audit --audit-level=high`  | vulnerabilidade high/critical                                                                                                                                             |
+| `format:check`                  | arquivo fora do Prettier (entra no CI quando o app estiver todo formatado; até lá, lint-staged no pre-commit)                                                             |
 
 CI (GitHub Actions) em todo push na `main` e PR, na ordem: `npm ci` → `api:check` → `typecheck` → `lint` → `cycles` →
 `test` (com cobertura) → `test:a11y` → `build` → `audit`. Node pela `.nvmrc`.

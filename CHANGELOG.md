@@ -8,3 +8,4 @@ dependência git numa tag. Tag publicada nunca é movida nem apagada: correção
 ### Adicionado
 
 - Esqueleto do pacote: build em modo biblioteca (Vite 8), tipos (`tsc`), vitest, ESLint e Prettier.
+- Docs: "Padrão Frontend Nomad v1" (`docs/padrao-frontend.md`) e a auditoria dos 4 apps contra ele (`docs/auditoria-apps.md`).

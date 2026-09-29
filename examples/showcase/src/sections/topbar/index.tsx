@@ -183,27 +183,26 @@ const section: ShowcaseSection = {
       <Demo title="Barra fechada (modo padrão)">
         <BarPlayground product="Loadbalance" />
       </Demo>
-      <Demo title="Barra com os três painéis abertos (forçados)">
-        <div className="flex flex-col gap-4">
+      <Demo title="Barra com os três painéis abertos em fluxo (sem portal)">
+        <div className="flex min-w-0 flex-col gap-3">
           <p className="text-caption text-text-secondary">
-            A vitrine abre cada painel via <code>open</code>/<code>onOpenChange</code> para você ver
-            os três estados juntos. Em uso normal cada um abre pelo próprio gatilho.
+            Cada painel abaixo é renderizado em linha, sem portal, usando a flag opt-in{' '}
+            <code>inlinePanel</code> do <code>Popover</code>. Em uso normal cada painel abre pelo
+            próprio gatilho (mesmo portal de antes).
           </p>
-          <div className="grid grid-cols-1 gap-6">
-            <div>
-              <p className="mb-2 text-caption font-semibold text-text-tertiary">
-                Seletor de empresa
-              </p>
+          <div className="grid min-h-0 grid-cols-1 items-stretch gap-4 lg:grid-cols-2 xl:grid-cols-4">
+            <InlinePanelCard title="1. Barra Nomad" subtitle="modo padrão (portal)">
+              <BarPlayground product="Loadbalance" />
+            </InlinePanelCard>
+            <InlinePanelCard title="2. Seletor de empresa" subtitle="OrgSwitcher open inlinePanel">
               <PopoverExample />
-            </div>
-            <div>
-              <p className="mb-2 text-caption font-semibold text-text-tertiary">Grade de apps</p>
+            </InlinePanelCard>
+            <InlinePanelCard title="3. Grade de apps" subtitle="AppSwitcher open inlinePanel">
               <AppsExample />
-            </div>
-            <div>
-              <p className="mb-2 text-caption font-semibold text-text-tertiary">Menu da conta</p>
+            </InlinePanelCard>
+            <InlinePanelCard title="4. Menu da conta" subtitle="AccountMenu open inlinePanel">
               <AccountExample />
-            </div>
+            </InlinePanelCard>
           </div>
         </div>
       </Demo>
@@ -213,49 +212,69 @@ const section: ShowcaseSection = {
 
 export default section
 
-function PopoverExample() {
-  const [open, setOpen] = useState(true)
+/** Cartão com altura fixa para os painéis inline. Cada painel ocupa o cartão inteiro. */
+function InlinePanelCard({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string
+  subtitle: string
+  children: React.ReactNode
+}) {
   return (
-    <div className="rounded-md border border-border bg-surface-base p-3">
+    <div className="flex min-h-72 min-w-0 flex-col gap-2 rounded-md border border-border bg-surface-base p-3">
+      <p className="text-caption font-semibold text-text-tertiary">{title}</p>
+      <p className="text-caption text-text-secondary">{subtitle}</p>
+      <div className="flex min-h-0 flex-1 flex-col gap-2">{children}</div>
+    </div>
+  )
+}
+
+function PopoverExample() {
+  // Mantém o painel sempre aberto: a vitrine quer mostrar o estado expandido.
+  return (
+    <div className="flex min-h-0 flex-1 rounded-md border border-border bg-surface-base p-3">
       <OrgSwitcher
         organizations={DATA.organizations}
         currentOrgId={DATA.organization.id}
         onSwitch={() => {}}
-        open={open}
-        onOpenChange={setOpen}
+        open
+        inlinePanel
+        onOpenChange={() => {}}
       />
     </div>
   )
 }
 
 function AppsExample() {
-  const [open, setOpen] = useState(true)
   return (
-    <div className="rounded-md border border-border bg-surface-base p-3">
+    <div className="flex min-h-0 flex-1 rounded-md border border-border bg-surface-base p-3">
       <AppSwitcher
         apps={APPS}
         orgId={DATA.organization.id}
         currentAppSlug="motor"
         accountUrl={DATA.accountUrl}
-        open={open}
-        onOpenChange={setOpen}
+        open
+        inlinePanel
+        onOpenChange={() => {}}
       />
     </div>
   )
 }
 
 function AccountExample() {
-  const [open, setOpen] = useState(true)
   return (
-    <div className="rounded-md border border-border bg-surface-base p-3">
+    <div className="flex min-h-0 flex-1 rounded-md border border-border bg-surface-base p-3">
       <AccountMenu
-        user={PROFILE}
-        organization={DATA.organization}
+        user={{ name: 'Ana Souza', email: 'ana@nomad.dev', picture: null }}
+        organization={{ name: 'Nomad Labs', role: 'owner' }}
         manageAccountHref={DATA.accountUrl}
         onSwitchOrganization={() => {}}
         onSignOut={() => {}}
-        open={open}
-        onOpenChange={setOpen}
+        open
+        inlinePanel
+        onOpenChange={() => {}}
       />
     </div>
   )

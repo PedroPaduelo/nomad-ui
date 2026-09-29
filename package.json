@@ -28,6 +28,7 @@
       "types": "./dist/types/topbar/index.d.ts",
       "import": "./dist/topbar.js"
     },
+    "./topbar.css": "./src/topbar/topbar.css",
     "./package.json": "./package.json"
   },
   "engines": {

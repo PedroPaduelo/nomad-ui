@@ -1,0 +1,582 @@
+/*
+ * @nomad/topbar: estilos da barra superior padrão Nomad (CONTA-24).
+ *
+ * Tudo lê variáveis `--ntb-*` (a tabela está no README). Cada uma cai num token comum do design system da Nomad
+ * (`--surface-*`, `--color-*`, `--radius-*`, `--shadow-*`) e, na falta dele, em cores de sistema (Canvas,
+ * CanvasText, LinkText) e `color-mix`. Nenhuma cor fixa: a barra segue o tema e a paleta de cada app.
+ * Para ajustar num app, defina as `--ntb-*` no `:root` (ou em qualquer ancestral da barra).
+ *
+ * As variáveis privadas `--_x` são resolvidas em `.ntb` a partir das públicas, então sobrescrever a pública em
+ * qualquer ancestral funciona.
+ */
+.ntb {
+  --_height: var(--ntb-height, var(--header-height, 56px));
+  --_bg: var(--ntb-bg, var(--surface-panel, Canvas));
+  --_fg: var(--ntb-fg, var(--color-text-primary, CanvasText));
+  --_muted: var(
+    --ntb-fg-muted,
+    var(--color-text-secondary, color-mix(in srgb, CanvasText 72%, Canvas))
+  );
+  --_subtle: var(
+    --ntb-fg-subtle,
+    var(--color-text-tertiary, color-mix(in srgb, CanvasText 56%, Canvas))
+  );
+  --_border: var(--ntb-border, var(--color-border, color-mix(in srgb, CanvasText 12%, Canvas)));
+  --_border-strong: var(
+    --ntb-border-strong,
+    var(--color-border-strong, color-mix(in srgb, CanvasText 20%, Canvas))
+  );
+  --_hover: var(--ntb-hover, var(--surface-hover, color-mix(in srgb, CanvasText 6%, transparent)));
+  --_selected: var(
+    --ntb-selected,
+    var(--surface-selected, color-mix(in srgb, LinkText 12%, transparent))
+  );
+  --_accent: var(--ntb-accent, var(--color-accent, LinkText));
+  --_accent-text: var(--ntb-accent-text, var(--color-text-accent, LinkText));
+  --_on-accent: var(--ntb-accent-fg, var(--color-text-on-accent, Canvas));
+  --_danger: var(--ntb-danger, var(--color-error, CanvasText));
+  --_pop-bg: var(--ntb-popover-bg, var(--surface-pop, Canvas));
+  --_pop-border: var(
+    --ntb-popover-border,
+    var(--color-border-strong, color-mix(in srgb, CanvasText 20%, Canvas))
+  );
+  --_shadow: var(
+    --ntb-shadow,
+    var(--shadow-lg, 0 12px 40px color-mix(in srgb, CanvasText 14%, transparent))
+  );
+  --_radius: var(--ntb-radius, var(--radius-card, 12px));
+  --_radius-control: var(--ntb-radius-control, var(--radius-control, 8px));
+  --_focus: var(--ntb-focus, var(--color-accent, Highlight));
+  --_font: var(--ntb-font, inherit);
+  --_fs: var(--ntb-font-size, var(--fs-body, 14px));
+  --_fs-cap: var(--ntb-font-size-caption, var(--fs-cap, 12px));
+  --_z: var(--ntb-z-popover, 60);
+  --_transition: var(--transition-fast, 120ms ease);
+  font-family: var(--_font);
+  font-size: var(--_fs);
+  line-height: var(--ntb-line-height, var(--lh-body, 20px));
+  color: var(--_fg);
+}
+.ntb *,
+.ntb *::before,
+.ntb *::after {
+  box-sizing: border-box;
+}
+.ntb :focus-visible {
+  outline: 2px solid var(--_focus);
+  outline-offset: 2px;
+}
+.ntb :focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Botões e links do pacote: sempre com o próprio reset (o app pode ter estilo global em button/a). */
+.ntb-btn,
+.ntb-item,
+.ntb-tile,
+.ntb-link {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.ntb-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.ntb-ico {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  display: block;
+}
+.ntb-ico-18 {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: block;
+}
+
+/* ------------------------------------------------------------------ moldura */
+.ntb-bar {
+  height: var(--_height);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 16px;
+  background: var(--_bg);
+  border-bottom: 1px solid var(--_border);
+}
+.ntb-bar--sticky {
+  position: sticky;
+  top: 0;
+  z-index: var(--ntb-z-bar, 40);
+}
+.ntb-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding-right: 8px;
+  color: var(--_fg);
+  text-decoration: none;
+  flex: none;
+}
+.ntb-brand__logo {
+  display: flex;
+  flex: none;
+}
+.ntb-brand__name {
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.ntb-brand__product {
+  font-weight: 400;
+  color: var(--_muted);
+}
+.ntb-vsep {
+  width: 1px;
+  height: 24px;
+  background: var(--_border-strong);
+  margin: 0 6px;
+  flex: none;
+}
+.ntb-search {
+  flex: 1;
+  min-width: 0;
+  max-width: var(--ntb-search-max, 560px);
+  margin: 0 auto;
+  display: flex;
+}
+.ntb-search > * {
+  flex: 1;
+  min-width: 0;
+}
+.ntb-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  flex: none;
+}
+
+/* botão de ícone (grade de apps; o app pode usar nas próprias ações) */
+.ntb-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--_radius-control);
+  color: var(--_muted);
+  transition:
+    background-color var(--_transition),
+    color var(--_transition);
+}
+.ntb-icon-btn:hover,
+.ntb-icon-btn[aria-expanded='true'] {
+  background: var(--_hover);
+  color: var(--_fg);
+}
+
+/* ---------------------------------------------------------------- popover */
+.ntb-pop-root {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+.ntb-panel {
+  position: absolute;
+  top: calc(100% + var(--ntb-popover-gap, 4px));
+  z-index: var(--_z);
+  background: var(--_pop-bg);
+  color: var(--_fg);
+  border: 1px solid var(--_pop-border);
+  border-radius: var(--_radius);
+  box-shadow: var(--_shadow);
+  padding: 18px;
+  text-align: left;
+  max-width: calc(100vw - 32px);
+  line-height: 1.4286; /* 20px no corpo de 14px; proporcional nos textos menores (blocos da grade) */
+}
+.ntb-panel--end {
+  right: 0;
+}
+.ntb-panel--start {
+  left: 0;
+}
+.ntb-panel:focus {
+  outline: none;
+}
+
+/* ------------------------------------------------------------ itens de menu */
+.ntb-label {
+  padding: 8px 10px 4px;
+  font-size: var(--_fs-cap);
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--_subtle);
+}
+.ntb-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--_radius-control);
+  width: 100%;
+  text-align: left;
+  color: var(--_fg);
+}
+.ntb-item:hover {
+  background: var(--_hover);
+}
+.ntb-item > .ntb-ico {
+  color: var(--_muted);
+}
+.ntb-item__meta {
+  display: grid;
+  line-height: 18px;
+  min-width: 0;
+}
+.ntb-item__meta > b {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ntb-item__meta > small {
+  font-size: var(--_fs-cap);
+  color: var(--_subtle);
+}
+.ntb-item__check {
+  margin-left: auto;
+  color: var(--_accent-text);
+}
+.ntb-item--danger,
+.ntb-item--danger > .ntb-ico {
+  color: var(--_danger);
+}
+.ntb-item[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: default;
+}
+.ntb-item[aria-disabled='true']:hover {
+  background: none;
+}
+.ntb-divider {
+  height: 1px;
+  background: var(--_border);
+  border: 0;
+  margin: 6px 0;
+}
+
+/* ---------------------------------------------------------- seletor de empresa */
+.ntb-org-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 8px 0 6px;
+  border-radius: var(--_radius-control);
+  border: 1px solid transparent;
+  color: var(--_fg);
+  min-width: 0;
+}
+.ntb-org-btn:hover,
+.ntb-org-btn[aria-expanded='true'] {
+  background: var(--_hover);
+}
+.ntb-org-btn__name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+.ntb-org-btn > .ntb-ico {
+  color: var(--_subtle);
+}
+.ntb-org-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  flex: none;
+  background: var(--_tone-fg);
+  color: var(--_tone-bg);
+}
+
+/* ------------------------------------------------------------------ avatar */
+.ntb-avatar-btn {
+  margin-left: 6px;
+  border-radius: 50%;
+  display: inline-flex;
+  flex: none;
+}
+.ntb-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex: none;
+  line-height: 1;
+  background: var(--_tone-bg);
+  color: var(--_tone-fg);
+  overflow: hidden;
+}
+.ntb-avatar--lg {
+  width: 48px;
+  height: 48px;
+  font-size: 17px;
+}
+.ntb-avatar > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: inherit;
+}
+.ntb-avatar--photo {
+  background: var(--ntb-avatar-photo-bg, var(--surface-inset, var(--_hover)));
+}
+.ntb-account-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 10px 12px;
+}
+.ntb-account-card__text {
+  display: grid;
+  line-height: 20px;
+  min-width: 0;
+}
+.ntb-account-card__name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ntb-account-card__email {
+  color: var(--_muted);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ntb-account-card__org {
+  color: var(--_subtle);
+  font-size: var(--_fs-cap);
+  line-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Cores de avatar e marca da empresa: 6 tons estáveis pelo nome (`--av1..6-bg/fg` do design da Nomad). */
+.ntb-tone-1 {
+  --_tone-bg: var(--ntb-av1-bg, var(--av1-bg, color-mix(in srgb, var(--_accent) 16%, var(--_bg))));
+  --_tone-fg: var(--ntb-av1-fg, var(--av1-fg, var(--_accent-text)));
+}
+.ntb-tone-2 {
+  --_tone-bg: var(--ntb-av2-bg, var(--av2-bg, color-mix(in srgb, var(--_accent) 16%, var(--_bg))));
+  --_tone-fg: var(--ntb-av2-fg, var(--av2-fg, var(--_accent-text)));
+}
+.ntb-tone-3 {
+  --_tone-bg: var(--ntb-av3-bg, var(--av3-bg, color-mix(in srgb, var(--_accent) 16%, var(--_bg))));
+  --_tone-fg: var(--ntb-av3-fg, var(--av3-fg, var(--_accent-text)));
+}
+.ntb-tone-4 {
+  --_tone-bg: var(--ntb-av4-bg, var(--av4-bg, color-mix(in srgb, var(--_accent) 16%, var(--_bg))));
+  --_tone-fg: var(--ntb-av4-fg, var(--av4-fg, var(--_accent-text)));
+}
+.ntb-tone-5 {
+  --_tone-bg: var(--ntb-av5-bg, var(--av5-bg, color-mix(in srgb, var(--_accent) 16%, var(--_bg))));
+  --_tone-fg: var(--ntb-av5-fg, var(--av5-fg, var(--_accent-text)));
+}
+.ntb-tone-6 {
+  --_tone-bg: var(--ntb-av6-bg, var(--av6-bg, color-mix(in srgb, var(--_accent) 16%, var(--_bg))));
+  --_tone-fg: var(--ntb-av6-fg, var(--av6-fg, var(--_accent-text)));
+}
+
+/* ------------------------------------------------------------ grade de apps */
+.ntb-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+}
+.ntb-grid > li {
+  display: grid;
+  min-width: 0;
+}
+.ntb-tile {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 14px 4px 12px;
+  border-radius: var(--_radius-control);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--_fg);
+  transition: background-color var(--_transition);
+  min-width: 0;
+}
+.ntb-tile:hover {
+  background: var(--_hover);
+}
+.ntb-tile[aria-current='page'] {
+  background: var(--_selected);
+}
+.ntb-tile--disabled {
+  color: var(--_subtle);
+}
+.ntb-tile--disabled .ntb-app-icon {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+.ntb-tile__text {
+  display: grid;
+  gap: 2px;
+  max-width: 100%;
+}
+.ntb-tile__caption {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 400;
+  color: var(--_muted);
+}
+.ntb-app-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 22%;
+  overflow: hidden;
+  font-weight: 600;
+  line-height: 1;
+}
+.ntb-app-icon > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ntb-app-icon--mono {
+  background: var(--_accent);
+  color: var(--_on-accent);
+}
+.ntb-caption {
+  margin: 0;
+  padding: 4px 10px 0;
+  font-size: var(--_fs-cap);
+  line-height: 16px;
+  color: var(--_muted);
+}
+.ntb-alert {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: var(--_fs-cap);
+  line-height: 16px;
+  color: var(--_muted);
+}
+.ntb-link {
+  color: var(--_accent-text);
+  font-weight: 500;
+}
+.ntb-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.ntb-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 16px;
+  color: var(--_muted);
+  font-size: 13px;
+}
+.ntb-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--_border-strong);
+  border-top-color: var(--_accent);
+  animation: ntb-spin 0.7s linear infinite;
+  flex: none;
+}
+@keyframes ntb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.ntb-foot {
+  margin-top: 6px;
+  border-top: 1px solid var(--_border);
+  padding: 10px 10px 4px;
+  display: flex;
+  justify-content: space-between;
+  column-gap: 4px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.ntb-foot--center {
+  justify-content: center;
+}
+
+/* ---------------------------------------------------------------- responsivo */
+@media (max-width: 1100px) {
+  .ntb-search {
+    max-width: var(--ntb-search-max-md, 360px);
+  }
+}
+@media (max-width: 900px) {
+  .ntb-bar {
+    padding: 0 8px;
+    gap: 4px;
+  }
+  .ntb-search,
+  .ntb-vsep,
+  .ntb-brand__product,
+  .ntb-hide-sm {
+    display: none;
+  }
+  .ntb-brand {
+    padding-right: 0;
+  }
+  .ntb-org-btn__name {
+    max-width: 120px;
+  }
+}
+@media (max-width: 480px) {
+  .ntb-brand__name {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ntb *,
+  .ntb *::before,
+  .ntb *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

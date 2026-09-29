@@ -16,7 +16,7 @@ export function Demo({
       <Label as="h3">{title}</Label>
       <div
         className={
-          'flex min-w-0 flex-wrap items-start gap-3 rounded-lg border border-border bg-surface-base p-4 ' +
+          'flex min-w-0 items-start gap-3 rounded-lg border border-border bg-surface-base p-4 ' +
           className
         }
       >

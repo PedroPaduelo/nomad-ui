@@ -1,15 +1,18 @@
-import { Moon, Monitor, Sun } from 'lucide-react'
+import { Home, Layers, Palette, Sparkles, Moon, Monitor, Sun } from 'lucide-react'
 import {
   Label,
+  MainLayout,
   PALETTES,
   Segmented,
   Select,
   useResolvedTheme,
   useThemeStore,
   type PaletteId,
+  type SidebarItem,
+  type SidebarSection,
   type Theme,
 } from '@nomad/ui'
-import { sections, GROUP_ORDER } from './registry'
+import { sections } from './registry'
 import { readParams } from './url'
 
 const THEME_OPTIONS: { value: Theme; label: string; icon: React.ReactNode }[] = [
@@ -17,6 +20,24 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: React.ReactNode }[] = 
   { value: 'dark', label: 'Escuro', icon: <Moon className="h-3.5 w-3.5" aria-hidden /> },
   { value: 'system', label: 'Sistema', icon: <Monitor className="h-3.5 w-3.5" aria-hidden /> },
 ]
+
+/** Marca da Nomad (igual à da seção da barra Nomad). */
+function NommandMark({ size = 24 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" role="img" aria-label="Nommand">
+      <rect width="32" height="32" rx="8" fill="var(--mark-bg)" />
+      <g
+        fill="none"
+        stroke="var(--mark-on)"
+        strokeWidth={2.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M10.5 22.5V9.5l11 13v-13" />
+      </g>
+    </svg>
+  )
+}
 
 /** Seletores de paleta (10) e de tema: mudam o app inteiro, como o ThemeSwitcher. */
 function AppearanceControls() {
@@ -50,19 +71,112 @@ function AppearanceControls() {
   )
 }
 
-// A URL e o registro não mudam durante a vida da página.
-const params = readParams()
-const groups = [...new Set(sections.map((s) => s.group))].sort((a, b) => {
-  const ra = GROUP_ORDER.indexOf(a)
-  const rb = GROUP_ORDER.indexOf(b)
-  return (ra === -1 ? 99 : ra) - (rb === -1 ? 99 : rb)
-})
+/** Encaixes da sidebar (4 entradas fixas) e seus ícones. */
+type SidebarEntry = {
+  key: string
+  label: string
+  icon: React.ReactNode
+  href: string
+  matches: (id: string | null) => boolean
+}
+
+const SIDEBAR_ENTRIES: SidebarEntry[] = [
+  {
+    key: 'inicio',
+    label: 'Início',
+    icon: <Home className="h-[18px] w-[18px]" strokeWidth={1.75} />,
+    href: '#inicio',
+    matches: (id) => id === null,
+  },
+  {
+    key: 'componentes',
+    label: 'Componentes',
+    icon: <Layers className="h-[18px] w-[18px]" strokeWidth={1.75} />,
+    href: '#componentes',
+    matches: (id) =>
+      id === 'botoes' ||
+      id === 'formulario' ||
+      id === 'sobreposicoes' ||
+      id === 'banner-estados' ||
+      id === 'layout',
+  },
+  {
+    key: 'temas',
+    label: 'Temas',
+    icon: <Palette className="h-[18px] w-[18px]" strokeWidth={1.75} />,
+    href: '#temas',
+    matches: (id) => id === 'temas' || id === 'paletas',
+  },
+  {
+    key: 'barra-nomad',
+    label: 'Barra Nomad',
+    icon: <Sparkles className="h-[18px] w-[18px]" strokeWidth={1.75} />,
+    href: '#barra-nomad',
+    matches: (id) => id === 'barra-nomad',
+  },
+]
 
 export function App() {
+  const params = readParams()
   const visible = params.section ? sections.filter((s) => s.id === params.section) : sections
+  const currentId = params.section ?? null
+
+  const sidebarSections: SidebarSection[] = [
+    {
+      items: SIDEBAR_ENTRIES.map<SidebarItem>((e) => ({
+        key: e.key,
+        label: e.label,
+        icon: e.icon,
+        href: e.href,
+        current: e.matches(currentId),
+      })),
+    },
+  ]
 
   const content = (
-    <div className="flex min-w-0 flex-col gap-10">
+    <div className="flex min-w-0 flex-col gap-12">
+      {/* Início: cabeçalho + cards das 4 áreas */}
+      <section
+        id="inicio"
+        aria-labelledby="inicio-title"
+        className="flex scroll-mt-20 flex-col gap-4"
+        data-showcase-section="inicio"
+      >
+        <div>
+          <Label as="p" className="mb-1">
+            Início
+          </Label>
+          <h2 id="inicio-title" className="text-title text-text-primary">
+            Vitrine @nomad/ui
+          </h2>
+          <p className="mt-1 max-w-[90ch] text-body text-text-secondary">
+            O kit, o tema e a barra Nomad compartilhados por todos os apps. Troque a paleta e o
+            modo (claro/escuro) na barra superior — tudo aqui responde na hora.
+          </p>
+        </div>
+        <div
+          id="componentes"
+          aria-label="Áreas da vitrine"
+          className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
+        >
+          {SIDEBAR_ENTRIES.filter((e) => e.key !== 'inicio').map((e) => (
+            <a
+              key={e.key}
+              href={e.href}
+              className="flex min-w-0 flex-col gap-2 rounded-lg border border-border bg-surface-base p-4 transition-colors hover:border-border-hover hover:bg-surface-raised"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-md bg-accent-muted text-text-accent">
+                {e.icon}
+              </span>
+              <p className="text-body font-semibold text-text-primary">{e.label}</p>
+              <p className="text-caption text-text-secondary">
+                Vá para a área de {e.label.toLowerCase()} da vitrine.
+              </p>
+            </a>
+          ))}
+        </div>
+      </section>
+
       {visible.map((s) => (
         <section
           key={s.id}
@@ -94,45 +208,28 @@ export function App() {
   if (params.bare) return <main className="p-6">{content}</main>
 
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 border-b border-border bg-surface-base px-6 py-3">
-        <div className="min-w-0">
-          <h1 className="text-heading text-text-primary">@nomad/ui — vitrine</h1>
-          <p className="text-caption text-text-tertiary">
-            Kit, tema e barra Nomad nas 10 paletas × claro/escuro.
-          </p>
-        </div>
-        <AppearanceControls />
-      </header>
-      <div className="flex w-full">
-        <nav
-          aria-label="Seções"
-          className="sticky top-[65px] hidden h-[calc(100vh-65px)] w-56 shrink-0 overflow-y-auto border-r border-border bg-surface-base px-3 py-4 lg:block"
-        >
-          {groups.map((g) => (
-            <div key={g} className="mb-4">
-              <Label as="p" className="mb-1 px-2">
-                {g}
-              </Label>
-              <ul>
-                {sections
-                  .filter((s) => s.group === g)
-                  .map((s) => (
-                    <li key={s.id}>
-                      <a
-                        href={`#${s.id}`}
-                        className="block rounded-md px-2 py-1 text-caption text-text-secondary hover:bg-surface-hover hover:text-text-primary"
-                      >
-                        {s.title}
-                      </a>
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          ))}
-        </nav>
-        <main className="min-w-0 flex-1 px-6 py-6">{content}</main>
-      </div>
-    </div>
+    <MainLayout
+      sidebar={{
+        sections: sidebarSections,
+        brand: { initial: 'N', name: 'Vitrine', subtitle: '@nomad/ui · v0' },
+        ariaLabel: 'Navegação da vitrine',
+      }}
+      sidebarCollapsed={false}
+      onToggleSidebar={() => {}}
+      header={{
+        brand: (
+          <div className="flex items-center gap-2 text-sm font-semibold text-text-primary">
+            <NommandMark size={20} />
+            Vitrine @nomad/ui
+          </div>
+        ),
+        actions: <AppearanceControls />,
+      }}
+      contentMax={false}
+      contentPadding="p-6"
+      mainAriaLabel="Conteúdo da vitrine @nomad/ui"
+    >
+      {content}
+    </MainLayout>
   )
 }

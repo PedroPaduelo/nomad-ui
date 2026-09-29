@@ -51,7 +51,7 @@ const APPS: LauncherApp[] = [
     id: '2',
     slug: 'loadbalance',
     name: 'Loadbalance',
-    iconUrl: 'https://conta.example/api/apps/loadbalance/icon',
+    iconUrl: null,
     launchUrl: 'https://lb.example/auth/sso',
     description: 'Proxy',
   },
@@ -189,8 +189,7 @@ const section: ShowcaseSection = {
             A vitrine abre cada painel via <code>open</code>/<code>onOpenChange</code> para você ver
             os três estados juntos. Em uso normal cada um abre pelo próprio gatilho.
           </p>
-          <BarPlayground product="Conta" />
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6">
             <div>
               <p className="mb-2 text-caption font-semibold text-text-tertiary">
                 Seletor de empresa

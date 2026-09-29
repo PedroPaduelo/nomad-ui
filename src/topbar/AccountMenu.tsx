@@ -17,7 +17,7 @@ export function Avatar({
   src,
   size = 'md',
 }: {
-  name: string
+  name: string | null
   src?: string | null
   size?: 'md' | 'lg'
 }) {
@@ -25,7 +25,7 @@ export function Avatar({
   const photo = src && failed !== src ? src : null
   return (
     <span
-      className={`ntb-avatar ntb-tone-${toneOf(name)}${photo ? ' ntb-avatar--photo' : ''}${size === 'lg' ? ' ntb-avatar--lg' : ''}`}
+      className={`ntb-avatar ntb-tone-${toneOf(name ?? "")}${photo ? ' ntb-avatar--photo' : ''}${size === 'lg' ? ' ntb-avatar--lg' : ''}`}
       aria-hidden="true"
     >
       {photo ? (
@@ -38,7 +38,7 @@ export function Avatar({
           onError={() => setFailed(photo)}
         />
       ) : (
-        initials(name)
+        initials(name ?? "")
       )}
     </span>
   )
@@ -48,7 +48,7 @@ export type AccountMenuProps = {
   /** Pessoa logada (`profile` de `GET /api/oidc/topbar`). */
   user: { name: string | null; email?: string | null; picture?: string | null }
   /** Empresa ativa e papel (vão no cartão). */
-  organization?: { name: string; role?: string | null } | null
+  organization?: { name: string | null; role?: string | null } | null
   /** "Gerenciar sua Conta Nommand": link (`accountUrl`) e/ou callback. */
   manageAccountHref?: string
   onManageAccount?: () => void

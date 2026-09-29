@@ -3,8 +3,9 @@ import { usePopoverClose } from './Popover'
 import { CheckIcon } from './icons'
 
 /** Iniciais do nome (2 letras): "Ana Souza" → "AS", "Nomad" → "NO". */
-export function initials(name: string): string {
-  const clean = name.trim().replace(/@.*/, '')
+export function initials(name: string | null): string {
+  const safe = name ?? ''
+  const clean = safe.trim().replace(/@.*/, '')
   const parts = clean.split(/[\s._-]+/).filter(Boolean)
   if (parts.length === 0) return '?'
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
@@ -12,9 +13,10 @@ export function initials(name: string): string {
 }
 
 /** Um dos 6 tons de avatar, estável pelo nome (mesmo cálculo da Conta Nommand). */
-export function toneOf(name: string): number {
+export function toneOf(name: string | null): number {
+  const safe = name ?? ''
   let h = 0
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
+  for (let i = 0; i < safe.length; i++) h = (h * 31 + safe.charCodeAt(i)) >>> 0
   return (h % 6) + 1
 }
 

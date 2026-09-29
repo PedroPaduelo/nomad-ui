@@ -9,3 +9,5 @@ test-results/
 .vitest-attachments/
 examples/*/node_modules/
 examples/*/dist/
+.caps/
+.*.mjs

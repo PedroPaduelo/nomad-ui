@@ -46,7 +46,7 @@ export function Avatar({
 
 export type AccountMenuProps = {
   /** Pessoa logada (`profile` de `GET /api/oidc/topbar`). */
-  user: { name: string; email?: string | null; picture?: string | null }
+  user: { name: string | null; email?: string | null; picture?: string | null }
   /** Empresa ativa e papel (vão no cartão). */
   organization?: { name: string; role?: string | null } | null
   /** "Gerenciar sua Conta Nommand": link (`accountUrl`) e/ou callback. */
@@ -106,7 +106,7 @@ export function AccountMenu({
         <button
           type="button"
           className="ntb-btn ntb-avatar-btn"
-          aria-label={`Conta de ${user.name}`}
+          aria-label={`Conta de ${user.name ?? ''}`}
           {...p}
         >
           <Avatar name={user.name} src={user.picture} />
@@ -116,7 +116,7 @@ export function AccountMenu({
       <div className="ntb-account-card">
         <Avatar name={user.name} src={user.picture} size="lg" />
         <div className="ntb-account-card__text">
-          <b className="ntb-account-card__name">{user.name}</b>
+          <b className="ntb-account-card__name">{user.name ?? ''}</b>
           {user.email && <span className="ntb-account-card__email">{user.email}</span>}
           {organization && (
             <span className="ntb-account-card__org">

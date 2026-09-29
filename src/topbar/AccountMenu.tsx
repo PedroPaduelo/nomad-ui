@@ -25,7 +25,7 @@ export function Avatar({
   const photo = src && failed !== src ? src : null
   return (
     <span
-      className={`ntb-avatar ntb-tone-${toneOf(name ?? "")}${photo ? ' ntb-avatar--photo' : ''}${size === 'lg' ? ' ntb-avatar--lg' : ''}`}
+      className={`ntb-avatar ntb-tone-${toneOf(name ?? '')}${photo ? ' ntb-avatar--photo' : ''}${size === 'lg' ? ' ntb-avatar--lg' : ''}`}
       aria-hidden="true"
     >
       {photo ? (
@@ -38,7 +38,7 @@ export function Avatar({
           onError={() => setFailed(photo)}
         />
       ) : (
-        initials(name ?? "")
+        initials(name ?? '')
       )}
     </span>
   )

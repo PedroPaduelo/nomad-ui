@@ -16,6 +16,55 @@ kit do AgentPack.
 | `@nomad/ui/data`                             | `createQueryClient`, `createHttpClient`, Zod e query keys            |
 | `@nomad/ui/tsconfig`, `/eslint`, `/prettier` | presets                                                              |
 
+## Barra superior Nomad
+
+O CSS da barra é um import explícito (o JS não importa nem incorpora CSS no bundle). Adicione uma vez ao CSS global, depois do tema:
+
+```css
+@import '@nomad/ui/theme.css';
+@import '@nomad/ui/topbar.css';
+```
+
+Importe os componentes de `@nomad/ui/topbar` (mesma API do antigo `@nomad/topbar` da Conta Nommand):
+
+```tsx
+import { TopBar, TopBarBrand, OrgSwitcher, AppSwitcher, AccountMenu, type TopbarData } from '@nomad/ui/topbar'
+import { useQuery } from '@tanstack/react-query'
+
+// O backend do app busca a Conta usando o access token OIDC da sessão e repassa
+// GET /api/auth/oidc/topbar. O navegador NÃO chama a Conta diretamente.
+const { data } = useQuery<TopbarData>({
+  queryKey: ['topbar'],
+  queryFn: async () => {
+    const r = await fetch('/api/auth/oidc/topbar', { credentials: 'include' })
+    if (!r.ok) throw new Error('Não foi possível carregar os aplicativos.')
+    return r.json()
+  },
+  staleTime: 60_000,
+})
+
+<TopBar
+  brand={<TopBarBrand logo={<Logo />} name="Nommand" product="Loadbalance" href="/" />}
+  org={data && <OrgSwitcher organizations={data.organizations} currentOrgId={data.organization.id}
+    onSwitch={(id) => { window.location.href = `/auth/sso?org=${encodeURIComponent(id)}&next=/` }} />}
+  search={<SearchBox />}
+  actions={<AppActions />}
+  apps={<AppSwitcher apps={data?.apps ?? null} orgId={data?.organization.id}
+    currentAppSlug="loadbalance" accountUrl={data?.accountUrl} />}
+  account={data && <AccountMenu user={{ name: data.profile.name ?? '', email: data.profile.email,
+    picture: data.profile.picture }} organization={data.organization}
+    manageAccountHref={data.accountUrl} onSignOut={() => { /* POST /api/auth/logout e seguir endSessionUrl */ }} />}
+/>
+```
+
+O backend deve servir `GET /api/auth/oidc/topbar`, chamando a API da Conta em nome da sessão (refresh de access token uma vez em 401) e aplicando cache curto (~60 s). O formato completo de `TopbarData` e cada prop estão no README da origem `conta_nommand/packages/topbar/README.md` e no contrato SSO §10. Nunca faça a chamada OIDC do navegador.
+
+A barra mapeia automaticamente as variáveis `--ntb-*` aos tokens `--surface-*`, `--color-*`, `--shadow-*`, `--radius-*`, `--fs-*`, `--lh-*`, `--av1..6-*` do tema. Os apps com tema Nomad não precisam definir `--ntb-*`; uma variável específica pode ser sobrescrita no `:root` ou num ancestral de `.ntb`. O tema escuro precisa definir `color-scheme: dark` para que a placa dos ícones de app (SVG da Conta) acompanhe o modo.
+
+A barra não busca dados e não gerencia sessão. O backend do app é o único cliente da Conta. `AppSwitcher`, `AccountMenu` e `OrgSwitcher` aceitam `open`/`onOpenChange` quando a aplicação precisar controlar a abertura; omitindo as props, cada peça controla o próprio estado.
+
+A migração elimina a cópia em `src/shared/nomad-topbar/` e torna obsoleto `scripts/sync-nomad-topbar.sh` da Conta quando os apps consumirem esta entrada; a remoção do script cabe à task da Conta.
+
 ## Desenvolvimento
 
 ```bash

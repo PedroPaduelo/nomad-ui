@@ -1,4 +1,11 @@
-import { useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from 'react'
 import { Popover, usePopoverClose } from './Popover'
 import { GridIcon } from './icons'
 import { launchHref } from './launchHref'
@@ -44,6 +51,11 @@ export type AppSwitcherProps = {
   onRetry?: () => void
   /** Chamado ao abrir o painel pela primeira vez (bom momento para buscar os apps). */
   onOpen?: () => void
+  /**
+   * Controle externo (opcional, como no `OrgSwitcher`): aberto/fechado. Sem ele, o painel controla o próprio estado.
+   * Acréscimo do @nomad/ui (o `@nomad/topbar` 1.0.0 não tinha); quem não passa nada não vê diferença.
+   */
+  open?: boolean
   onOpenChange?: (open: boolean) => void
   /** Slug do app em que a pessoa está: o bloco fica marcado como atual (`aria-current`). */
   currentAppSlug?: string
@@ -313,6 +325,7 @@ export function AppSwitcher({
   error,
   onRetry,
   onOpen,
+  open: controlled,
   onOpenChange,
   currentAppSlug,
   orgId,
@@ -329,8 +342,13 @@ export function AppSwitcher({
   align = 'end',
   buttonContent,
 }: AppSwitcherProps) {
-  const [open, setOpen] = useState(false)
+  const [inner, setOpen] = useState(false)
+  const open = controlled ?? inner
   const opened = useRef(false)
+  const onOpenRef = useRef(onOpen)
+  useEffect(() => {
+    onOpenRef.current = onOpen
+  })
   function changeOpen(value: boolean) {
     setOpen(value)
     if (value && !opened.current) {
@@ -339,6 +357,13 @@ export function AppSwitcher({
     }
     onOpenChange?.(value)
   }
+  // Aberto por fora (`open`): a 1ª abertura também avisa `onOpen`.
+  useEffect(() => {
+    if (controlled && !opened.current) {
+      opened.current = true
+      onOpenRef.current?.()
+    }
+  }, [controlled])
 
   return (
     <Popover

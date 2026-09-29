@@ -64,6 +64,12 @@ export type AccountMenuProps = {
   label?: string
   formatRole?: (role: string | null | undefined) => ReactNode
   width?: number
+  /**
+   * Controle externo (opcional, como no `OrgSwitcher`): aberto/fechado. Acréscimo do @nomad/ui (o `@nomad/topbar`
+   * 1.0.0 não tinha); quem não passa nada não vê diferença.
+   */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 /**
@@ -84,6 +90,8 @@ export function AccountMenu({
   label = 'Sua conta',
   formatRole = roleLabel,
   width = 300,
+  open,
+  onOpenChange,
 }: AccountMenuProps) {
   const role = organization ? formatRole(organization.role) : null
   return (
@@ -92,6 +100,8 @@ export function AccountMenu({
       label={label}
       width={width}
       align="end"
+      open={open}
+      onOpenChange={onOpenChange}
       trigger={(p) => (
         <button
           type="button"

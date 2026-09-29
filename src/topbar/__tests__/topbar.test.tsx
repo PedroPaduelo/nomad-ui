@@ -490,3 +490,45 @@ describe('@nomad/ui/topbar: TopBar', () => {
     expect(bar.className).not.toContain('ntb-bar--sticky')
   })
 })
+
+describe('@nomad/ui/topbar: controle externo da grade e do menu da conta (acréscimo)', () => {
+  it('AppSwitcher com open: abre por fora, avisa onOpen uma vez e pede para fechar pelo onOpenChange', async () => {
+    const user = userEvent.setup()
+    const onOpen = vi.fn()
+    const change = vi.fn()
+    const { rerender } = render(
+      <AppSwitcher apps={apps} open onOpen={onOpen} onOpenChange={change} />,
+    )
+    expect(screen.getByRole('dialog', { name: 'Aplicativos' })).toBeInTheDocument()
+    expect(onOpen).toHaveBeenCalledTimes(1)
+    await user.keyboard('{Escape}')
+    expect(change).toHaveBeenLastCalledWith(false)
+    // Controlado: continua aberto até o dono mudar `open`.
+    expect(screen.getByRole('dialog', { name: 'Aplicativos' })).toBeInTheDocument()
+    rerender(<AppSwitcher apps={apps} open={false} onOpen={onOpen} onOpenChange={change} />)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    rerender(<AppSwitcher apps={apps} open onOpen={onOpen} onOpenChange={change} />)
+    expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('AccountMenu com open/onOpenChange', async () => {
+    const user = userEvent.setup()
+    const change = vi.fn()
+    const { rerender } = render(
+      <AccountMenu
+        user={{ name: 'Ana Souza' }}
+        onSignOut={() => {}}
+        open={false}
+        onOpenChange={change}
+      />,
+    )
+    expect(screen.queryByRole('dialog')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Conta de Ana Souza' }))
+    expect(change).toHaveBeenLastCalledWith(true)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    rerender(
+      <AccountMenu user={{ name: 'Ana Souza' }} onSignOut={() => {}} open onOpenChange={change} />,
+    )
+    expect(screen.getByRole('dialog', { name: 'Sua conta' })).toBeInTheDocument()
+  })
+})

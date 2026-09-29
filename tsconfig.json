@@ -19,7 +19,18 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
-    "types": ["node", "vitest/globals", "@testing-library/jest-dom"]
+    "types": ["node", "vitest/globals", "@testing-library/jest-dom"],
+    // Os testes em `src/__tests__/*.browser.test.tsx` consomem as sub-entradas
+    // do próprio pacote; o vitest.a11y.config.ts (vite) já tem aliases; aqui só
+    // é preciso para o typecheck rodar. Quem publica o pacote não carrega isso
+    // (tsconfig.build.json exclui testes).
+    "paths": {
+      "@nomad/ui": ["./src/index.ts"],
+      "@nomad/ui/markdown": ["./src/markdown.ts"],
+      "@nomad/ui/theme-boot": ["./src/lib/themeBoot.ts"],
+      "@nomad/ui/topbar": ["./src/topbar/index.ts"],
+      "@nomad/ui/data": ["./src/data/index.ts"]
+    }
     // Sem alias `@/`: dentro de src/ os imports são relativos, senão os .d.ts
     // publicados apontariam para caminhos que não existem no app que instala.
   },

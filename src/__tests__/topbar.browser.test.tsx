@@ -20,6 +20,7 @@ import {
   type TopbarData,
 } from '@nomad/ui/topbar'
 import { NommandMark } from './fixtures'
+import '../topbar/topbar.css'
 
 const DATA: TopbarData = {
   profile: { name: 'Ana Souza', email: 'ana@nomad.dev', picture: null },

@@ -39,7 +39,8 @@ function NommandMark({ size = 24 }: { size?: number }) {
   )
 }
 
-/** Seletores de paleta (10) e de tema: mudam o app inteiro, como o ThemeSwitcher. */
+/** Seletores de paleta (10) e de tema: mudam o app inteiro, como o ThemeSwitcher.
+ *  Em telas pequenas (<sm) some o rótulo e o resolved-theme para caber no header. */
 function AppearanceControls() {
   const theme = useThemeStore((s) => s.theme)
   const palette = useThemeStore((s) => s.palette)
@@ -48,7 +49,7 @@ function AppearanceControls() {
   const resolved = useResolvedTheme()
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <label className="flex items-center gap-2 text-caption text-text-secondary">
+      <label className="hidden items-center gap-2 text-caption text-text-secondary sm:flex">
         Paleta
         <Select
           sm
@@ -63,8 +64,25 @@ function AppearanceControls() {
           ))}
         </Select>
       </label>
-      <Segmented options={THEME_OPTIONS} value={theme} onChange={setTheme} aria-label="Tema" />
-      <span className="text-caption text-text-tertiary" data-testid="resolved-theme">
+      {/* Mobile: tema em select compacto (a paleta troca pela seção Temas) */}
+      <Select
+        sm
+        className="sm:hidden"
+        value={theme}
+        onChange={(e) => setTheme(e.target.value as Theme)}
+        aria-label="Tema"
+      >
+        <option value="light">Claro</option>
+        <option value="dark">Escuro</option>
+        <option value="system">Sistema</option>
+      </Select>
+      <div className="hidden sm:block">
+        <Segmented options={THEME_OPTIONS} value={theme} onChange={setTheme} aria-label="Tema" />
+      </div>
+      <span
+        className="hidden text-caption text-text-tertiary sm:inline"
+        data-testid="resolved-theme"
+      >
         {resolved === 'dark' ? 'escuro' : 'claro'}
       </span>
     </div>

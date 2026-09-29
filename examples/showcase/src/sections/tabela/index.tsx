@@ -50,36 +50,38 @@ const section: ShowcaseSection = {
             </button>
           </Card.Header>
           <Card.Body className="p-0">
-            <table className="w-full text-body">
-              <thead className="text-caption text-text-tertiary">
-                <tr className="border-b border-border">
-                  <th className="px-4 py-2 text-left font-medium">Pessoa</th>
-                  <th className="px-4 py-2 text-left font-medium">Papel</th>
-                  <th className="px-4 py-2 text-left font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ROWS.map((r) => (
-                  <tr key={r.email} className="border-b border-border last:border-b-0">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar size={28}>{r.initials}</Avatar>
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-text-primary">{r.name}</p>
-                          <p className="truncate text-caption text-text-tertiary">{r.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Chip>{r.role}</Chip>
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge type="status" value={r.status} label={r.status} />
-                    </td>
+            <div className="w-full overflow-x-auto">
+              <table className="w-full min-w-[420px] text-body">
+                <thead className="text-caption text-text-tertiary">
+                  <tr className="border-b border-border">
+                    <th className="px-4 py-2 text-left font-medium">Pessoa</th>
+                    <th className="px-4 py-2 text-left font-medium">Papel</th>
+                    <th className="px-4 py-2 text-left font-medium">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {ROWS.map((r) => (
+                    <tr key={r.email} className="border-b border-border last:border-b-0">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar size={28}>{r.initials}</Avatar>
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-text-primary">{r.name}</p>
+                            <p className="truncate text-caption text-text-tertiary">{r.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Chip>{r.role}</Chip>
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge type="status" value={r.status} label={r.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Card.Body>
         </Card>
       </Demo>

@@ -6,6 +6,11 @@
  * (o motivo real de um 422/409) e o `requestId` (o `x-request-id` da resposta,
  * que a tela de erro mostra como "código para suporte").
  *
+ * Para discriminar erros do backend pelo tipo (`invalid_credentials`,
+ * `mfa_required`, `version_conflict`…) use `errorCode` (vem de `body.error`
+ * quando for string) ou `body` (corpo bruto da resposta). `details`
+ * continua sendo `body.details`.
+ *
  * Copiado de `frontend/src/api/client.ts` e `api/renderErrors.ts` do
  * agent-package; os predicados só classificam um erro já recebido (não falam
  * com o servidor), por isso a fronteira de dados do ESLint os libera em
@@ -24,6 +29,19 @@ export class ApiError extends Error {
   requestId?: string
   /** Código do axios quando não houve resposta (`ERR_NETWORK`, `ECONNABORTED`...). */
   code?: string
+  /**
+   * `error` do corpo de erro quando for string (ex.: `invalid_credentials`,
+   * `mfa_required`, `token_expired`, `version_conflict`). É o que a Conta
+   * usa para escolher a tela/fluxo certo em 401/409/etc. `undefined` quando
+   * o corpo não tem `error` ou não é string.
+   */
+  errorCode?: string
+  /**
+   * Corpo bruto da resposta (o `response.data` do axios). `undefined` quando
+   * não houve resposta (rede/tempo). Use quando precisar ler campos além de
+   * `error`/`message`/`details`.
+   */
+  body?: unknown
 
   constructor(
     message: string,
@@ -31,6 +49,8 @@ export class ApiError extends Error {
     details?: unknown,
     requestId?: string,
     code?: string,
+    errorCode?: string,
+    body?: unknown,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -38,6 +58,8 @@ export class ApiError extends Error {
     this.details = details
     this.requestId = requestId
     this.code = code
+    this.errorCode = errorCode
+    this.body = body
   }
 }
 

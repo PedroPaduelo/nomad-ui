@@ -99,8 +99,10 @@ export interface HttpClientOptions {
    * Nunca para requisição `skipAuth` ou `skipSessionExpiry`. Com `getToken`,
    * só quando a requisição levou o token ATUAL: um 401 de uma chamada feita
    * com o token anterior (a pessoa já entrou de novo) não derruba o login
-   * novo. Encerre a sessão aqui (o guard de rotas leva ao login) ou
-   * redirecione para o login da Conta.
+   * novo. Sem `getToken` (sessão por cookie), só quando a chamada NÃO levou
+   * `Authorization` próprio — credencial própria é de outro mecanismo, e o 401
+   * não é da nossa sessão. Encerre a sessão aqui (o guard de rotas leva ao
+   * login) ou redirecione para o login da Conta.
    */
   onUnauthorized?: (context: UnauthorizedContext) => void
   /** Chamado a cada resposta HTTP (sucesso ou erro): prova de que o backend está de pé. */
@@ -109,8 +111,16 @@ export interface HttpClientOptions {
   onNetworkError?: (error: ApiError) => void
   /** Prazo padrão das requisições (ms). */
   timeout?: number
-  /** Envia cookies em chamadas de outra origem (sessão por cookie). */
+  /** Envia cookies em chamadas da MESMA origem/baseURL (sessão por cookie). */
   withCredentials?: boolean
+  /**
+   * Opt-in explícito para enviar o cookie de sessão em chamadas de **outra
+   * origem** (`https://outro.test/…`, `//outro.test/…`). Sem esta flag, o
+   * cookie da sessão só vai para a mesma origem/baseURL do client — é o padrão
+   * seguro: nunca vaza a credencial para um host que não é a sua API. Use só
+   * se a sua API lega vive em outro host e você confia nele.
+   */
+  withCredentialsCrossOrigin?: boolean
   /** Cabeçalhos fixos extras (enviados em toda requisição). */
   headers?: Record<string, string>
   /** Qualquer outro padrão do `axios.create`. */
@@ -241,6 +251,12 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
   instance.interceptors.request.use(async (config) => {
     if (config.getHeadersUsed) return config
     config.getHeadersUsed = true
+    // Mesmo com `withCredentials: true` no client, o cookie da sessão só vai
+    // para a mesma origem/baseURL — nunca para URL absoluta de outro host.
+    // O opt-in explícito é `withCredentialsCrossOrigin: true`.
+    if (options.withCredentials) {
+      config.withCredentials = isBackendUrl(config.url) || !!options.withCredentialsCrossOrigin
+    }
     const token = options.getToken ? await options.getToken() : undefined
     if (
       token &&
@@ -295,38 +311,45 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
       if (response) options.onResponse?.(response.status)
       else if (error.code === 'ERR_NETWORK') options.onNetworkError?.(apiError)
 
+      // 401 do que o client considera "a sessão atual":
+      // - A URL é do nosso backend (mesmo origin/baseURL); E
+      // - O token enviado (se `getToken`) bate com o atual; ou
+      //   não temos `getToken` (sessão por cookie) e a chamada NÃO levou
+      //   `Authorization` próprio (credencial própria é outro mecanismo).
+      // Chamar `evil.example` com 401, ou um 401 de uma chamada com
+      // `Authorization` próprio num client de cookie, não é "sua sessão
+      // expirou" — não pode disparar refresh nem `onUnauthorized`.
+      const sentToken = bearerOf(error.config)
+      const sentOwnAuth = sentToken !== null
+      const backendCall = isBackendUrl(error.config?.url)
+      const current = options.getToken ? await options.getToken() : null
+      const isCurrentSession =
+        backendCall &&
+        (options.getToken ? sentToken !== null && sentToken === current : !sentOwnAuth)
+
       if (
         status === 401 &&
         options.refreshSession &&
+        isCurrentSession &&
         !error.config?.skipAuth &&
         !error.config?.skipSessionExpiry &&
         !error.config?.[RETRIED]
       ) {
-        const sentToken = bearerOf(error.config)
-        const current = options.getToken ? await options.getToken() : undefined
-        const isCurrentSession = sentToken !== null && sentToken === current
-        if (isCurrentSession) {
-          refreshInFlight ??= options.refreshSession().finally(() => {
-            refreshInFlight = null
-          })
-          try {
-            await refreshInFlight
-            // Reinterceptor cobre o Bearer novo do getToken() e refaz
-            // getHeaders (CSRF pode ter virado outra vez).
-            return retry(error.config as InternalAxiosRequestConfig)
-          } catch {
-            // Refresh falhou: cai no `onUnauthorized` abaixo.
-          }
+        refreshInFlight ??= options.refreshSession().finally(() => {
+          refreshInFlight = null
+        })
+        try {
+          await refreshInFlight
+          // Reinterceptor cobre o Bearer novo do getToken() e refaz
+          // getHeaders (CSRF pode ter virado outra vez).
+          return retry(error.config as InternalAxiosRequestConfig)
+        } catch {
+          // Refresh falhou: cai no `onUnauthorized` abaixo.
         }
       }
 
-      if (status === 401 && options.onUnauthorized && !error.config?.skipSessionExpiry) {
-        const sentToken = bearerOf(error.config)
-        const current = options.getToken ? await options.getToken() : null
-        const isCurrentSession = options.getToken
-          ? sentToken !== null && sentToken === current
-          : true
-        if (isCurrentSession) options.onUnauthorized({ error: apiError, sentToken })
+      if (status === 401 && options.onUnauthorized && isCurrentSession && !error.config?.skipSessionExpiry) {
+        options.onUnauthorized({ error: apiError, sentToken })
       }
       return Promise.reject(apiError)
     },

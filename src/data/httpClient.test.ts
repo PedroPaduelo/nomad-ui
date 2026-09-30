@@ -1,4 +1,5 @@
 import { http as mock, HttpResponse } from 'msw'
+import type { AxiosAdapter } from 'axios'
 import { ApiError, isNetworkError, isNotFoundError, isUnauthorizedError } from './apiError'
 import { createHttpClient, generatedClientConfig } from './httpClient'
 import { API, server, setupMswServer } from '../test/msw'
@@ -341,6 +342,150 @@ describe('createHttpClient', () => {
 
     expect(error.message).toBe('Sua sessão expirou. Entre de novo.')
     expect(onUnauthorized).toHaveBeenCalledWith({ error, sentToken: null })
+  })
+
+  it('withCredentials: cookie NÃO vai para URL absoluta de outro host (mesma origem segura por padrão)', async () => {
+    const captured: Array<{ url: string; withCredentials: boolean | undefined }> = []
+    const adapter: AxiosAdapter = async (config) => {
+      captured.push({ url: config.url ?? '', withCredentials: config.withCredentials })
+      return {
+        data: {},
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: config as never,
+      }
+    }
+    const client = createHttpClient({
+      baseURL: `${API}/`,
+      withCredentials: true,
+      axios: { adapter },
+    })
+
+    await client.get('https://evil.example/steal')
+    await client.get('//evil.example/steal')
+    await client.get('/me')
+    await client.get('http://api.test/api/me')
+
+    expect(captured).toEqual([
+      { url: 'https://evil.example/steal', withCredentials: false },
+      { url: '//evil.example/steal', withCredentials: false },
+      { url: '/me', withCredentials: true },
+      { url: 'http://api.test/api/me', withCredentials: true },
+    ])
+  })
+
+  it('withCredentials: opt-in explícito via withCredentialsCrossOrigin para chamadas cross-host com cookie', async () => {
+    const captured: Array<{ url: string; withCredentials: boolean | undefined }> = []
+    const adapter: AxiosAdapter = async (config) => {
+      captured.push({ url: config.url ?? '', withCredentials: config.withCredentials })
+      return {
+        data: {},
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: config as never,
+      }
+    }
+    const client = createHttpClient({
+      baseURL: `${API}/`,
+      withCredentials: true,
+      withCredentialsCrossOrigin: true,
+      axios: { adapter },
+    })
+
+    await client.get('https://other.example/x')
+
+    expect(captured).toEqual([{ url: 'https://other.example/x', withCredentials: true }])
+  })
+
+  it('401 com credencial própria (Authorization explícito) e sessão por cookie NÃO dispara onUnauthorized', async () => {
+    const sentHeaders: Array<Record<string, string>> = []
+    server.use(
+      mock.get(`${API}/internal`, ({ request }) => {
+        sentHeaders.push({
+          authorization: request.headers.get('authorization') ?? '',
+          cookie: request.headers.get('cookie') ?? '',
+        })
+        return HttpResponse.json({ message: 'api key revogada' }, { status: 401 })
+      }),
+    )
+    const onUnauthorized = vi.fn()
+    const client = createHttpClient({
+      baseURL: API,
+      withCredentials: true,
+      onUnauthorized,
+    })
+
+    const error = await rejection(
+      client.get('/internal', { headers: { Authorization: 'Bearer apk_revogada' } }),
+    )
+
+    expect(error.status).toBe(401)
+    expect(onUnauthorized).not.toHaveBeenCalled()
+    expect(sentHeaders).toEqual([{ authorization: 'Bearer apk_revogada', cookie: '' }])
+  })
+
+  it('401 com credencial própria (Authorization explícito) e refreshSession NÃO dispara refresh nem onUnauthorized', async () => {
+    server.use(
+      mock.get(`${API}/me`, () =>
+        HttpResponse.json({ message: 'api key revogada' }, { status: 401 }),
+      ),
+    )
+    const onUnauthorized = vi.fn()
+    const refresh = vi.fn()
+    const client = createHttpClient({
+      baseURL: API,
+      withCredentials: true,
+      onUnauthorized,
+      refreshSession: refresh,
+    })
+
+    await rejection(
+      client.get('/me', { headers: { Authorization: 'Bearer apk_revogada' } }),
+    )
+
+    expect(refresh).not.toHaveBeenCalled()
+    expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('repro da AP: cross-host NÃO leva cookie E credencial própria em cookie NÃO dispara onUnauthorized', async () => {
+    // Adapter que finge 401 (sem rede): igual ao repro mínimo da [AP] NUI-MIG-04.
+    const captured: Array<{ url: string; withCredentials: boolean | undefined }> = []
+    const fake401Adapter: AxiosAdapter = async (config) => {
+      captured.push({ url: config.url ?? '', withCredentials: config.withCredentials })
+      const err = new Error('401') as Error & {
+        response: { status: number; data: unknown; headers: unknown; config: unknown }
+        config: unknown
+        isAxiosError: boolean
+        toJSON: () => unknown
+      }
+      err.response = { status: 401, data: {}, headers: {}, config }
+      err.config = config
+      err.isAxiosError = true
+      err.toJSON = () => ({})
+      throw err
+    }
+    let n = 0
+    const client = createHttpClient({
+      baseURL: 'https://api.agentpack.example/',
+      withCredentials: true,
+      onUnauthorized: () => {
+        n++
+      },
+      axios: { adapter: fake401Adapter },
+    })
+
+    await rejection(client.get('https://evil.example/steal'))
+    await rejection(
+      client.get('/projects', { headers: { Authorization: 'Bearer apk_revogada' } }),
+    )
+
+    expect(captured).toEqual([
+      { url: 'https://evil.example/steal', withCredentials: false },
+      { url: '/projects', withCredentials: true },
+    ])
+    expect(n).toBe(0)
   })
 
   it('sem resposta: ApiError sem status e onNetworkError', async () => {

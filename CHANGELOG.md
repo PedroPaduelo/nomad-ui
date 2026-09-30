@@ -3,6 +3,22 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.5.0] — 2026-09-30
+
+Minor aditivo (NUI-04 / TOPBAR-PARITY-01 `904e24cf`). Define o **modelo de dados canônico da barra Nomad** (`TopBarModel`) e o Zod schema (`topBarModelSchema`) que os apps usam para validar a resposta de `GET /api/oidc/topbar`. A `[CONTA] [TOPBAR-PARITY-02] c689a5ec` implementa o endpoint com este contrato; cada app migra nas tasks `[LB] NUI-MIG-02b` / `[AP] NUI-MIG-04b` / `[MOTOR] NUI-MIG-03b`. Inclui também o fix visual do brand mark (vitrine mostrava ícone preto sólido no claro).
+
+### Adicionado
+
+- **`TopBarModel` + tipos auxiliares** (`src/topbar/topBarModel.ts`): `apps`, `organization`, `organizations`, `account`, `launcherLinks`, `accountLinks`, `helpLinks`, `createOrgUrl`. Compatível com o `TopbarData` legado (v1.0.x): `profile` + `accountUrl` continuam reconhecidos.
+- **`topBarModelSchema` (Zod 4)**: valida a resposta do backend e transforma para o shape canônico. Aceita o shape legado.
+- **Tokens `--mark-bg` / `--mark-on`** na paleta (`paletteCssVars`): padrão seguro por modo (`#0b1220`/`#0f172a` bg, `#f8fafc`/`#fff` on). Quem usava `var(--mark-bg)` na SVG do logo da org parou de cair em preto/currentColor — vitrine e apps passam a renderizar o mark com a cor certa.
+- **README** (`src/topbar/README.md`): contrato, exemplo de uso, decisões, lista de tipos exportados.
+
+### Testes
+
+- `topBarModel.test.ts` (novo): 5 testes — shape canônico, shape legado, validação de `manageAccountHref`, campos opcionais, rejeição de `launcherLink` sem label.
+- Vitest 114/114 (era 109/109).
+
 ## [1.4.1] — 2026-09-30
 
 Patch visual do `Progress` (reportado pelo dono na vitrine logo após a v1.4.0). Trilha agora ocupa a largura toda do pai por padrão (`w-full`), evitando que o `flex` do contêiner colapse o componente para 0 px quando o pai não força largura. Comportamento de quem passava largura explícita (`className="w-32"` ou wrapper com largura) preservado.

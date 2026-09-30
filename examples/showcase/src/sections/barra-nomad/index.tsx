@@ -17,10 +17,11 @@ import type { ShowcaseSection } from '../../types'
 function NommandMark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" role="img" aria-label="Nommand">
-      <rect width={32} height={32} rx="8" fill="var(--mark-bg)" />
+      <rect width={32} height={32} rx="8" fill="var(--mark-bg, #0f172a)" />
       <g
         fill="none"
-        stroke="var(--mark-on)"
+        stroke="var(--mark-on, #fff)"
+        color="var(--mark-on, #fff)"
         strokeWidth={2.75}
         strokeLinecap="round"
         strokeLinejoin="round"

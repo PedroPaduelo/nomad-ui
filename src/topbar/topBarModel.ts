@@ -38,13 +38,27 @@ import type { TopbarOrganization } from './OrgSwitcher'
 /** Link genérico (geral do launcher, conta ou ajuda). */
 export interface BarLink {
   id: string
-  /** Texto visível; pode ser um nó React quando o app embute um item próprio. */
+  /** Texto visível. O JSON traz string; um app pode embutir um nó React. */
   label: ReactNode
   /** URL absoluta (`https://...`) ou relativa (`/apps/...`). */
   href: string
-  /** Ícone opcional do lucide-react ou componente qualquer. */
+  /** Ícone opcional do lucide-react ou componente qualquer (JSON: nome do ícone). */
   icon?: ReactNode
   /** Abre em nova aba (default true para links que saem do app). */
+  newTab?: boolean
+}
+
+/**
+ * Link vindo do backend (JSON): `label` é string e `icon` é o NOME do ícone
+ * (ex.: "Shield"); o app pode traduzir o nome para um componente. O tipo
+ * `BarLink` (saída do schema) aceita nós React para quem monta o model no
+ * cliente — por isso os dois tipos.
+ */
+export interface BarLinkJson {
+  id: string
+  label: string
+  href: string
+  icon?: string
   newTab?: boolean
 }
 
@@ -52,9 +66,9 @@ export const barLinkSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
   href: z.string().min(1),
-  icon: z.unknown().optional(),
+  icon: z.string().optional(),
   newTab: z.boolean().optional(),
-}) satisfies z.ZodType<BarLink>
+}) satisfies z.ZodType<BarLinkJson, BarLinkJson>
 
 /** Conta ativa (vem de `TopbarData.organization`). */
 export interface TopBarAccountOrg {

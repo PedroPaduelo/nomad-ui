@@ -45,8 +45,55 @@ const model: TopBarModel = {
     { id: 'terms',       label: 'Termos',       href: 'https://example/terms' },
   ],
   createOrgUrl: 'https://conta.example/new',
+  notifications: { unread: 3, href: 'https://conta.example/notifications' },
 }
 ```
+
+## Renderizar a barra a partir do model (v1.6.0)
+
+Com o `model`, o `<TopBar>` monta as 3 peças padrão — seletor de empresa, grade
+de apps e menu da conta — mais o menu de ajuda (`helpLinks`) e o sino de
+notificações (`notifications`), sem nenhum item hard-coded por app. A marca, a
+busca e as ações próprias do app continuam nos slots:
+
+```tsx
+import { TopBar, TopBarModelBrand, topBarModelSchema } from '@nomad/ui/topbar'
+
+const model = topBarModelSchema.parse(await res.json()) // validado na borda
+
+<TopBar
+  model={model}
+  brand={<TopBarModelBrand product="Loadbalance" />} // logo do pacote
+  currentAppSlug="loadbalance"                        // marca o bloco na grade
+  search={<Input aria-label="Buscar" />}              // busca do app (centro)
+  actions={<Paleta />}                                 // ações do app (à direita)
+  onSwitchOrg={(orgId) => navigate(`/auth/sso?org=${orgId}`)}
+  onSignOut={logout}
+/>
+```
+
+| Peça                                          | Do model                                         | Do app                       |
+| --------------------------------------------- | ------------------------------------------------ | ---------------------------- |
+| Grade de apps                                 | `apps[]` (links com `?org=&next=/`, aba nova)    | `currentAppSlug`             |
+| Rodapé da grade                               | `launcherLinks[]` + "Gerenciar sua Conta"        | —                            |
+| Seletor de empresa                            | `organizations[]`, empresa ativa, `createOrgUrl` | `onSwitchOrg`                |
+| Menu da conta                                 | `account`, `accountLinks[]`, "Gerenciar", "Sair" | `onSignOut`                  |
+| Ajuda                                         | `helpLinks[]`                                    | `topBarLabels.help`          |
+| Notificações                                  | `notifications { unread, href }`                 | `onNotificationsClick`       |
+| Marca e busca                                 | —                                                | `brand`, `search`, `actions` |
+| Tema ("Tema · Escuro", alterna claro/escuro)  | — (embutido; usa o `ThemeProvider` do pacote)    | `labels.themeItem`           |
+| "Trocar de empresa" (só com > 1 empresa)      | — (embutido; abre o seletor)                     | —                            |
+
+Tudo opcional: o que não vier no model não aparece (sem `notifications`, sem sino;
+sem `helpLinks`, sem menu de ajuda; sem `onSignOut`, sem "Sair"; uma empresa só,
+sem "Trocar de empresa"). Quem já monta as peças componente por componente pode
+usar `<TopBarModelBar model={…} />` (só o conteúdo, sem a moldura) ou continuar
+com os slots antigos (`org`, `apps`, `account`) — o `TopBar` sem `model` se
+comporta exatamente como na v1.5.0.
+
+`label` e `icon` dos links são `ReactNode` no tipo do cliente (o app pode embutir
+um nó); no JSON são strings (`BarLinkJson`). O pacote não traduz o nome do ícone
+("Shield", "Palette") sozinho: quem quiser faz isso antes de montar o model.
 
 ## Validação Zod (recomendado)
 

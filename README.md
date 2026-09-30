@@ -6,13 +6,38 @@ kit do AgentPack.
 
 > Em construção (épico NUI-00). Instalação, entradas e exemplos entram aqui até a `v1.0.0`.
 
+## Instalação e consumo por tag
+
+O app instala por dependência git numa tag fixa (sem publicar no npm):
+
+```json
+"dependencies": { "@nomad/ui": "github:PedroPaduelo/nomad-ui#v1.5.1" }
+```
+
+### Bump de tag: reinstale e confira (importante)
+
+Com dependência git, o `package-lock.json` guarda o **commit resolvido** da tag. Trocar
+só a tag no `package.json` e rodar `npm install` pode **manter em silêncio o commit
+antigo** (o npm reaproveita a entrada do lock). Já aconteceu com a `v1.5.0` (2026-09-30):
+um app ficou na `v1.4.1` acreditando estar na `v1.5.0`. Procedimento de bump:
+
+```bash
+# 1. edite a tag no package.json do app
+# 2. force a resolução para a nova tag:
+npm install @nomad/ui@github:PedroPaduelo/nomad-ui#vX.Y.Z
+# 3. confirme a versão instalada:
+node -p "require('@nomad/ui/package.json').version"
+```
+
+Em monorepo/workspace, confira o lock **da raiz e o do pacote** (`npm ls @nomad/ui` na raiz).
+
 ## Entradas
 
 | Import                                       | Conteúdo                                                             |
 | -------------------------------------------- | -------------------------------------------------------------------- |
 | `@nomad/ui`                                  | kit (`components/ui`) e tema (provider, hooks, seletor de aparência) |
 | `@nomad/ui/theme.css`                        | tema Tailwind 4 (globals.css do AgentPack)                           |
-| `@nomad/ui/topbar`                           | barra Nomad: `TopBar`, `OrgSwitcher`, `AppSwitcher`, `AccountMenu`   |
+| `@nomad/ui/topbar`                           | barra Nomad: `TopBar`, `TopBarModelBar`, `TopBarModel`, `OrgSwitcher`, `AppSwitcher`, `AccountMenu` |
 | `@nomad/ui/data`                             | `createQueryClient`, `createHttpClient`, Zod e query keys            |
 | `@nomad/ui/tsconfig`, `/eslint`, `/prettier` | presets                                                              |
 

@@ -18,6 +18,14 @@ export type TopBarProps = {
   onSignOut?: TopBarModelBarProps['onSignOut']
   /** Slug do app atual (marca o bloco na grade). */
   currentAppSlug?: string
+  /** Clique no sino do `model`: executa no lugar de seguir `notifications.href`. */
+  onNotificationsClick?: TopBarModelBarProps['onNotificationsClick']
+  /** Some com o sino do `model` (o app tem central de notificações própria). */
+  showNotifications?: TopBarModelBarProps['showNotifications']
+  /** Rótulos/nomes acessíveis das peças do `model` (ver `TopBarModelBar`). */
+  topBarLabels?: TopBarModelBarProps['labels']
+  /** Larguras dos painéis do `model` (px). */
+  topBarWidths?: TopBarModelBarProps['widths']
   /** Antes da marca (ex.: botão ☰ da navegação lateral no celular). */
   leading?: ReactNode
   /** Logo + nome do produto (`TopBarBrand`). */
@@ -52,6 +60,10 @@ export function TopBar({
   onSwitchOrg,
   onSignOut,
   currentAppSlug,
+  onNotificationsClick,
+  showNotifications,
+  topBarLabels,
+  topBarWidths,
   leading,
   brand,
   org,
@@ -72,6 +84,10 @@ export function TopBar({
         currentAppSlug={currentAppSlug}
         onSwitchOrg={onSwitchOrg}
         onSignOut={onSignOut}
+        onNotificationsClick={onNotificationsClick}
+        showNotifications={showNotifications}
+        labels={topBarLabels}
+        widths={topBarWidths}
         search={search}
         actions={actions}
         organize="bar"

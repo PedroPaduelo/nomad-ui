@@ -52,9 +52,14 @@ export function roleLabel(role: string | null | undefined): string {
   return ROLE_LABELS[key] ?? ROLE_PT[key] ?? role
 }
 
-/** Clique "normal" (sem Ctrl/⌘/Shift/botão do meio): só esse é interceptado para navegação SPA. */
+/**
+ * Clique "normal" (sem Ctrl/⌘/Shift/botão do meio): só esse é interceptado
+ * para navegação SPA. Eventos sintéticos (programáticos, como o `click` do
+ * Playwright/testing-library sem `button`) contam como normais.
+ */
 export function isPlainClick(e: MouseEvent): boolean {
-  return e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
+  const button = e.button ?? 0
+  return button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
 }
 
 /**

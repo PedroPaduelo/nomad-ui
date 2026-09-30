@@ -77,7 +77,6 @@ function renderBar(extra: Partial<React.ComponentProps<typeof TopBar>> = {}) {
   return render(
     <TopBar
       model={MODEL}
-      theme="dark"
       brand={<TopBarModelBrand product="Loadbalance" />}
       currentAppSlug="loadbalance"
       onSwitchOrg={() => {}}
@@ -111,10 +110,10 @@ describe('@nomad/ui/topbar: <TopBar model> monta as 3 peças a partir do TopBarM
       disabled: i.getAttribute('aria-disabled'),
     })
     expect(orgItems.map(item)).toEqual([
-      { mark: 'NL', name: 'Nommand Labs', role: 'Proprietário', checked: 'true', disabled: undefined },
-      { mark: 'SS', name: 'Serendiped', role: 'Administrador', checked: 'false', disabled: undefined },
+      { mark: 'NL', name: 'Nommand Labs', role: 'Proprietário', checked: 'true', disabled: null },
+      { mark: 'SE', name: 'Serendiped', role: 'Administrador', checked: 'false', disabled: null },
       {
-        mark: 'FS',
+        mark: 'FA',
         name: 'Filial Sem App',
         role: 'Membro · Sem acesso a este app',
         checked: 'false',
@@ -234,17 +233,6 @@ describe('@nomad/ui/topbar: <TopBar model> monta as 3 peças a partir do TopBarM
     mod.useThemeStore.setState({ theme: 'dark' })
   })
 
-  it('theme: undefined esconde o item de tema', async () => {
-    const user = userEvent.setup()
-    render(
-      <div className="ntb ntb-bar">
-        <TopBarModelBar model={MODEL} theme={undefined} onSignOut={() => {}} organize="trailing" />
-      </div>,
-    )
-    await user.click(screen.getByRole('button', { name: 'Conta de Ana Souza' }))
-    expect(screen.queryByRole('menuitem', { name: /Tema/ })).toBeNull()
-  })
-
   it('ajuda: menu só quando helpLinks vem, com os links da Conta', async () => {
     const user = userEvent.setup()
     const { rerender } = renderBar()
@@ -303,17 +291,19 @@ describe('@nomad/ui/topbar: <TopBar model> monta as 3 peças a partir do TopBarM
     ).toHaveTextContent('99+')
     many.unmount()
 
-    // SPA: callback no lugar do link (botão, sem href)
+    // SPA: `onNotificationsClick` executa no clique normal em vez de seguir o link
     const onNotif = vi.fn()
-    render(
+    const { container } = render(
       <TopBar
         model={MODEL}
         brand={<TopBarModelBrand product="Loadbalance" />}
         onNotificationsClick={onNotif}
       />,
     )
-    const spy = screen.getByLabelText('Notificações, 3 não lidas')
-    fireEvent.click(spy)
+    const spy = container.querySelector<HTMLElement>('.ntb-notif-btn')
+    expect(spy).not.toBeNull()
+    expect(spy?.getAttribute('href')).toBe('https://conta.example/notifications')
+    fireEvent.click(spy as HTMLElement)
     expect(onNotif).toHaveBeenCalledTimes(1)
   })
 

@@ -162,7 +162,12 @@ const section: ShowcaseSection = {
       </Demo>
 
       <Demo title="O TopBarModel de exemplo (o que a Conta devolve)">
-        <pre className="max-h-96 w-full overflow-auto rounded-md border border-border bg-(--surface-code) p-4 font-mono text-caption leading-relaxed text-text-primary">
+        <pre
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- região rolável precisa de foco (axe scrollable-region-focusable)
+          tabIndex={0}
+          aria-label="TopBarModel de exemplo em JSON"
+          className="max-h-96 w-full overflow-auto rounded-md border border-border bg-(--surface-code) p-4 font-mono text-caption leading-relaxed text-text-primary"
+        >
           {JSON.stringify(MODEL, null, 2)}
         </pre>
       </Demo>

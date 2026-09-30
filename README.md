@@ -8,11 +8,18 @@ kit do AgentPack.
 
 ## Instalação e consumo por tag
 
-O app instala por dependência git numa tag fixa (sem publicar no npm):
+O app instala por dependência git numa tag fixa (sem publicar no npm). **Use a URL
+`git+https://` completa**, não o atalho `github:`:
 
 ```json
-"dependencies": { "@nomad/ui": "github:PedroPaduelo/nomad-ui#v1.5.1" }
+"dependencies": {
+  "@nomad/ui": "git+https://github.com/PedroPaduelo/nomad-ui.git#v1.5.2"
+}
 ```
+
+O atalho `github:PedroPaduelo/nomad-ui#vX.Y.Z` faz o `package-lock.json` resolver por
+git+ssh, e `npm ci` quebra em imagem Docker (CI) sem chave ssh — os 3 frontends de
+produção caíram nisso em 2026-09-30.
 
 ### Bump de tag: reinstale e confira (importante)
 
@@ -24,7 +31,7 @@ um app ficou na `v1.4.1` acreditando estar na `v1.5.0`. Procedimento de bump:
 ```bash
 # 1. edite a tag no package.json do app
 # 2. force a resolução para a nova tag:
-npm install @nomad/ui@github:PedroPaduelo/nomad-ui#vX.Y.Z
+npm install @nomad/ui@git+https://github.com/PedroPaduelo/nomad-ui.git#vX.Y.Z
 # 3. confirme a versão instalada:
 node -p "require('@nomad/ui/package.json').version"
 ```

@@ -50,24 +50,6 @@ export {
 export { OrgSwitcher, OrgMark, type OrgSwitcherProps, type TopbarOrganization } from './OrgSwitcher'
 export { AccountMenu, Avatar, type AccountMenuProps } from './AccountMenu'
 export { Popover, usePopoverClose, type PopoverProps, type PopoverTriggerProps } from './Popover'
-// Contrato canônico da barra: tipo + schema Zod (v1.5.0). Sem estes exports o
-// `import { topBarModelSchema } from '@nomad/ui/topbar'` dos apps vinha
-// `undefined` (achado pela [CONTA] em 2026-09-30, PKG-FIXES #6).
-export {
-  topBarModelSchema,
-  topBarProfileSchema,
-  topBarAccountSchema,
-  topBarAccountOrgSchema,
-  topBarOrgOptionSchema,
-  barLinkSchema,
-  type TopBarModel,
-  type TopBarModelInput,
-  type TopBarProfile,
-  type TopBarAccount,
-  type TopBarAccountOrg,
-  type TopBarOrgOption,
-  type BarLink,
-} from './topBarModel'
 export { initials, roleLabel, toneOf, type MenuItemSpec } from './shared'
 export { launchHref } from './launchHref'
 export { fetchLauncherApps, type FetchLauncherOptions } from './fetchLauncherApps'

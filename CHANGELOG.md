@@ -3,6 +3,37 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.6.0] — 2026-09-30
+
+Minor aditivo (`[NUI] [TOPBAR-PARITY-01]` `904e24cf`, parte 2). A barra Nomad passa a ser renderizada INTEIRA a partir do `TopBarModel` (v1.5.0), sem item hard-coded por app — fecha a divergência de conteúdo entre os 4 apps apontada na validação da `[LB] NUI-MIG-02`. Quem já monta as peças componente por componente (slots `org`/`apps`/`account`) continua funcionando igual.
+
+### Adicionado
+
+- **`<TopBar model={…}>`**: com o model, o `TopBar` monta as 3 peças padrão (seletor de empresa, grade de apps, menu da conta) + menu de ajuda (`helpLinks`) + sino de notificações (`notifications`). Marca, busca e ações do app continuam nos slots. Novas props: `model`, `onSwitchOrg`, `onSignOut`, `currentAppSlug`, `onNotificationsClick`, `showNotifications`, `topBarLabels`, `topBarWidths`.
+- **`TopBarModelBar`**: só o conteúdo das peças (sem a moldura) para quem monta o cabeçalho do próprio jeito; `organize="bar" | "trailing"`, `inlinePanels` para a vitrine.
+- **`NotificationsButton` + `notificationsLabel`**: sino da Conta com contador (`unread > 99` → "99+"; `unread: 0` sem pastilha), nome acessível "Notificações, N não lidas"; link para `notifications.href` com `onSelect` opcional (SPA). CSS: `.ntb-notif-btn` / `.ntb-notif-badge`.
+- **`TopBarModelBarBar.notifications` no contrato**: `TopBarNotifications { unread: number, href: string }` + `topBarNotificationsSchema` (obrigatório antes do transform, opcional no app). `createOrgLabel?` (rótulo de "Criar empresa").
+- **`NommandMark` + `TopBarModelBrand`**: a marca Nommand (SVG com `--mark-bg`/`--mark-on`) no pacote — o app não precisa manter o SVG. `TopBarBrand` ganha `showName` (só o logo) e `className`.
+- **Barra pelo model**: Ajuda (menu `helpLinks`), item "Tema · Escuro/Claro/Sistema" no menu da conta (alterna o tema do `ThemeProvider` do pacote), "Criar empresa" no seletor de empresa (`createOrgUrl`, nova aba), "Gerenciar sua Conta Nommand" como primeiro item do menu, `launcherLinks` como tiles na grade.
+- **`MenuItemSpec.onNavigate`**: item de menu com `href` que executa uma ação em vez de seguir o link (navegação SPA; ⌘/Ctrl+clique segue o link).
+- **`AccountMenu.onSignOut` opcional**: sem callback o item "Sair" não aparece (barra anônima); `triggerLabel` customizável.
+- **README**: seção "Instalação e consumo por tag" — bump de tag com dependência git (o `package-lock` prende o commit resolvido: reinstalar com `npm install @nomad/ui@git+https://…#vX.Y.Z` e conferir `node -p "require('@nomad/ui/package.json').version"`), URL `git+https://` completa em vez do atalho `github:` (o atalho resolve por ssh e quebra `npm ci` em Docker sem chave). Seção "Renderizar a barra a partir do model" no README do topbar com a tabela model × app.
+- **Vitrine**: a seção "Barra Nomad" passou a mostrar `<TopBar model>` com um `TopBarModel` de exemplo completo (4 apps, 3 empresas, conta, launcherLinks, accountLinks, helpLinks, notificações), o JSON do model e o model legado da v1.0.x.
+
+### Corrigido
+
+- **`MenuItems` sem `div` intermediária** (axe `aria-required-children`): os itens `menuitem` do menu da conta são filhos diretos do painel `role="menu"`.
+- **`roleLabel`** aceita o papel já em PT-BR (`"Proprietário"` → "Proprietário") além de `owner`/`admin`/`member`, e conhece `viewer`/`billing`/`readonly`.
+- **`isPlainClick`** trata evento sintético sem `button` (Playwright/testing-library) como clique normal.
+
+### Testes
+
+- `topbarModel.test.tsx` (novo, 16 testes): as 3 peças a partir do mesmo model (empresa com papel/empresa sem acesso/"Criar empresa", grade com `?org=&next=/` + `launcherLinks` + rodapé, menu da conta na ordem do §10), ajuda, notificações (contador, 0, 99+, SPA), item de Tema (store + callback), ordem §10 com busca/ações, axe com a barra e os painéis abertos, `<TopBar>` sem `model` inalterado, model legado, `onSignOut` opcional, `onSwitchOrg` opcional.
+- Vitest 142/142 (era 127/127 na 1.5.2), test:a11y 198/198.
+
+### Consumidores
+`[CONTA] [TOPBAR-PARITY-02]` entrega o model completo; adoção nos apps nas tasks `[LB] NUI-MIG-02b` `76a8741a`, `[AP] NUI-MIG-04b` `3807aab1`, `[MOTOR] NUI-MIG-03b`.
+
 ## [1.5.2] — 2026-09-30
 
 Patch (PKG-FIXES #6 e #7, reportados pela `[CONTA] CONTA-MIG-02` `1aa3522b`). Aditivo: nenhuma chamada existente quebra.

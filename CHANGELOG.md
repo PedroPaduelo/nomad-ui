@@ -3,6 +3,22 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.4.0] — 2026-09-30
+
+Minor aditivo (PKG-FIXES #5, reportado pela `[LB] [NUI-MIG-02] 0b537df0`). Mudança aditiva — nenhuma chamada existente quebra.
+
+### Adicionado
+
+- **`Progress.tone?`**: tom do preenchimento. Mapeia para `bg-status-{success,warning,error,info}` ou `bg-accent` no fill, com `data-tone` no root. Antes, `className` ia só na trilha e o fill era sempre `bg-status-success` — apps precisavam pintar o fill via className próprio (o contorno sai).
+- **`Progress.fillClassName?`**: classes extras no fill (ex.: `opacity-50` durante polling).
+- Tipo exportado `ProgressTone`.
+
+### Testes
+
+- `progress.test.tsx` (novo): 8 testes — default `success`, `warning`/`error`/`accent`/`info`, `fillClassName`, `className` segue na trilha, clamp de `value` em [0, 100] refletido em `aria-valuenow`.
+- Vitest 109/109 (era 101/101).
+- Vitrine: nova seção "Progress" com os 5 tons.
+
 ## [1.3.0] — 2026-09-30
 
 Feature aditiva (PKG-FIXES #3b, reportado pela `[LB] [NUI-MIG-02] 0b537df0`). API 100% compatível com o wrapper do load-balance (`toast.success/error/info/warning` + `<Toaster/>`) — a troca no MIG-02b é só de import. Dependência nova: `sonner` (Sonner 2.x).

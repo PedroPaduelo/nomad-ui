@@ -1,6 +1,6 @@
 {
   "name": "@nomad/ui",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Kit, tema (11 paletas), barra Nomad, camada de dados e presets compartilhados pelos apps da Nomad. Base: kit do AgentPack.",
   "type": "module",
   "license": "UNLICENSED",

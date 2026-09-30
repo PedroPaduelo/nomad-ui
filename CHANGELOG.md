@@ -3,6 +3,29 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.5.1] — 2026-09-30
+
+Republicação do conteúdo da v1.5.0. A tag `v1.5.0` foi criada no commit errado
+(`114e667`, que é o da v1.4.1): quem instalava `#v1.5.0` recebia o pacote da
+1.4.1 — sem `TopBarModel`/`topBarModelSchema` e sem o fix do brand mark
+(`--mark-bg`/`--mark-on`). O conteúdo nunca esteve errado; a tag apontava para
+o commit errado. Tags publicadas não se movem (regra do dono), então a
+correção sai em versão nova: use `#v1.5.1`.
+
+Nada muda em relação à 1.5.0 para quem usa a `main`: é o mesmo código, com a
+versão do `package.json` correta.
+
+### Corrigido
+
+- **`v1.5.1` republica o conteúdo da `v1.5.0`** (`TopBarModel` + `topBarModelSchema`
+  + fix do logo), na `main` `6b1699d` e seguintes.
+
+### Checklist de release (novo)
+
+- Antes de avisar a tag como publicada: `git rev-list -n1 <tag>` tem que ser o
+  commit do release **e** `git show <tag>:package.json` tem que trazer a
+  versão certainada. Bug reportado pelo motor em 2026-09-30.
+
 ## [1.5.0] — 2026-09-30
 
 Minor aditivo (NUI-04 / TOPBAR-PARITY-01 `904e24cf`). Define o **modelo de dados canônico da barra Nomad** (`TopBarModel`) e o Zod schema (`topBarModelSchema`) que os apps usam para validar a resposta de `GET /api/oidc/topbar`. A `[CONTA] [TOPBAR-PARITY-02] c689a5ec` implementa o endpoint com este contrato; cada app migra nas tasks `[LB] NUI-MIG-02b` / `[AP] NUI-MIG-04b` / `[MOTOR] NUI-MIG-03b`. Inclui também o fix visual do brand mark (vitrine mostrava ícone preto sólido no claro).

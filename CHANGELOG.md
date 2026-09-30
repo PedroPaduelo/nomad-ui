@@ -3,6 +3,25 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.2.0] — 2026-09-30
+
+Minor aditivo (PKG-FIXES #4, reportado pela `[CONTA] [CONTA-MIG-02] 1aa3522b`). Mudança aditiva: novos campos opcionais em `ApiError`, nenhum campo existente muda de tipo ou de nome. Apps que já discriminam por `error.details` continuam funcionando.
+
+### Adicionado
+
+- **`ApiError.errorCode?: string`** — `body.error` quando for string (ex.: `invalid_credentials`, `mfa_required`, `token_expired`, `version_conflict`). É o que a Conta usa para escolher a tela/fluxo certo em 401/409/etc. `undefined` quando o corpo não tem `error` ou não é string.
+- **`ApiError.body?: unknown`** — corpo bruto da resposta (`response.data` do axios). `undefined` quando não houve resposta (rede/tempo). Use quando precisar ler campos além de `error`/`message`/`details`.
+
+### Compatibilidade
+
+- `ApiError` agora aceita dois argumentos opcionais a mais no construtor (`errorCode`, `body`), depois dos existentes (`message`, `status`, `details`, `requestId`, `code`). Quem chama `new ApiError(...)` com os 5 primeiros argumentos continua igual.
+- `httpClient` agora preenche `errorCode`/`body` automaticamente a partir do corpo da resposta.
+
+### Testes
+
+- `apiError.test.ts` (novo): 4 testes — repro literal da Conta (`POST /auth/login 401 { error: "invalid_credentials" }`), corpo sem `error`, `error` não-string (ignorado), `ERR_NETWORK` (sem corpo).
+- Vitest 94/94 (era 90/90).
+
 ## [1.1.2] — 2026-09-30
 
 Bugfix do `Menu` (PKG-FIXES #3a, reportado pela `[LB] [NUI-MIG-02] 0b537df0`). Mudança aditiva — nenhuma chamada existente quebra.

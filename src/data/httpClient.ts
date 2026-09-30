@@ -139,6 +139,8 @@ interface ErrorBody {
   detail?: unknown
   details?: unknown
   errorId?: unknown
+  /** Código discriminante do erro (`invalid_credentials`, `version_conflict`...). */
+  error?: unknown
 }
 
 function trimSlash(url: string): string {
@@ -301,12 +303,16 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
       const requestId = remember(response)
       const status = response?.status
       const data: unknown = response?.data
+      const isBody = data && typeof data === 'object'
+      const body = isBody ? (data as ErrorBody) : undefined
       const apiError = new ApiError(
         bodyMessage(data) ?? fallbackErrorMessage(error.code, status),
         status,
-        data && typeof data === 'object' ? (data as ErrorBody).details : undefined,
+        body?.details,
         requestId,
         response ? undefined : error.code,
+        typeof body?.error === 'string' && body.error ? body.error : undefined,
+        isBody ? data : undefined,
       )
       if (response) options.onResponse?.(response.status)
       else if (error.code === 'ERR_NETWORK') options.onNetworkError?.(apiError)

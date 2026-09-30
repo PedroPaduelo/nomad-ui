@@ -3,6 +3,19 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.4.1] — 2026-09-30
+
+Patch visual do `Progress` (reportado pelo dono na vitrine logo após a v1.4.0). Trilha agora ocupa a largura toda do pai por padrão (`w-full`), evitando que o `flex` do contêiner colapse o componente para 0 px quando o pai não força largura. Comportamento de quem passava largura explícita (`className="w-32"` ou wrapper com largura) preservado.
+
+### Corrigido
+
+- **`Progress` colapsava para 0 px de largura dentro de containers `flex`** (mostrado na seção Progress da vitrine: 5 tons apareciam sem fill porque a trilha tinha largura 0). Adicionado `w-full` ao root.
+
+### Testes
+
+- `progress.test.tsx`: 1 asserção nova (root tem `w-full`); demais inalteradas.
+- Vitest 109/109.
+
 ## [1.4.0] — 2026-09-30
 
 Minor aditivo (PKG-FIXES #5, reportado pela `[LB] [NUI-MIG-02] 0b537df0`). Mudança aditiva — nenhuma chamada existente quebra.

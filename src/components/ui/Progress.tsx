@@ -46,7 +46,7 @@ export function Progress({
       aria-valuemax={100}
       aria-label={ariaLabel}
       data-tone={tone}
-      className={'h-1.5 overflow-hidden rounded-[3px] bg-surface-overlay ' + className}
+      className={'h-1.5 w-full overflow-hidden rounded-[3px] bg-surface-overlay ' + className}
     >
       <div
         className={

@@ -19,6 +19,7 @@ describe('Progress', () => {
   it('sem tone: fill usa bg-status-success (default, comportamento atual preservado)', () => {
     render(<Progress value={50} aria-label="uso" />)
     const root = screen.getByRole('progressbar', { name: 'uso' })
+    expect(root).toHaveClass('w-full')
     const fill = root.firstElementChild as HTMLElement
     expect(fill).toHaveClass('bg-status-success')
   })

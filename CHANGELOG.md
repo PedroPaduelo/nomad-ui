@@ -3,6 +3,23 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.1.1] — 2026-09-30
+
+Bugfix de segurança do `@nomad/ui/data` (PKG-FIXES #2, reportado pela `[AP] [NUI-MIG-04] c8e002e1`). Nenhuma API existente muda para quem já usa `withCredentials: true` na mesma origem/baseURL. Apps que dependem do cookie cross-host (nenhum hoje) precisam ligar `withCredentialsCrossOrigin: true` explicitamente.
+
+### Corrigido
+
+- **`withCredentials` agora é por origem**, não mais global. Com `withCredentials: true`, o cookie de sessão só vai para a mesma origem/baseURL do client — antes, o cookie ia também para qualquer URL absoluta de outro host (`https://evil.example/…`, `//evil.example/…`), o que vazava a credencial para fora da API. URLs absolutas de outro host passam a ser enviadas **sem cookie** (padrão seguro). Opt-in explícito: `withCredentialsCrossOrigin: true` no `createHttpClient` para apps legadas que confiam no host cross-origin.
+- **`onUnauthorized` (e `refreshSession`) deixa de disparar em 401 de uma chamada que levou `Authorization` próprio num client sem `getToken`** (sessão por cookie). Antes, `(!getToken || ...)` ficava sempre `true` e qualquer 401 de uma chamada com Bearer próprio derrubava a sessão por cookie. Agora, no client de cookie, "a sessão atual" só é verdade quando a chamada **não** levou credencial própria — uma chamada com `Authorization: Bearer apk_revogada` recebe o 401 e propaga; o cookie de sessão segue intacto.
+
+### Adicionado
+
+- Opção `withCredentialsCrossOrigin?: boolean` em `HttpClientOptions` — opt-in explícito para reativar o comportamento antigo em chamadas cross-host (uso raro; exige confiança no host destino).
+
+### Testes
+
+- `httpClient.test.ts`: 5 testes novos (cross-host, opt-in, sessão por cookie + credencial própria, refresh + credencial própria + cookie, repro literal da `[AP]`). Vitest 88/88.
+
 ## [1.1.0] — 2026-09-30
 
 Minor aditivo (PKG-FIXES #1, reportado pela NUI-MIG-02 do loadbalance): sete componentes que a auditoria da NUI-04 prometia para a v1.0.0 e não estavam no pacote. Nenhum nome, token, prop ou export existente muda; quem está na v1.0.x atualiza sem alteração.

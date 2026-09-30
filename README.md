@@ -17,9 +17,21 @@ O app instala por dependência git numa tag fixa (sem publicar no npm). **Use a 
 }
 ```
 
-O atalho `github:PedroPaduelo/nomad-ui#vX.Y.Z` faz o `package-lock.json` resolver por
-git+ssh, e `npm ci` quebra em imagem Docker (CI) sem chave ssh — os 3 frontends de
-produção caíram nisso em 2026-09-30.
+Por que a URL completa: o atalho `github:PedroPaduelo/nomad-ui#vX.Y.Z` faz o npm
+resolver por git+ssh e `npm ci` quebra em imagem Docker sem chave ssh — os 3 frontends
+de produção caíram nisso em 2026-09-30.
+
+**Atenção ao lock:** o `resolved` gravado é `git+ssh://git@github.com/…#<sha>` mesmo
+instalando por `git+https://` (o npm normaliza para ssh ao gravar; verificado em
+2026-09-30). Em máquina **sem** chave ssh (CI/Docker), regenere o lock na primeira
+instalação para ele ficar em https:
+
+```bash
+rm -f package-lock.json && npm install   # grava git+https://…#<sha>
+```
+
+Depois disso `npm ci` funciona sem ssh. Quem já tem lock com `git+ssh://` e CI sem chave:
+apague o `package-lock.json` uma vez (não por app, no CI).
 
 ### Bump de tag: reinstale e confira (importante)
 

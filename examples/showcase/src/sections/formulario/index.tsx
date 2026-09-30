@@ -1,6 +1,7 @@
 import {
   Field,
   Input,
+  Kbd,
   Segmented,
   Select,
   Tabs,
@@ -89,6 +90,28 @@ const section: ShowcaseSection = {
           />
           <p className="text-caption text-text-tertiary">
             Owner decide, Admin gerencia, Membro só lê.
+          </p>
+        </div>
+      </Demo>
+
+      <Demo title="Kbd (teclas) — letra em mono, símbolo Unicode em fonte de texto">
+        <div className="flex w-full flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Kbd>Esc</Kbd>
+            <Kbd>F2</Kbd>
+            <Kbd>Tab</Kbd>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Kbd symbol>⌘</Kbd>
+            <Kbd symbol>K</Kbd>
+            <Kbd symbol>⇧</Kbd>
+            <Kbd symbol>⌥</Kbd>
+            <Kbd symbol>↻</Kbd>
+            <Kbd symbol>⏎</Kbd>
+          </div>
+          <p className="text-caption text-text-tertiary">
+            Linha 1: letra de tecla (mono). Linha 2: glifo Unicode — sem <code>symbol</code> a fonte
+            de mono não tem o glifo e o navegador desenha a caixa vazia (▯).
           </p>
         </div>
       </Demo>

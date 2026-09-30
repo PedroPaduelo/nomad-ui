@@ -3,6 +3,33 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.6.1] — 2026-09-30
+
+Patch aditivo (PKG-FIXES `679ca2d8`, gap reportado pela `[MOTOR] [UI-FIX-MIG03] cd8ec6e4`).
+
+### Corrigido
+
+- **`<Kbd symbol>` renderiza glifo Unicode (⌘, ⇧, ⌥, ↻, ⏎, ⌫) sem a "caixa vazia" (▯).** O `Kbd` tinha `font-mono` fixo e a regra base do `globals.css` (`code, pre, kbd, samp { font-family: var(--font-mono) }`, seletor de elemento) forçava a fonte de mono em TODO `kbd`. Nenhuma das fontes de mono do tema (JetBrains Mono, Fira Code) tem o glifo ⌘/⇧/⌥, então o navegador desenhava ▯ — o dono viu "▯K comandos" na barra. Com `symbol`, a peça usa a fonte de texto (`font-sans`, que cai no system-ui com esses glifos) e marca `data-kbd-symbol`; o `globals.css` ganha `kbd[data-kbd-symbol] { font-family: var(--font-sans) }` (seletor de atributo vence o de elemento). Default inalterado: sem `symbol`, segue mono.
+- **`Header` do pacote**: o atalho "Buscar ou ir para…" passou a usar `<Kbd symbol>` em vez de um `<kbd>` cru com `font-mono` (o ▯K da barra).
+
+### Adicionado
+
+- **`Kbd.symbol?`** (bool) e **`Kbd.mono?`** (`mono` sem `symbol` não muda nada; `symbol mono` força mono). Tipo `KbdProps` exportado. Nada quebra: prop nova, default igual ao comportamento de hoje.
+
+### Testes
+
+- `kbd.test.tsx` (novo, 8 testes, jsdom): mono por padrão; `symbol` → `font-sans` + `data-kbd-symbol`; cada modificador (⌘ ⇧ ⌥ ⌃ ↻ ⏎ ⌫); `mono` não reverte `symbol`; `className` do app entra; o `Header` usa `Kbd symbol`; axe.
+- `kbd.browser.test.tsx` (novo, 22 testes, Chromium × 11 paletas × claro/escuro): a **fonte computada** de `kbd[data-kbd-symbol]` não é a de mono em nenhum caso, o `kbd` de letra continua em JetBrains Mono, e o contraste da cápsula passa no axe.
+- Vitest 150/150 (era 142/142), test:a11y 220/220 (era 198/198).
+
+### Consumidores
+
+Os 4 apps: trocar `<Kbd>⌘K</Kbd>` por `<Kbd symbol>⌘K</Kbd>` (ou o `kbd` cru pelo `Kbd symbol`) e **tirar o contorno `font-sans` no app** (motor: CommandBar e o `↻` da lista de conversas).
+
+### Nota (lock em workspace)
+
+Bump em monorepo/workspace: o `package-lock.json` da **raiz** manda. Editar a tag só no `package.json` do pacote (ex.: `motor/fe`) não instala nada enquanto a entrada da raiz continuar pinada — aconteceu com o motor em 2026-09-30 (pediu 1.5.1, ficou na 1.4.1). Atualize os dois locks e confira `require('@nomad/ui/package.json').version` (README, seção "Instalação e consumo por tag").
+
 ## [1.6.0] — 2026-09-30
 
 Minor aditivo (`[NUI] [TOPBAR-PARITY-01]` `904e24cf`, parte 2). A barra Nomad passa a ser renderizada INTEIRA a partir do `TopBarModel` (v1.5.0), sem item hard-coded por app — fecha a divergência de conteúdo entre os 4 apps apontada na validação da `[LB] NUI-MIG-02`. Quem já monta as peças componente por componente (slots `org`/`apps`/`account`) continua funcionando igual.
@@ -32,6 +59,7 @@ Minor aditivo (`[NUI] [TOPBAR-PARITY-01]` `904e24cf`, parte 2). A barra Nomad pa
 - Vitest 142/142 (era 127/127 na 1.5.2), test:a11y 198/198.
 
 ### Consumidores
+
 `[CONTA] [TOPBAR-PARITY-02]` entrega o model completo; adoção nos apps nas tasks `[LB] NUI-MIG-02b` `76a8741a`, `[AP] NUI-MIG-04b` `3807aab1`, `[MOTOR] NUI-MIG-03b`.
 
 ## [1.5.2] — 2026-09-30
@@ -55,6 +83,7 @@ Patch (PKG-FIXES #6 e #7, reportados pela `[CONTA] CONTA-MIG-02` `1aa3522b`). Ad
 - Vitest 127/127 (era 114/114 na 1.5.1).
 
 ### Consumidores
+
 Conta (`[CONTA] CONTA-MIG-02`): pode validar com `topBarModelSchema` vindo de `@nomad/ui/topbar`; o login com senha errada não desloga mais. Apps que já usavam `topBarModelSchema` de um import direto de `src/topbar/topBarModel` passam a usar o sub-path público.
 
 ## [1.5.1] — 2026-09-30
@@ -72,7 +101,7 @@ versão do `package.json` correta.
 ### Corrigido
 
 - **`v1.5.1` republica o conteúdo da `v1.5.0`** (`TopBarModel` + `topBarModelSchema`
-  + fix do logo), na `main` `6b1699d` e seguintes.
+  - fix do logo), na `main` `6b1699d` e seguintes.
 
 ### Checklist de release (novo)
 

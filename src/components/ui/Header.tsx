@@ -17,6 +17,7 @@
 import { Menu as MenuIcon, Package, Search } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { SIDEBAR_MOBILE_ID } from './Sidebar'
+import { Kbd } from './Kbd'
 
 export interface HeaderProps {
   /**
@@ -108,9 +109,11 @@ export function Header({
         >
           <Search className="h-4 w-4 shrink-0" strokeWidth={1.75} />
           Buscar ou ir para…
-          <kbd className="ml-auto rounded-sm border border-border bg-surface-body px-1.5 py-px font-mono text-micro text-text-tertiary">
+          {/* `symbol`: o atalho vem como ⌘K/⌃K (glifo Unicode); a fonte de mono
+              não tem o glifo e a barra mostrava "▯K" (PKG-FIXES 679ca2d8). */}
+          <Kbd symbol className="ml-auto">
             {commandShortcutLabel}
-          </kbd>
+          </Kbd>
         </button>
       )}
 

@@ -48,17 +48,19 @@ npm install @nomad/ui@git+https://github.com/PedroPaduelo/nomad-ui.git#vX.Y.Z
 node -p "require('@nomad/ui/package.json').version"
 ```
 
-Em monorepo/workspace, confira o lock **da raiz e o do pacote** (`npm ls @nomad/ui` na raiz).
+Em monorepo/workspace, o lock **da raiz manda**: bump só no `package.json` do pacote (ex.: `motor/fe`)
+não instala nada enquanto a entrada da raiz continuar pinada — atualize os dois locks e confira
+`require('@nomad/ui/package.json').version` (`npm ls @nomad/ui` na raiz).
 
 ## Entradas
 
-| Import                                       | Conteúdo                                                             |
-| -------------------------------------------- | -------------------------------------------------------------------- |
-| `@nomad/ui`                                  | kit (`components/ui`) e tema (provider, hooks, seletor de aparência) |
-| `@nomad/ui/theme.css`                        | tema Tailwind 4 (globals.css do AgentPack)                           |
+| Import                                       | Conteúdo                                                                                            |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `@nomad/ui`                                  | kit (`components/ui`) e tema (provider, hooks, seletor de aparência)                                |
+| `@nomad/ui/theme.css`                        | tema Tailwind 4 (globals.css do AgentPack)                                                          |
 | `@nomad/ui/topbar`                           | barra Nomad: `TopBar`, `TopBarModelBar`, `TopBarModel`, `OrgSwitcher`, `AppSwitcher`, `AccountMenu` |
-| `@nomad/ui/data`                             | `createQueryClient`, `createHttpClient`, Zod e query keys            |
-| `@nomad/ui/tsconfig`, `/eslint`, `/prettier` | presets                                                              |
+| `@nomad/ui/data`                             | `createQueryClient`, `createHttpClient`, Zod e query keys                                           |
+| `@nomad/ui/tsconfig`, `/eslint`, `/prettier` | presets                                                                                             |
 
 ## Barra superior Nomad
 
@@ -139,9 +141,7 @@ const sections: SidebarSection[] = [
   },
   {
     label: 'Catálogo',
-    items: [
-      { key: 'skills', label: 'Skills', icon: <Puzzle />, href: '/catalog/skills' },
-    ],
+    items: [{ key: 'skills', label: 'Skills', icon: <Puzzle />, href: '/catalog/skills' }],
   },
 ]
 
@@ -175,7 +175,9 @@ function App({ children }: { children: React.ReactNode }) {
                 <ThemeSwitcher />
                 <HeaderUserMenu
                   user={{ name: 'Ana Souza', email: 'ana@nomad.dev' }}
-                  onSignOut={() => { /* limpar sessão */ }}
+                  onSignOut={() => {
+                    /* limpar sessão */
+                  }}
                 />
               </>
             ),

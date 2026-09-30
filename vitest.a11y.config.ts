@@ -21,6 +21,12 @@ export default defineConfig({
       '@base-ui/react/popover',
       '@base-ui/react/switch',
       '@base-ui/react/tabs',
+      // `zod` entra pelo schema do TopBarModel; sem listar aqui, a primeira
+      // execução numa worktree nova otimiza no meio da coleta e o Vite
+      // recarrega a página de teste no meio da suite (todos os arquivos
+      // falham a importação com "Failed to fetch dynamically imported
+      // module"). Vira um flake só na primeira rodada.
+      'zod',
     ],
   },
   test: {

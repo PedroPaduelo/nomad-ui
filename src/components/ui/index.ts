@@ -94,7 +94,7 @@ export { Tabs, TabsList, Tab, TabsPanel } from './Tabs'
 export type { TabsProps, TabsListProps, TabProps, TabsPanelProps } from './Tabs'
 export { Progress } from './Progress'
 export type { ProgressProps, ProgressTone } from './Progress'
-export { Kbd } from './Kbd'
+export { Kbd, type KbdProps } from './Kbd'
 export { PropertyPicker } from './PropertyPicker'
 export type { PropertyOption, PropertyPickerProps } from './PropertyPicker'
 

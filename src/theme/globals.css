@@ -401,6 +401,15 @@ html.light {
     font-family: var(--font-mono);
   }
 
+  /* Kbd com símbolo Unicode (⌘, ⇧, ⌥, ↻): a fonte de mono não tem o glifo e o
+     navegador desenha a caixa vazia (▯). A regra acima é de elemento; este
+     seletor de atributo (vindo do `Kbd symbol`) tem especificidade maior e
+     devolve a fonte de texto, que cai no system-ui com esses glifos
+     (PKG-FIXES 679ca2d8, reportado pela [MOTOR] UI-FIX-MIG03). */
+  kbd[data-kbd-symbol] {
+    font-family: var(--font-sans);
+  }
+
   /* Focus ring — accessible */
   :focus-visible {
     outline: 2px solid var(--color-accent);

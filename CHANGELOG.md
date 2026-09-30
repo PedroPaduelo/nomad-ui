@@ -3,6 +3,28 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.1.0] — 2026-09-30
+
+Minor aditivo (PKG-FIXES #1, reportado pela NUI-MIG-02 do loadbalance): sete componentes que a auditoria da NUI-04 prometia para a v1.0.0 e não estavam no pacote. Nenhum nome, token, prop ou export existente muda; quem está na v1.0.x atualiza sem alteração.
+
+### Adicionado
+
+- `Switch` (+ `switchTrackVariants`, `SwitchProps`) — liga/desliga APG "Switch" sobre `@base-ui/react/switch`, com `label`/`description` ou `aria-label`, tamanhos `sm`/`md`.
+- `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHeaderCell`, `TableCell` (+ `tableRowVariants`, tipos `TableProps`, `TableRowProps`, `TableRowTone`, `TableHeaderCellProps`, `TableCellProps`, `TableSort`) — tabela semântica, cabeçalho ordenável com `aria-sort`, tons de linha `default`/`selected`/`highlight`/`danger`.
+- `Pagination` (+ `PaginationProps`) — faixa "26–50 de 1.234", Anterior/Próxima com nome acessível e pontas desabilitadas; rótulos e formatação trocáveis.
+- `Banner` (+ `bannerVariants`, `BannerProps`, `BannerTone`) — aviso `info`/`success`/`warning`/`error` com título, descrição, ação e dispensar.
+- `MultiSelect` (+ `MultiSelectProps`, `MultiSelectOption`) — seleção múltipla em `Popover` com busca opcional e resumo da seleção.
+- `CodeBlock` (+ `highlightJson`, `CodeBlockProps`) — bloco de código em região rolável focável, realce de JSON e botão de copiar.
+- `StatusDot` (+ `statusDotVariants`, `StatusDotProps`, `StatusDotTone`) — ponto de status `success`/`warning`/`error`/`info`/`accent`/`neutral`, com `pulse` e nome acessível opcional.
+
+Fonte: `PedroPaduelo/load-balance` em `0d728c1` (`frontend/src/components/ui/*`), só com o alias `@/lib/utils` trocado pelo caminho relativo. Todos usam tokens do tema e Base UI.
+
+### Testes
+
+- Unitários (`src/components/ui/__tests__/*`): 20 testes (os 6 do loadbalance + bordas da `Pagination`).
+- `axe a11y` em `src/__tests__/kit-extras.browser.test.tsx`: os 7 componentes com todos os tons, **11 paletas × claro/escuro (22 casos), 0 violação**. Total do `test:a11y`: 182/182.
+- `vitest.a11y.config.ts` pré-otimiza as entradas `@base-ui/react/*` (`optimizeDeps.include`) para o Vite não recarregar a suíte na primeira otimização.
+
 ## [1.0.1] — 2026-09-30
 
 Patch aditivo: 11ª paleta oficial do @nomad/ui. Compatibilidade total — nenhum nome de paleta, token, componente, prop ou export existente muda. Apps que já estavam na v1.0.0 continuam funcionando sem alterações.

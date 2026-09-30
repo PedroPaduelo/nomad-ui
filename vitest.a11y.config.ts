@@ -10,6 +10,19 @@ import { playwright } from '@vitest/browser-playwright'
  */
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Entradas do Base UI que os componentes importam: pré-otimizadas para o Vite
+  // não recarregar o teste no meio da coleta (v1.1.0: `switch` entrou com o kit
+  // extra e derrubou a suíte na primeira otimização).
+  optimizeDeps: {
+    include: [
+      '@base-ui/react/collapsible',
+      '@base-ui/react/combobox',
+      '@base-ui/react/menu',
+      '@base-ui/react/popover',
+      '@base-ui/react/switch',
+      '@base-ui/react/tabs',
+    ],
+  },
   test: {
     include: ['src/**/*.browser.test.{ts,tsx}'],
     passWithNoTests: true,

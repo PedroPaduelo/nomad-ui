@@ -3,6 +3,27 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.3.0] — 2026-09-30
+
+Feature aditiva (PKG-FIXES #3b, reportado pela `[LB] [NUI-MIG-02] 0b537df0`). API 100% compatível com o wrapper do load-balance (`toast.success/error/info/warning` + `<Toaster/>`) — a troca no MIG-02b é só de import. Dependência nova: `sonner` (Sonner 2.x).
+
+### Adicionado
+
+- **`Toaster`** (`src/components/ui/Toaster.tsx`) — wrapper Sonner 2.x com os tokens da paleta ativa. Lê o `theme` do `useResolvedTheme()` automaticamente (sem precisar passar `theme` por prop). Posição e offset configuráveis; padrão `bottom-right`. `richColors` + `closeButton` sempre ligados.
+- **`useToast()`** (`src/components/ui/useToast.ts`) — referência CONSTANTE (`success`, `error`, `warning`, `info`, `loading`, `dismiss`, `promise`) segura pra usar como dependência de hooks. Alias `useNotify` (legado) exportado.
+- **Vitrine**: nova seção "Toasts" (`examples/showcase/src/sections/toasts/`) com 5 botões (um por tom + dismiss). `Toaster` global montado em `App.tsx`.
+
+### Tokens injetados
+
+- `--normal-{bg,border,text}` → tokens neutros da paleta (`--surface-raised`, `--color-border`, `--color-text-primary`).
+- `--{success,error,warning,info}-{bg,border,text}` → tom da paleta via `color-mix(... 12% / 30% / cheia)`. Mesma fórmula do wrapper do load-balance e do `MainLayout` do agent-package.
+- `--border-radius` → `--radius-control`.
+
+### Testes
+
+- `toast.test.tsx` (novo): 7 testes — referência estável do hook, todas as funções expostas, região renderizada, tema injeta CSS vars com `color-mix` (não cores hardcoded), clique dispara `[data-sonner-toast]`, `position` customizada aceita.
+- Vitest 101/101 (era 94/94).
+
 ## [1.2.0] — 2026-09-30
 
 Minor aditivo (PKG-FIXES #4, reportado pela `[CONTA] [CONTA-MIG-02] 1aa3522b`). Mudança aditiva: novos campos opcionais em `ApiError`, nenhum campo existente muda de tipo ou de nome. Apps que já discriminam por `error.details` continuam funcionando.

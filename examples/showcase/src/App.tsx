@@ -5,6 +5,7 @@ import {
   PALETTES,
   Segmented,
   Select,
+  Toaster,
   useResolvedTheme,
   useThemeStore,
   type PaletteId,
@@ -248,6 +249,7 @@ export function App() {
       mainAriaLabel="Conteúdo da vitrine @nomad/ui"
     >
       {content}
+      <Toaster position="bottom-right" />
     </MainLayout>
   )
 }

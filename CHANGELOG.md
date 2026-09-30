@@ -3,6 +3,29 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.5.2] — 2026-09-30
+
+Patch (PKG-FIXES #6 e #7, reportados pela `[CONTA] CONTA-MIG-02` `1aa3522b`). Aditivo: nenhuma chamada existente quebra.
+
+### Corrigido
+
+- **`@nomad/ui/topbar` volta a exportar o contrato canônico** (PKG-FIXES #6). O barrel `src/topbar/index.ts` não re-exportava `./topBarModel`, então `import { topBarModelSchema } from '@nomad/ui/topbar'` vinha **undefined** e os apps não conseguiam validar a resposta da Conta. Exporta agora `topBarModelSchema` e os tipos `TopBarModel`, `TopBarModelInput`, `TopBarProfile`, `TopBarAccount`, `TopBarAccountOrg`, `TopBarOrgOption`, `BarLink`, mais os schemas auxiliares (`barLinkSchema`, `topBarProfileSchema`, `topBarAccountSchema`, `topBarAccountOrgSchema`, `topBarOrgOptionSchema`).
+- **401 de credencial recusada não derruba mais a pessoa** (PKG-FIXES #7). `createHttpClient` tratava QUALQUER 401 com o token atual como "sessão vencida": um `401 { error: 'invalid_credentials' }` de `POST /auth/login` (senha errada no MFA disable) disparava `refreshSession` + `onUnauthorized` e deslogava quem estava tentando entrar.
+
+### Adicionado
+
+- **`HttpClientOptions.isSessionExpired?(error)`**: decide se um 401 é sessão vencida. Padrão (`defaultIsSessionExpired`, exportado): 401 cujo `body.error` não está em `{ invalid_credentials, invalid_password, mfa_token_invalid, invalid_mfa_code, mfa_required }`. Passe a sua se o backend usar outros códigos de credencial.
+- **`UnauthorizedContext.refreshError?`**: o que o `refreshSession` lançou quando o auto-refresh foi tentado e falhou. Antes o `catch` engolia o erro e o `onUnauthorized` só recebia o 401; agora o app sabe se o refresh foi recusado pelo IdP ou se a rede caiu. `undefined` quando não houve refresh.
+
+### Testes
+
+- `publicExports.test.ts` (novo): importa pelo barrel público e confere que `topBarModelSchema` e os schemas auxiliares são funções, e que o shape legado monta o `account`.
+- `httpClient.test.ts`: +11 testes (5 códigos de credencial via msw com o repro real, 401 sem `errorCode` ainda sendo sessão vencida, `token_expired` ainda renova/desloga, `isSessionExpired` custom, `refreshError` chegando ao `onUnauthorized`, refresh ok repetindo com o token novo).
+- Vitest 127/127 (era 114/114 na 1.5.1).
+
+### Consumidores
+Conta (`[CONTA] CONTA-MIG-02`): pode validar com `topBarModelSchema` vindo de `@nomad/ui/topbar`; o login com senha errada não desloga mais. Apps que já usavam `topBarModelSchema` de um import direto de `src/topbar/topBarModel` passam a usar o sub-path público.
+
 ## [1.5.1] — 2026-09-30
 
 Republicação do conteúdo da v1.5.0. A tag `v1.5.0` foi criada no commit errado

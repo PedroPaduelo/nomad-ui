@@ -53,12 +53,44 @@ export const REQUEST_ID_HEADER = 'x-request-id'
 /** Cabeçalho que o app envia para correlacionar a resposta (espelha `x-request-id`). */
 export const REQUEST_ID_REQUEST_HEADER = 'X-Request-Id'
 
+/**
+ * Códigos de erro que, num 401, NÃO são "sessão vencida": são credencial
+ * recusada pela própria rota (`POST /auth/login` com senha errada, MFA com
+ * código inválido). Nesses casos o `createHttpClient` NÃO deve tentar refresh
+ * nem chamar `onUnauthorized` — do contrário um 401 de login derruba a pessoa
+ * que está tentando entrar (PKG-FIXES #7, reportado pela [CONTA]).
+ */
+const CREDENTIAL_ERROR_CODES = new Set([
+  'invalid_credentials',
+  'invalid_password',
+  'mfa_token_invalid',
+  'invalid_mfa_code',
+  'mfa_required',
+])
+
+/**
+ * Padrão de `isSessionExpired`: 401 cujo `errorCode` não é de credencial.
+ * Todo 401 sem `errorCode` conta como sessão vencida (o backend legado só
+ * devolvia `{ message }` no 401 de sessão).
+ */
+export function defaultIsSessionExpired(error: ApiError): boolean {
+  return !error.errorCode || !CREDENTIAL_ERROR_CODES.has(error.errorCode)
+}
+
 /** O que o `onUnauthorized` recebe (só chamado quando não há auto-refresh). */
 export interface UnauthorizedContext {
   /** O erro já normalizado (status 401). */
   error: ApiError
   /** Token Bearer que a requisição levou (`null` quando não levou). */
   sentToken: string | null
+  /**
+   * O que o `refreshSession` lançou, quando o auto-refresh foi tentado e
+   * falhou (PKG-FIXES #7). Antes o `catch` engolia o erro e o `onUnauthorized`
+   * só via o 401 — agora o app sabe se o refresh foi recusado pelo IdP
+   * (ex.: refresh token revogado) ou se a rede caiu. `undefined` quando não
+   * houve refresh.
+   */
+  refreshError?: unknown
 }
 
 /** Cabeçalhos extras que o app injeta em cada requisição (CSRF, versionamento, etc.). */
@@ -105,6 +137,18 @@ export interface HttpClientOptions {
    * login) ou redirecione para o login da Conta.
    */
   onUnauthorized?: (context: UnauthorizedContext) => void
+  /**
+   * Um 401 é "sessão vencida" (refresh + `onUnauthorized`) ou só "credencial
+   * recusada" (login com senha errada, MFA com código inválido)? Padrão:
+   * `defaultIsSessionExpired` — 401 cujo `body.error` não está em
+   * `{ invalid_credentials, invalid_password, mfa_token_invalid,
+   * invalid_mfa_code, mfa_required }` conta como sessão vencida. Passe a sua
+   * se o backend usar outros códigos de credencial (PKG-FIXES #7).
+   *
+   * Só consulted depois das portas `skipAuth`/`skipSessionExpiry` da
+   * requisição, então um 401 de login com `skipSessionExpiry` nem chega aqui.
+   */
+  isSessionExpired?: (error: ApiError) => boolean
   /** Chamado a cada resposta HTTP (sucesso ou erro): prova de que o backend está de pé. */
   onResponse?: (status: number) => void
   /** Chamado quando a requisição não recebeu resposta (ERR_NETWORK): o backend pode ter caiu. */
@@ -332,11 +376,16 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
       const isCurrentSession =
         backendCall &&
         (options.getToken ? sentToken !== null && sentToken === current : !sentOwnAuth)
+      // 401 de credencial recusada (login, MFA) não é sessão vencida: não
+      // entra em refresh nem derruba a pessoa (PKG-FIXES #7).
+      const sessionExpired = (options.isSessionExpired ?? defaultIsSessionExpired)(apiError)
 
+      let refreshError: unknown
       if (
         status === 401 &&
         options.refreshSession &&
         isCurrentSession &&
+        sessionExpired &&
         !error.config?.skipAuth &&
         !error.config?.skipSessionExpiry &&
         !error.config?.[RETRIED]
@@ -349,13 +398,20 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
           // Reinterceptor cobre o Bearer novo do getToken() e refaz
           // getHeaders (CSRF pode ter virado outra vez).
           return retry(error.config as InternalAxiosRequestConfig)
-        } catch {
-          // Refresh falhou: cai no `onUnauthorized` abaixo.
+        } catch (e) {
+          // Refresh falhou: o `onUnauthorized` abaixo recebe o motivo (401).
+          refreshError = e
         }
       }
 
-      if (status === 401 && options.onUnauthorized && isCurrentSession && !error.config?.skipSessionExpiry) {
-        options.onUnauthorized({ error: apiError, sentToken })
+      if (
+        status === 401 &&
+        options.onUnauthorized &&
+        isCurrentSession &&
+        sessionExpired &&
+        !error.config?.skipSessionExpiry
+      ) {
+        options.onUnauthorized({ error: apiError, sentToken, refreshError })
       }
       return Promise.reject(apiError)
     },

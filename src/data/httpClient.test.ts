@@ -521,3 +521,151 @@ describe('createHttpClient', () => {
     })
   })
 })
+
+/**
+ * PKG-FIXES #7 (v1.5.2): um 401 de credencial recusada (login com senha
+ * errada, MFA com código inválido) não pode entrar em refresh nem derrubar a
+ * pessoa: antes, `createHttpClient` tratava QUALQUER 401 com o token atual como
+ * "sessão vencida" e chamava `refreshSession` + `onUnauthorized`.
+ */
+describe('createHttpClient: 401 de credencial não é sessão vencida (#7)', () => {
+  const credentialCodes = [
+    'invalid_credentials',
+    'invalid_password',
+    'mfa_token_invalid',
+    'invalid_mfa_code',
+    'mfa_required',
+  ]
+
+  it.each(credentialCodes)('repro do backend: 401 { error: %s } não chama refresh nem onUnauthorized', async (code) => {
+    const refresh = vi.fn().mockResolvedValue(undefined)
+    const out = vi.fn()
+    server.use(
+      mock.post(`${API}/auth/mfa/verify`, () =>
+        HttpResponse.json({ error: code, message: 'credencial recusada' }, { status: 401 }),
+      ),
+    )
+    const client = createHttpClient({
+      baseURL: `${API}/`,
+      getToken: () => 'tok-1',
+      refreshSession: refresh,
+      onUnauthorized: out,
+    })
+
+    const error = await rejection(client.post('/auth/mfa/verify', { code: '000000' }))
+
+    expect(error.status).toBe(401)
+    expect(error.errorCode).toBe(code)
+    expect(refresh).not.toHaveBeenCalled()
+    expect(out).not.toHaveBeenCalled()
+  })
+
+  it('401 sem errorCode continua sendo sessão vencida (backend legado)', async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined)
+    const out = vi.fn()
+    server.use(
+      mock.get(`${API}/projects`, () => HttpResponse.json({ message: 'Sessão expirada' }, { status: 401 })),
+    )
+    const client = createHttpClient({
+      baseURL: `${API}/`,
+      getToken: () => 'tok-1',
+      refreshSession: refresh,
+      onUnauthorized: out,
+    })
+
+    await rejection(client.get('/projects'))
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(out).toHaveBeenCalledTimes(1)
+  })
+
+  it('401 com errorCode de sessão (token_expired) ainda renova e desloga', async () => {
+    const refresh = vi.fn().mockRejectedValue(new Error('refresh revogado'))
+    const out = vi.fn()
+    server.use(
+      mock.get(`${API}/projects`, () =>
+        HttpResponse.json({ error: 'token_expired', message: 'Sessão expirada' }, { status: 401 }),
+      ),
+    )
+    const client = createHttpClient({
+      baseURL: `${API}/`,
+      getToken: () => 'tok-1',
+      refreshSession: refresh,
+      onUnauthorized: out,
+    })
+
+    await rejection(client.get('/projects'))
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(out).toHaveBeenCalledTimes(1)
+  })
+
+  it('isSessionExpired custom: o app decide pelo próprio código', async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined)
+    const out = vi.fn()
+    server.use(
+      mock.post(`${API}/auth/login`, () =>
+        HttpResponse.json({ error: 'senha_expirada', message: 'troque a senha' }, { status: 401 }),
+      ),
+    )
+    const client = createHttpClient({
+      baseURL: `${API}/`,
+      getToken: () => 'tok-1',
+      refreshSession: refresh,
+      onUnauthorized: out,
+      isSessionExpired: (e) => e.errorCode !== 'senha_expirada',
+    })
+
+    await rejection(client.post('/auth/login', { password: 'x' }))
+
+    expect(refresh).not.toHaveBeenCalled()
+    expect(out).not.toHaveBeenCalled()
+  })
+
+  it('refresh falho: o onUnauthorized recebe o motivo (refreshError) em vez de engolir', async () => {
+    const motivo = new Error('refresh token revogado pelo IdP')
+    const refresh = vi.fn().mockRejectedValue(motivo)
+    const out = vi.fn()
+    server.use(
+      mock.get(`${API}/projects`, () => HttpResponse.json({ message: 'Sessão expirada' }, { status: 401 })),
+    )
+    const client = createHttpClient({
+      baseURL: `${API}/`,
+      getToken: () => 'tok-1',
+      refreshSession: refresh,
+      onUnauthorized: out,
+    })
+
+    const error = await rejection(client.get('/projects'))
+
+    expect(out).toHaveBeenCalledTimes(1)
+    expect(out.mock.calls[0][0].refreshError).toBe(motivo)
+    expect(out.mock.calls[0][0].error).toBe(error)
+  })
+
+  it('refresh ok: repete a requisição com o token novo e não desloga', async () => {
+    let token = 'tok-1'
+    const out = vi.fn()
+    server.use(
+      mock.get(`${API}/projects`, ({ request }) => {
+        if (request.headers.get('authorization') === 'Bearer tok-1') {
+          return HttpResponse.json({ message: 'Sessão expirada' }, { status: 401 })
+        }
+        return HttpResponse.json({ items: [{ id: 'p1' }] })
+      }),
+    )
+    const client = createHttpClient({
+      baseURL: `${API}/`,
+      getToken: () => token,
+      refreshSession: async () => {
+        token = 'tok-2'
+      },
+      onUnauthorized: out,
+    })
+
+    const response = await client.get<{ items: { id: string }[] }>('/projects')
+
+    expect(response.data.items[0].id).toBe('p1')
+    expect(out).not.toHaveBeenCalled()
+  })
+})

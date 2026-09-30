@@ -21,6 +21,7 @@ export {
   REQUEST_ID_HEADER,
   REQUEST_ID_REQUEST_HEADER,
 } from './httpClient'
+export { defaultIsSessionExpired } from './httpClient'
 export type { HeaderSource, HttpClient, HttpClientOptions, UnauthorizedContext } from './httpClient'
 export {
   clearCacheOnSessionChange,

@@ -14,6 +14,15 @@ import { Menu as BaseMenu } from '@base-ui/react/menu'
 // de colisão: não é recortado por contêiner com overflow nem vaza da janela.
 //
 // Uso: <Menu button={<...>} ariaLabel="..."><MenuItem/>...</Menu>.
+// A prop `button` é só o **conteúdo** do gatilho: o `MenuTrigger` já
+// renderiza um `<button>` (atributo HTML). Passar um `<button>` aqui gera
+// `<button><button>...</button></button>` (inválido). Use texto, ícone ou
+// qualquer nó que não seja `<button>`.
+//
+// `disabled` no `Menu` desativa o gatilho (atributo HTML `disabled` +
+// `aria-disabled="true"`) e impede a abertura do painel. Sem `disabled`, o
+// gatilho é focável e o painel abre com Enter/Espaço/↓, etc.
+//
 // Só `MenuItem`, `MenuSeparator` e `MenuLabel` entram no painel. Conteúdo
 // interativo livre (botões, formulários) não é menu: use um popover.
 
@@ -21,7 +30,10 @@ const POPUP_CLASS =
   'max-w-[320px] min-w-[220px] rounded-md border border-border bg-surface-raised p-1.5 shadow-lg outline-hidden'
 
 export interface MenuProps {
-  /** Conteúdo do botão-gatilho. */
+  /**
+   * Conteúdo do botão-gatilho. NÃO envolva em `<button>` — o gatilho já é um
+   * `<button>` (atributo HTML). Use texto, ícone ou qualquer elemento neutro.
+   */
   button: ReactNode
   buttonClassName?: string
   ariaLabel?: string
@@ -30,6 +42,12 @@ export interface MenuProps {
   className?: string
   /** Classes extras no painel do dropdown (ex. max-h + scroll). */
   menuClassName?: string
+  /**
+   * `true` desativa o gatilho (`disabled` HTML + `aria-disabled="true"`) e
+   * impede a abertura do painel. Sem isso, o gatilho é focável e abre
+   * normalmente.
+   */
+  disabled?: boolean
   /**
    * @deprecated O painel sempre vai para o `body` e é reposicionado para
    * caber na janela; o valor é ignorado. Mantido para não quebrar quem passa.
@@ -45,12 +63,17 @@ export function Menu({
   children,
   className = '',
   menuClassName = '',
+  disabled = false,
 }: MenuProps) {
   const popupRef = useRef<HTMLDivElement>(null)
   return (
     <div className={'relative ' + className}>
-      <BaseMenu.Root modal={false}>
-        <BaseMenu.Trigger aria-label={ariaLabel} className={buttonClassName}>
+      <BaseMenu.Root modal={false} disabled={disabled}>
+        <BaseMenu.Trigger
+          aria-label={ariaLabel}
+          className={buttonClassName}
+          disabled={disabled}
+        >
           {button}
         </BaseMenu.Trigger>
         <MenuLayer

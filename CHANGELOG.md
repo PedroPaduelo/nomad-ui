@@ -3,6 +3,23 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.1.2] — 2026-09-30
+
+Bugfix do `Menu` (PKG-FIXES #3a, reportado pela `[LB] [NUI-MIG-02] 0b537df0`). Mudança aditiva — nenhuma chamada existente quebra.
+
+### Corrigido
+
+- **`<Menu disabled>` agora desativa o gatilho de verdade.** A nova prop `disabled?: boolean` em `MenuProps` é passada para `BaseMenu.Root` e `BaseMenu.Trigger`: o `<button>` recebe o atributo HTML `disabled` (e `data-disabled` do Base UI) e o painel não abre. Antes, o `disabled` era ignorado pelo `Menu` e o loadbalance contornava com `pointer-events-none opacity-60` em Toolbar, ConfigsTable, KeyRowActions, GroupsPage e Page. Esse contorno sai quando o app migrar.
+
+### Documentação
+
+- JSDoc da prop `button` agora avisa que **é só o conteúdo do gatilho** — o `MenuTrigger` já renderiza um `<button>` (atributo HTML), e passar `<button>` aqui gerava `<button><button>…</button></button>` (inválido). Os apps que faziam isso podem voltar ao normal (texto/ícone).
+
+### Testes
+
+- `menu.test.tsx` (novo): 2 testes — `disabled` desativa e impede abrir; sem `disabled` o gatilho abre normalmente.
+- Vitest 90/90 (era 88/88).
+
 ## [1.1.1] — 2026-09-30
 
 Bugfix de segurança do `@nomad/ui/data` (PKG-FIXES #2, reportado pela `[AP] [NUI-MIG-04] c8e002e1`). Nenhuma API existente muda para quem já usa `withCredentials: true` na mesma origem/baseURL. Apps que dependem do cookie cross-host (nenhum hoje) precisam ligar `withCredentialsCrossOrigin: true` explicitamente.

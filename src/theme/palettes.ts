@@ -1281,6 +1281,12 @@ export function paletteCssVars(palette: Palette, mode: 'dark' | 'light'): Record
     '--color-error': c.status?.error ?? fallback.error,
     '--color-info': c.status?.info ?? fallback.info,
     '--color-neutral-muted': fallback.neutralMuted,
+    // Brand mark (logo da org nos cards da TopBar): bg sólido + cor do
+    // "N"/path. Padrão seguro por modo — o app pode sobrescrever com
+    // outro logo. Quem usa `var(--mark-bg)` na SVG deixa de cair em
+    // currentColor/preto quando o token não existe.
+    '--mark-bg': mode === 'dark' ? '#0b1220' : '#0f172a',
+    '--mark-on': mode === 'dark' ? '#f8fafc' : '#ffffff',
   }
 }
 

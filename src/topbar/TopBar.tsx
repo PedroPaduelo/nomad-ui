@@ -1,20 +1,36 @@
 import type { MouseEvent, ReactNode } from 'react'
+import { TopBarModelBar, type TopBarModelBarProps } from './TopBarModelBar'
 import { isPlainClick } from './shared'
+import type { TopBarModel } from './topBarModel'
 
 export type TopBarProps = {
+  /**
+   * Contrato canônico da barra (Padrão SSO §10, v1.6.0): com `model`, o
+   * `TopBar` monta as 3 peças padrão (empresa, apps, conta), o menu de ajuda
+   * e o sino de notificações a partir do objeto — sem item hard-coded. Os
+   * slots abaixo continuam valendo para marca, busca e ações do app; `org`,
+   * `apps` e `account` são ignorados quando `model` vem.
+   */
+  model?: TopBarModel
+  /** Callback de troca de empresa do `model` (nomes = `TopBarModelBar`). */
+  onSwitchOrg?: TopBarModelBarProps['onSwitchOrg']
+  /** Logout do `model`. */
+  onSignOut?: TopBarModelBarProps['onSignOut']
+  /** Slug do app atual (marca o bloco na grade). */
+  currentAppSlug?: string
   /** Antes da marca (ex.: botão ☰ da navegação lateral no celular). */
   leading?: ReactNode
   /** Logo + nome do produto (`TopBarBrand`). */
   brand?: ReactNode
-  /** Seletor de empresa (`OrgSwitcher`). */
+  /** Seletor de empresa (`OrgSwitcher`) — ignorado quando `model` vem. */
   org?: ReactNode
   /** Busca do próprio app (centro; some abaixo de 900 px). */
   search?: ReactNode
   /** Ações próprias do app (ajuda, tema, sino…), antes da grade de apps. */
   actions?: ReactNode
-  /** Grade de apps (`AppSwitcher`). */
+  /** Grade de apps (`AppSwitcher`) — ignorada quando `model` vem. */
   apps?: ReactNode
-  /** Menu da conta (`AccountMenu`). */
+  /** Menu da conta (`AccountMenu`) — ignorado quando `model` vem. */
   account?: ReactNode
   /** Fica grudada no topo ao rolar (padrão: sim). */
   sticky?: boolean
@@ -27,8 +43,15 @@ export type TopBarProps = {
  * `leading · brand | org · search · actions · apps · account`. Abaixo de 900 px a busca e o separador somem, o
  * espaçamento aperta e o nome do produto encolhe (em 480 px só o logo fica). Ações que devem sumir no celular
  * podem usar a classe `ntb-hide-sm`.
+ *
+ * Com `model` (v1.6.0) o conteúdo das peças padrão vem do contrato canônico
+ * (ver `TopBarModelBar`); a marca, a busca e as ações do app seguem nos slots.
  */
 export function TopBar({
+  model,
+  onSwitchOrg,
+  onSignOut,
+  currentAppSlug,
   leading,
   brand,
   org,
@@ -40,11 +63,22 @@ export function TopBar({
   className,
   ...rest
 }: TopBarProps) {
-  return (
-    <header
-      className={`ntb ntb-bar${sticky ? ' ntb-bar--sticky' : ''}${className ? ` ${className}` : ''}`}
-      aria-label={rest['aria-label']}
-    >
+  const pieces = model ? (
+    <>
+      {leading}
+      {brand}
+      <TopBarModelBar
+        model={model}
+        currentAppSlug={currentAppSlug}
+        onSwitchOrg={onSwitchOrg}
+        onSignOut={onSignOut}
+        search={search}
+        actions={actions}
+        organize="bar"
+      />
+    </>
+  ) : (
+    <>
       {leading}
       {brand}
       {org && (
@@ -59,6 +93,14 @@ export function TopBar({
         {apps}
         {account}
       </div>
+    </>
+  )
+  return (
+    <header
+      className={`ntb ntb-bar${sticky ? ' ntb-bar--sticky' : ''}${className ? ` ${className}` : ''}`}
+      aria-label={rest['aria-label']}
+    >
+      {pieces}
     </header>
   )
 }
@@ -76,6 +118,9 @@ export type TopBarBrandProps = {
   onNavigate?: () => void
   /** Nome acessível do link (padrão: "<name> <product>, início"). */
   label?: string
+  /** Só o logo, sem o nome (padrão: mostra). */
+  showName?: boolean
+  className?: string
 }
 
 /** Marca da barra: logo + "Nommand <Produto>", como na Conta Nommand. */
@@ -86,6 +131,8 @@ export function TopBarBrand({
   href = '/',
   onNavigate,
   label,
+  showName = true,
+  className,
 }: TopBarBrandProps) {
   function onClick(e: MouseEvent<HTMLAnchorElement>) {
     if (onNavigate && isPlainClick(e)) {
@@ -95,16 +142,73 @@ export function TopBarBrand({
   }
   return (
     <a
-      className="ntb-brand"
+      className={`ntb-brand${className ? ` ${className}` : ''}`}
       href={href}
       onClick={onClick}
       aria-label={label ?? `${name}${product ? ` ${product}` : ''}, início`}
     >
       <span className="ntb-brand__logo">{logo}</span>
-      <span className="ntb-brand__name">
-        {name}
-        {product && <span className="ntb-brand__product"> {product}</span>}
-      </span>
+      {showName ? (
+        <span className="ntb-brand__name">
+          {name}
+          {product && <span className="ntb-brand__product"> {product}</span>}
+        </span>
+      ) : null}
     </a>
+  )
+}
+
+/** SVG de exemplo da marca Nommand (mesmo da Conta), com os tokens `--mark-bg`/`--mark-on`. */
+export function NommandMark({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="8" fill="var(--mark-bg, #0f172a)" />
+      <g
+        fill="none"
+        stroke="var(--mark-on, #fff)"
+        strokeWidth={2.75}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M10.5 22.5V9.5l11 13v-13" />
+      </g>
+    </svg>
+  )
+}
+
+export type TopBarModelBrandProps = {
+  /** Nome do produto (ex.: "Loadbalance"). A marca vem do pacote. */
+  product: string
+  /** Mostra a marca em texto ("Nommand Loadbalance"); padrão: só o logo. */
+  showName?: boolean
+  href?: string
+  onNavigate?: () => void
+  label?: string
+  className?: string
+}
+
+/**
+ * Marca da barra com o logo padrão do pacote (`NommandMark`), para quem não
+ * quer manter o SVG no app: `<TopBarModelBrand product="Loadbalance" />`.
+ */
+export function TopBarModelBrand({
+  product,
+  showName = false,
+  href = '/',
+  onNavigate,
+  label,
+  className,
+}: TopBarModelBrandProps) {
+  return (
+    <TopBarBrand
+      logo={<NommandMark />}
+      name="Nommand"
+      product={product}
+      showName={showName}
+      href={href}
+      onNavigate={onNavigate}
+      label={label ?? `Nommand ${product}, início`}
+      className={className}
+    />
   )
 }

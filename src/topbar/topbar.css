@@ -248,6 +248,31 @@
   color: var(--_fg);
 }
 
+/* Sino de notificações (v1.6.0): botão igual ao de ícone, com a pastilha do contador no canto. */
+.ntb-notif-btn {
+  position: relative;
+  text-decoration: none;
+}
+.ntb-notif-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--_danger);
+  color: var(--_bg);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--_bg);
+  pointer-events: none;
+}
+
 /* ---------------------------------------------------------------- popover */
 .ntb-pop-root {
   position: relative;

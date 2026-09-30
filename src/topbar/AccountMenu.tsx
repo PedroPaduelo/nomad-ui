@@ -58,10 +58,13 @@ export type AccountMenuProps = {
   /** "Trocar de empresa" (aparece quando vem): normalmente abre o `OrgSwitcher`. */
   onSwitchOrganization?: () => void
   switchOrganizationLabel?: string
-  onSignOut: () => void
+  /** Logout. Opcional (v1.6.0): sem callback o item "Sair" não aparece (barra anônima). */
+  onSignOut?: () => void
   signOutLabel?: string
   /** Nome acessível do painel. */
   label?: string
+  /** Nome acessível do gatilho (padrão: "Conta de <nome>"). */
+  triggerLabel?: string
   formatRole?: (role: string | null | undefined) => ReactNode
   width?: number
   /**
@@ -90,6 +93,7 @@ export function AccountMenu({
   onSignOut,
   signOutLabel = 'Sair',
   label = 'Sua conta',
+  triggerLabel,
   formatRole = roleLabel,
   width = 300,
   open,
@@ -110,7 +114,7 @@ export function AccountMenu({
         <button
           type="button"
           className="ntb-btn ntb-avatar-btn"
-          aria-label={`Conta de ${user.name ?? ''}`}
+          aria-label={triggerLabel ?? `Conta de ${user.name ?? ''}`}
           {...p}
         >
           <Avatar name={user.name} src={user.picture} />
@@ -132,7 +136,9 @@ export function AccountMenu({
       </div>
       <MenuDivider />
       <div role="menu" aria-label={label}>
-        {(manageAccountHref || onManageAccount) && (
+        {/* "Gerenciar" só entra aqui quando não vier pelo `extraItems` (o
+            `TopBarModelBar` já o coloca como primeiro item). */}
+        {!extraItems.some((i) => i.key === 'manage-account') && (manageAccountHref || onManageAccount) && (
           <MenuItem icon={<UserIcon />} href={manageAccountHref} onSelect={onManageAccount}>
             {manageAccountLabel}
           </MenuItem>
@@ -143,10 +149,14 @@ export function AccountMenu({
             {switchOrganizationLabel}
           </MenuItem>
         )}
-        <MenuDivider />
-        <MenuItem icon={<LogoutIcon />} onSelect={onSignOut}>
-          {signOutLabel}
-        </MenuItem>
+        {onSignOut ? (
+          <>
+            <MenuDivider />
+            <MenuItem icon={<LogoutIcon />} onSelect={onSignOut}>
+              {signOutLabel}
+            </MenuItem>
+          </>
+        ) : null}
       </div>
     </Popover>
   )

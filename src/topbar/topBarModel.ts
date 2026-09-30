@@ -20,7 +20,16 @@
  * 5. Schema exportado para os apps validarem a resposta do backend.
  * 6. `helpLinks` é opcional — só renderiza o menu de ajuda se vier preenchido.
  * 7. "Criar empresa" abre `createOrgUrl` numa aba nova (decisão do app).
+ * 8. `notifications` (v1.6.0): sino padrão à direita da barra, com contador
+ *    de não lidas e destino na central da Conta. Vem da Conta como os
+ *    demais itens; busca e paleta continuam no slot `actions` do app.
+ *
+ * Papel (`role`): o `AccountMenu` e o `OrgSwitcher` formatam para PT-BR com
+ * `roleLabel()` (`owner` → "Proprietário"). A resposta da Conta já traz o
+ * papel em português; `roleLabel` devolve o texto desconhecido como veio, os
+ * dois formatos renderizam igual.
  */
+import type { ReactNode } from 'react'
 import { z } from 'zod'
 
 import type { LauncherApp } from './AppSwitcher'
@@ -29,11 +38,12 @@ import type { TopbarOrganization } from './OrgSwitcher'
 /** Link genérico (geral do launcher, conta ou ajuda). */
 export interface BarLink {
   id: string
-  label: string
+  /** Texto visível; pode ser um nó React quando o app embute um item próprio. */
+  label: ReactNode
   /** URL absoluta (`https://...`) ou relativa (`/apps/...`). */
   href: string
   /** Ícone opcional do lucide-react ou componente qualquer. */
-  icon?: unknown
+  icon?: ReactNode
   /** Abre em nova aba (default true para links que saem do app). */
   newTab?: boolean
 }
@@ -133,11 +143,31 @@ export interface TopBarModel {
   launcherLinks?: BarLink[]
   /** URL para abrir em nova aba quando o usuário escolhe "Criar empresa". */
   createOrgUrl?: string
+  /** Rótulo do item "Criar empresa" (padrão: "Criar empresa"; a Conta pode dizer "Nova empresa"). */
+  createOrgLabel?: string
   /** Links do menu da conta (ex.: Segurança, Aparência). "Gerenciar" entra se não vier. */
   accountLinks?: BarLink[]
   /** Links do menu de ajuda (ex.: Ajuda, Privacidade, Termos). Opcional. */
   helpLinks?: BarLink[]
+  /** Sino de notificações da Conta (contador + destino). Opcional. */
+  notifications?: TopBarNotifications
 }
+
+/**
+ * Notificações da Conta (v1.6.0): o sino padrão à direita da barra. `unread`
+ * = não lidas (0 esconde o contador); `href` = central de notificações na
+ * Conta. O app pode interceptar o clique com `onNotificationsClick` para
+ * abrir um drawer próprio.
+ */
+export interface TopBarNotifications {
+  unread: number
+  href: string
+}
+
+export const topBarNotificationsSchema = z.object({
+  unread: z.number().int().min(0),
+  href: z.string().min(1),
+}) satisfies z.ZodType<TopBarNotifications>
 
 /**
  * Schema Zod para a resposta de `GET /api/oidc/topbar`. Compatível com o
@@ -155,8 +185,10 @@ export const topBarModelSchema = z
     profile: topBarProfileSchema.optional(),
     launcherLinks: z.array(barLinkSchema).optional(),
     createOrgUrl: z.string().min(1).optional(),
+    createOrgLabel: z.string().min(1).optional(),
     accountLinks: z.array(barLinkSchema).optional(),
     helpLinks: z.array(barLinkSchema).optional(),
+    notifications: topBarNotificationsSchema.optional(),
   })
   .transform((raw): TopBarModel => {
     // Resolve a forma canônica a partir do shape da Conta (v1.0.x → v1.5.0):
@@ -180,8 +212,10 @@ export const topBarModelSchema = z
       account,
       launcherLinks: raw.launcherLinks,
       createOrgUrl: raw.createOrgUrl,
+      createOrgLabel: raw.createOrgLabel,
       accountLinks: raw.accountLinks,
       helpLinks: raw.helpLinks,
+      notifications: raw.notifications,
     }
   })
 

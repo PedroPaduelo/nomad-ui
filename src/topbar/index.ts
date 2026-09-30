@@ -6,7 +6,38 @@
  * O CSS NÃO vem por este import (o build de biblioteca não carrega CSS no JS): o app importa
  * `@nomad/ui/topbar.css` uma vez, no `main.tsx` ou no CSS global (`@import '@nomad/ui/topbar.css';`).
  */
-export { TopBar, TopBarBrand, type TopBarProps, type TopBarBrandProps } from './TopBar'
+export {
+  TopBar,
+  TopBarBrand,
+  TopBarModelBrand,
+  NommandMark,
+  type TopBarProps,
+  type TopBarBrandProps,
+  type TopBarModelBrandProps,
+} from './TopBar'
+export { TopBarModelBar, type TopBarModelBarProps } from './TopBarModelBar'
+export {
+  NotificationsButton,
+  notificationsLabel,
+  type NotificationsButtonProps,
+} from './NotificationsButton'
+export {
+  topBarModelSchema,
+  topBarProfileSchema,
+  topBarAccountSchema,
+  topBarAccountOrgSchema,
+  topBarOrgOptionSchema,
+  topBarNotificationsSchema,
+  barLinkSchema,
+  type TopBarModel,
+  type TopBarModelInput,
+  type TopBarProfile,
+  type TopBarAccount,
+  type TopBarAccountOrg,
+  type TopBarOrgOption,
+  type TopBarNotifications,
+  type BarLink,
+} from './topBarModel'
 export {
   AppSwitcher,
   AppGrid,

@@ -24,12 +24,32 @@ const ROLE_LABELS: Record<string, string> = {
   owner: 'Proprietário',
   admin: 'Administrador',
   member: 'Membro',
+  viewer: 'Visualizador',
+  billing: 'Financeiro',
+  readonly: 'Somente leitura',
 }
 
-/** Papel na empresa em PT-BR (`owner`/`OWNER` → "Proprietário"); papel desconhecido volta como veio. */
+/** Papel em português que a Conta já devolve traduzido (passa direto). */
+const ROLE_PT: Record<string, string> = {
+  proprietário: 'Proprietário',
+  proprietaria: 'Proprietária',
+  administrador: 'Administrador',
+  administradora: 'Administradora',
+  membro: 'Membro',
+  visualizador: 'Visualizador',
+  visualizadora: 'Visualizadora',
+  financeiro: 'Financeiro',
+}
+
+/**
+ * Papel na empresa em PT-BR. Aceita o identificador (`owner`/`OWNER` →
+ * "Proprietário") e o rótulo em português que a Conta já devolve
+ * ("Proprietário" → "Proprietário"); qualquer outro volta como veio.
+ */
 export function roleLabel(role: string | null | undefined): string {
   if (!role) return ''
-  return ROLE_LABELS[role.toLowerCase()] ?? role
+  const key = role.trim().toLowerCase()
+  return ROLE_LABELS[key] ?? ROLE_PT[key] ?? role
 }
 
 /** Clique "normal" (sem Ctrl/⌘/Shift/botão do meio): só esse é interceptado para navegação SPA. */
@@ -47,6 +67,8 @@ export type MenuItemSpec = {
   icon?: ReactNode
   href?: string
   onSelect?: () => void
+  /** Com `href`: clique normal chama isto (navegação SPA) em vez de seguir o link. */
+  onNavigate?: () => void
   /** Abre o `href` numa aba nova. */
   newTab?: boolean
   danger?: boolean
@@ -64,6 +86,7 @@ type ItemProps = {
   href?: string
   newTab?: boolean
   onSelect?: () => void
+  onNavigate?: () => void
   title?: string
 }
 
@@ -79,6 +102,7 @@ export function MenuItem({
   href,
   newTab,
   onSelect,
+  onNavigate,
   title,
 }: ItemProps) {
   const close = usePopoverClose()
@@ -116,9 +140,12 @@ export function MenuItem({
         tabIndex={-1}
         onClick={(e) => {
           if (disabled) return e.preventDefault()
-          if (onSelect && !newTab && isPlainClick(e)) {
+          // `onSelect`: abre o item e executa a ação. `onNavigate`: só executa
+          // (navegação SPA do app). Em ambos, ⌘/Ctrl+clique segue o `href`.
+          if (isPlainClick(e)) {
             e.preventDefault()
-            onSelect()
+            if (onSelect) onSelect()
+            else onNavigate?.()
           }
           close()
         }}
@@ -152,6 +179,7 @@ export function MenuItems({ items }: { items: MenuItemSpec[] }) {
           icon={it.icon}
           href={it.href}
           onSelect={it.onSelect}
+          onNavigate={it.onNavigate}
           newTab={it.newTab}
           danger={it.danger}
           disabled={it.disabled}

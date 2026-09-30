@@ -66,6 +66,32 @@ export const BuildingIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" />
   </Stroke>
 )
+/** Sino de notificações (botão de `NotificationsButton`; v1.6.0). */
+export const BellIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Stroke {...p}>
+    <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+    <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
+  </Stroke>
+)
+/** Ponto de interrogação (menu de ajuda `helpLinks`; v1.6.0). */
+export const HelpIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Stroke {...p}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <path d="M12 17h.01" />
+  </Stroke>
+)
+/** Sol/lua (item de tema do menu da conta; v1.6.0). */
+export const ThemeIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Stroke {...p}>
+    <path d="M12 2v2" />
+    <path d="m4.9 4.9 1.4 1.4" />
+    <path d="M20 12h2" />
+    <path d="m19.1 4.9-1.4 1.4" />
+    <path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+    <path d="M17.5 17.5A9 9 0 0 1 6.5 6.5a9 9 0 1 0 11 11Z" />
+  </Stroke>
+)
 
 /** Grade 3×3 de pontos cheios (botão da grade de apps, como no design da Conta Nommand). */
 export function GridIcon({ size = 18 }: { size?: number }) {

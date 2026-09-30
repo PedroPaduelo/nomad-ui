@@ -28,6 +28,7 @@ export type PaletteId =
   | 'terracotta-editorial'
   | 'obsidian-magenta'
   | 'paper-newsprint'
+  | 'nommand'
 
 export interface PaletteColors {
   surfaces: {
@@ -1150,6 +1151,32 @@ export const PALETTES: Palette[] = [
         error: '#bc0010',
         info: '#991b1b',
       },
+    },
+  },
+  {
+    id: 'nommand',
+    name: 'Nommand',
+    description: 'Azul institucional da Conta Nommand — design v2 “Institucional”, aprovado pelo dono (2026-09-30). Mesmo accent das outras paletas azuis, com bordas mais sutis, status da paleta e onAccent explícito.',
+    preview: { accent: '#60a5fa', amber: '#b45309', surface: '#161b24' },
+    dark: {
+      surfaces: { body: '#161b24', base: '#1d242f', raised: '#252c38', overlay: '#28313e' },
+      accent: { main: '#60a5fa', hover: '#93c5fd', muted: 'rgba(96, 165, 250, 0.14)', strong: '#2563eb' },
+      amber: { main: '#f59e0b', hover: '#fbbf24', muted: 'rgba(245, 158, 11, 0.14)', strong: '#d97706' },
+      text: { primary: '#d6dde6', secondary: '#a2afc1', tertiary: '#8b9bb1', disabled: '#455263', accent: '#71b0ff', inverse: '#0f1219', amber: '#f59e0b', onAccent: '#0b1220', onAmber: '#0f1219' },
+      borders: { default: 'rgba(255, 255, 255, 0.10)', hover: 'rgba(255, 255, 255, 0.16)', accent: 'rgba(96, 165, 250, 0.45)' },
+      shadows: { sm: '0 1px 2px rgba(0, 0, 0, 0.40)', md: '0 4px 12px rgba(0, 0, 0, 0.45)', lg: '0 12px 40px rgba(0, 0, 0, 0.55)', accentGlow: '0 0 20px rgba(96, 165, 250, 0.12)' },
+      backdrop: 'rgba(10, 13, 18, 0.6)',
+      status: { success: '#34d399', warning: '#fbbf24', error: '#ff8684', info: '#71b0ff' },
+    },
+    light: {
+      surfaces: { body: '#eef1f5', base: '#f7f8fa', raised: '#ffffff', overlay: '#e8ecf1' },
+      accent: { main: '#2563eb', hover: '#1d4ed8', muted: 'rgba(37, 99, 235, 0.10)', strong: '#1e40af' },
+      amber: { main: '#b45309', hover: '#92400e', muted: 'rgba(217, 119, 6, 0.12)', strong: '#d97706' },
+      text: { primary: '#172033', secondary: '#4b5868', tertiary: '#5e6a7c', disabled: '#b0bac6', accent: '#1855dc', inverse: '#f8f9fb', amber: '#a04800', onAccent: '#ffffff', onAmber: '#ffffff' },
+      borders: { default: 'rgba(15, 23, 42, 0.10)', hover: 'rgba(15, 23, 42, 0.20)', accent: 'rgba(37, 99, 235, 0.35)' },
+      shadows: { sm: '0 1px 2px rgba(15, 23, 42, 0.06)', md: '0 4px 12px rgba(15, 23, 42, 0.08)', lg: '0 12px 40px rgba(15, 23, 42, 0.14)', accentGlow: '0 0 20px rgba(37, 99, 235, 0.08)' },
+      backdrop: 'rgba(30, 41, 59, 0.45)',
+      status: { success: '#00702e', warning: '#955000', error: '#c20011', info: '#1855dc' },
     },
   },
 ]

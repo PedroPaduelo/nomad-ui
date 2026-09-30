@@ -46,53 +46,55 @@ function Setup({
   )
 }
 
-describe('Sidebar: axe a11y em 1 paleta × claro/escuro', () => {
-  for (const mode of ['light', 'dark'] as const) {
-    it(`sidebar expandida (${mode})`, async () => {
-      const { container, unmount } = render(
-        <Setup paletteId="slate-blue-gold" mode={mode}>
-          <Sidebar
-            sections={SECTIONS}
-            footerItems={[
-              { key: 'settings', label: 'Configurações', icon: <Settings />, href: '/settings' },
-            ]}
-            brand={{ initial: 'A', name: 'AgentPack', subtitle: 'Empresa · 3 projetos' }}
-            collapsed={false}
-            onToggleCollapse={() => {}}
-          />
-        </Setup>,
-      )
-      const r = await axe.run(container, {
-        rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+describe('Sidebar: axe a11y em todas as paletas × claro/escuro', () => {
+  for (const p of PALETTES) {
+    for (const mode of ['light', 'dark'] as const) {
+      it(`sidebar expandida (${p.id} ${mode})`, async () => {
+        const { container, unmount } = render(
+          <Setup paletteId={p.id} mode={mode}>
+            <Sidebar
+              sections={SECTIONS}
+              footerItems={[
+                { key: 'settings', label: 'Configurações', icon: <Settings />, href: '/settings' },
+              ]}
+              brand={{ initial: 'A', name: 'AgentPack', subtitle: 'Empresa · 3 projetos' }}
+              collapsed={false}
+              onToggleCollapse={() => {}}
+            />
+          </Setup>,
+        )
+        const r = await axe.run(container, {
+          rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+        })
+        unmount()
+        const problems = r.violations.flatMap((v) =>
+          v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
+        )
+        expect(problems, `${p.id} ${mode}: ${problems.join('; ')}`).toEqual([])
       })
-      unmount()
-      const problems = r.violations.flatMap((v) =>
-        v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
-      )
-      expect(problems, `${mode}: ${problems.join('; ')}`).toEqual([])
-    })
 
-    it(`sidebar colapsada (${mode})`, async () => {
-      const { container, unmount } = render(
-        <Setup paletteId="slate-blue-gold" mode={mode}>
-          <Sidebar
-            sections={SECTIONS}
-            footerItems={[
-              { key: 'settings', label: 'Configurações', icon: <Settings />, href: '/settings' },
-            ]}
-            collapsed
-            onToggleCollapse={() => {}}
-          />
-        </Setup>,
-      )
-      const r = await axe.run(container, {
-        rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+      it(`sidebar colapsada (${p.id} ${mode})`, async () => {
+        const { container, unmount } = render(
+          <Setup paletteId={p.id} mode={mode}>
+            <Sidebar
+              sections={SECTIONS}
+              footerItems={[
+                { key: 'settings', label: 'Configurações', icon: <Settings />, href: '/settings' },
+              ]}
+              collapsed
+              onToggleCollapse={() => {}}
+            />
+          </Setup>,
+        )
+        const r = await axe.run(container, {
+          rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+        })
+        unmount()
+        const problems = r.violations.flatMap((v) =>
+          v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
+        )
+        expect(problems, `${p.id} ${mode}: ${problems.join('; ')}`).toEqual([])
       })
-      unmount()
-      const problems = r.violations.flatMap((v) =>
-        v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
-      )
-      expect(problems, `${mode}: ${problems.join('; ')}`).toEqual([])
-    })
+    }
   }
 })

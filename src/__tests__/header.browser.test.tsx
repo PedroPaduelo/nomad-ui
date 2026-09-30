@@ -42,54 +42,56 @@ function Setup({
   )
 }
 
-describe('Header / Breadcrumb / HeaderUserMenu: axe a11y em 1 paleta × claro/escuro', () => {
-  for (const mode of ['light', 'dark'] as const) {
-    it(`barra mínima (${mode})`, async () => {
-      const { container, unmount } = render(
-        <Setup paletteId="slate-blue-gold" mode={mode}>
-          <Header onToggleSidebar={() => {}} />
-        </Setup>,
-      )
-      const r = await axe.run(container, {
-        rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+describe('Header / Breadcrumb / HeaderUserMenu: axe a11y em todas as paletas × claro/escuro', () => {
+  for (const p of PALETTES) {
+    for (const mode of ['light', 'dark'] as const) {
+      it(`barra mínima (${p.id} ${mode})`, async () => {
+        const { container, unmount } = render(
+          <Setup paletteId={p.id} mode={mode}>
+            <Header onToggleSidebar={() => {}} />
+          </Setup>,
+        )
+        const r = await axe.run(container, {
+          rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+        })
+        unmount()
+        const problems = r.violations.flatMap((v) =>
+          v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
+        )
+        expect(problems, `${p.id} ${mode}: ${problems.join('; ')}`).toEqual([])
       })
-      unmount()
-      const problems = r.violations.flatMap((v) =>
-        v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
-      )
-      expect(problems, `${mode}: ${problems.join('; ')}`).toEqual([])
-    })
 
-    it(`trilha de navegação (${mode})`, async () => {
-      const { container, unmount } = render(
-        <Setup paletteId="slate-blue-gold" mode={mode}>
-          <Breadcrumb items={BREADCRUMB_ITEMS} />
-        </Setup>,
-      )
-      const r = await axe.run(container, {
-        rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+      it(`trilha de navegação (${p.id} ${mode})`, async () => {
+        const { container, unmount } = render(
+          <Setup paletteId={p.id} mode={mode}>
+            <Breadcrumb items={BREADCRUMB_ITEMS} />
+          </Setup>,
+        )
+        const r = await axe.run(container, {
+          rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+        })
+        unmount()
+        const problems = r.violations.flatMap((v) =>
+          v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
+        )
+        expect(problems, `${p.id} ${mode}: ${problems.join('; ')}`).toEqual([])
       })
-      unmount()
-      const problems = r.violations.flatMap((v) =>
-        v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
-      )
-      expect(problems, `${mode}: ${problems.join('; ')}`).toEqual([])
-    })
 
-    it(`menu do usuário (${mode})`, async () => {
-      const { container, unmount } = render(
-        <Setup paletteId="slate-blue-gold" mode={mode}>
-          <HeaderUserMenu user={{ name: 'Ana Souza', email: 'ana@nomad.dev' }} />
-        </Setup>,
-      )
-      const r = await axe.run(container, {
-        rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+      it(`menu do usuário (${p.id} ${mode})`, async () => {
+        const { container, unmount } = render(
+          <Setup paletteId={p.id} mode={mode}>
+            <HeaderUserMenu user={{ name: 'Ana Souza', email: 'ana@nomad.dev' }} />
+          </Setup>,
+        )
+        const r = await axe.run(container, {
+          rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+        })
+        unmount()
+        const problems = r.violations.flatMap((v) =>
+          v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
+        )
+        expect(problems, `${p.id} ${mode}: ${problems.join('; ')}`).toEqual([])
       })
-      unmount()
-      const problems = r.violations.flatMap((v) =>
-        v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
-      )
-      expect(problems, `${mode}: ${problems.join('; ')}`).toEqual([])
-    })
+    }
   }
 })

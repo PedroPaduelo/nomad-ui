@@ -50,55 +50,57 @@ const sidebarProps = {
   brand: { initial: 'A', name: 'AgentPack', subtitle: 'Empresa · 3 projetos' },
 }
 
-describe('MainLayout: axe a11y em 1 paleta × claro/escuro', () => {
-  for (const mode of ['light', 'dark'] as const) {
-    it(`shell completo (${mode})`, async () => {
-      const { container, unmount } = render(
-        <Setup paletteId="slate-blue-gold" mode={mode}>
-          <MainLayout
-            sidebar={sidebarProps}
-            sidebarCollapsed={false}
-            onToggleSidebar={() => {}}
-            breadcrumb={[
-              { label: 'Projetos', href: '/projects' },
-              { label: 'AgentPack', href: '/projects/abc' },
-              { label: 'Memórias' },
-            ]}
-          >
-            <p>Conteúdo de exemplo.</p>
-          </MainLayout>
-        </Setup>,
-      )
-      const r = await axe.run(container, {
-        rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+describe('MainLayout: axe a11y em todas as paletas × claro/escuro', () => {
+  for (const p of PALETTES) {
+    for (const mode of ['light', 'dark'] as const) {
+      it(`shell completo (${p.id} ${mode})`, async () => {
+        const { container, unmount } = render(
+          <Setup paletteId={p.id} mode={mode}>
+            <MainLayout
+              sidebar={sidebarProps}
+              sidebarCollapsed={false}
+              onToggleSidebar={() => {}}
+              breadcrumb={[
+                { label: 'Projetos', href: '/projects' },
+                { label: 'AgentPack', href: '/projects/abc' },
+                { label: 'Memórias' },
+              ]}
+            >
+              <p>Conteúdo de exemplo.</p>
+            </MainLayout>
+          </Setup>,
+        )
+        const r = await axe.run(container, {
+          rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+        })
+        unmount()
+        const problems = r.violations.flatMap((v) =>
+          v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
+        )
+        expect(problems, `${p.id} ${mode}: ${problems.join('; ')}`).toEqual([])
       })
-      unmount()
-      const problems = r.violations.flatMap((v) =>
-        v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
-      )
-      expect(problems, `${mode}: ${problems.join('; ')}`).toEqual([])
-    })
 
-    it(`shell sem breadcrumb (${mode})`, async () => {
-      const { container, unmount } = render(
-        <Setup paletteId="slate-blue-gold" mode={mode}>
-          <MainLayout
-            sidebar={sidebarProps}
-            sidebarCollapsed={false}
-            onToggleSidebar={() => {}}
-          >
-            <p>Conteúdo de exemplo.</p>
-          </MainLayout>
-        </Setup>,
-      )
-      const r = await axe.run(container, {
-        rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+      it(`shell sem breadcrumb (${p.id} ${mode})`, async () => {
+        const { container, unmount } = render(
+          <Setup paletteId={p.id} mode={mode}>
+            <MainLayout
+              sidebar={sidebarProps}
+              sidebarCollapsed={false}
+              onToggleSidebar={() => {}}
+            >
+              <p>Conteúdo de exemplo.</p>
+            </MainLayout>
+          </Setup>,
+        )
+        const r = await axe.run(container, {
+          rules: { 'color-contrast': { enabled: true }, region: { enabled: false } },
+        })
+        unmount()
+        const problems = r.violations.flatMap((v) =>
+          v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
+        )
+        expect(problems, `${p.id} ${mode}: ${problems.join('; ')}`).toEqual([])
       })
-      unmount()
-      const problems = r.violations.flatMap((v) =>
-        v.nodes.map((n) => `${v.id}: ${n.target.join(' ')}`),
-      )
-      expect(problems, `${mode}: ${problems.join('; ')}`).toEqual([])
-    })
+    }
   }
 })

@@ -44,7 +44,7 @@ cliente HTTP escrito à mão com `fetch` quando o `createHttpClient` resolve.
 ```jsonc
 // package.json do app — URL git+https COMPLETA, nunca o atalho github:
 "dependencies": {
-  "@nomad/ui": "git+https://github.com/PedroPaduelo/nomad-ui.git#v1.6.0"
+  "@nomad/ui": "git+https://github.com/PedroPaduelo/nomad-ui.git#v1.6.1"
 }
 ```
 
@@ -65,7 +65,9 @@ npm install @nomad/ui@git+https://github.com/PedroPaduelo/nomad-ui.git#vX.Y.Z
 node -p "require('@nomad/ui/package.json').version"
 ```
 
-Em monorepo/workspace, confira o lock **da raiz e o do pacote** (`npm ls @nomad/ui` na raiz).
+**Lock da raiz manda no workspace:** bump no `package.json` do pacote (ex.: `motor/fe`) não instala nada se a entrada
+do `package-lock.json` da raiz continuar pinada. Atualize os dois locks e confira
+`require('@nomad/ui/package.json').version` (o motor caiu nisso em 2026-09-30: pediu 1.5.1, ficou na 1.4.1).
 
 **SSH:** o atalho `github:PedroPaduelo/nomad-ui#vX.Y.Z` faz o npm resolver por git+ssh e `npm ci` quebra em imagem
 Docker sem chave ssh (os 3 frontends de produção caíram nisso em 2026-09-30). Mesmo instalando por `git+https://`, o npm
@@ -74,14 +76,14 @@ vez** (`rm -f package-lock.json && npm install` na primeira instalação, ou no 
 
 ### O que vem de lá
 
-| Import                                                         | Conteúdo                                                                                                                                                                                                                                                                                                                                 | Substitui no app                                                                    |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `@nomad/ui`                                                    | kit (`Button`, `Modal`, `Drawer`, `Menu`, `Popover`, `Tabs`, `Field`, `Input`, `Select`, `ConfirmDialog`, `EmptyState`, `Switch`, `Table`, `Pagination`, `Banner`, `MultiSelect`, `CodeBlock`, `StatusDot`, `Progress`, `Toaster`…) e tema (`ThemeProvider`, `PaletteProvider`, `ThemeSwitcher`, hooks de tema e paleta, boot sem flash) | `src/components/ui/`, `providers/ThemeProvider`, `lib/theme*`, `styles/palettes.ts` |
-| `@nomad/ui/theme.css`                                          | o `globals.css` do agent-package: tokens, `@theme inline`, 10 paletas × claro/escuro, e o `@source` do pacote                                                                                                                                                                                                                            | `src/styles/globals.css` e `palettes.css`                                           |
-| `@nomad/ui/topbar`                                             | `TopBar`, `TopBarModel` + `topBarModelSchema`, `TopBarModelBar`, `NotificationsButton`, `TopBarBrand`, `TopBarModelBrand`, `NommandMark`, `OrgSwitcher`, `AppSwitcher`, `AccountMenu` (Padrão SSO Nomad v1, §10)                                                                                                                         | `src/shared/nomad-topbar/` + `scripts/sync-nomad-topbar.sh`                         |
-| `@nomad/ui/data`                                               | `createQueryClient`, `createHttpClient({ baseURL, onUnauthorized, isSessionExpired })`, `ApiError` (`errorCode`, `body`), helpers de Zod e fábrica de query keys                                                                                                                                                                         | `lib/queryClient.ts`, o miolo de `api/client.ts`                                    |
-| `@nomad/ui/markdown`                                           | leitor de markdown do kit **(revisar na v1.0.0)**                                                                                                                                                                                                                                                                                        | `components/ui/Markdown.tsx`                                                        |
-| `@nomad/ui/tsconfig`, `@nomad/ui/eslint`, `@nomad/ui/prettier` | presets                                                                                                                                                                                                                                                                                                                                  | configs copiadas                                                                    |
+| Import                                                         | Conteúdo                                                                                                                                                                                                                                                                                                                                        | Substitui no app                                                                    |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `@nomad/ui`                                                    | kit (`Button`, `Modal`, `Drawer`, `Menu`, `Popover`, `Tabs`, `Field`, `Input`, `Select`, `ConfirmDialog`, `EmptyState`, `Switch`, `Table`, `Pagination`, `Banner`, `MultiSelect`, `CodeBlock`, `StatusDot`, `Progress`, `Kbd`, `Toaster`…) e tema (`ThemeProvider`, `PaletteProvider`, `ThemeSwitcher`, hooks de tema e paleta, boot sem flash) | `src/components/ui/`, `providers/ThemeProvider`, `lib/theme*`, `styles/palettes.ts` |
+| `@nomad/ui/theme.css`                                          | o `globals.css` do agent-package: tokens, `@theme inline`, 10 paletas × claro/escuro, e o `@source` do pacote                                                                                                                                                                                                                                   | `src/styles/globals.css` e `palettes.css`                                           |
+| `@nomad/ui/topbar`                                             | `TopBar`, `TopBarModel` + `topBarModelSchema`, `TopBarModelBar`, `NotificationsButton`, `TopBarBrand`, `TopBarModelBrand`, `NommandMark`, `OrgSwitcher`, `AppSwitcher`, `AccountMenu` (Padrão SSO Nomad v1, §10)                                                                                                                                | `src/shared/nomad-topbar/` + `scripts/sync-nomad-topbar.sh`                         |
+| `@nomad/ui/data`                                               | `createQueryClient`, `createHttpClient({ baseURL, onUnauthorized, isSessionExpired })`, `ApiError` (`errorCode`, `body`), helpers de Zod e fábrica de query keys                                                                                                                                                                                | `lib/queryClient.ts`, o miolo de `api/client.ts`                                    |
+| `@nomad/ui/markdown`                                           | leitor de markdown do kit **(revisar na v1.0.0)**                                                                                                                                                                                                                                                                                               | `components/ui/Markdown.tsx`                                                        |
+| `@nomad/ui/tsconfig`, `@nomad/ui/eslint`, `@nomad/ui/prettier` | presets                                                                                                                                                                                                                                                                                                                                         | configs copiadas                                                                    |
 
 ```css
 /* src/styles/globals.css do app: primeira linha */
@@ -126,6 +128,7 @@ pacote; o hash dele entra no `script-src` da CSP **(revisar na v1.0.0: nome do e
 | `v1.5.1` | republicação do conteúdo da `v1.5.0` (a tag `v1.5.0` apontava para o commit da `v1.4.1`)                                                                                                                                                         | **apontar para `#v1.5.1`, nunca `#v1.5.0`**                                          |
 | `v1.5.2` | o barrel de `@nomad/ui/topbar` passou a exportar o contrato (`topBarModelSchema` e tipos); `createHttpClient`: 401 de credencial (`invalid_credentials`, `mfa_*`) não derruba a sessão (`isSessionExpired`) e `UnauthorizedContext.refreshError` | aponta para `#v1.5.2` ou acima                                                       |
 | `v1.6.0` | `<TopBar model={…}>` monta as 3 peças + Ajuda + notificações a partir do `TopBarModel` (ver §8); `NotificationsButton`, `NommandMark`/`TopBarModelBrand`; `MenuItem.onNavigate`; `AccountMenu.onSignOut` opcional; nota de consumo por tag       | barra pelo model; conferir versão instalada                                          |
+| `v1.6.1` | `<Kbd symbol>` para glifo Unicode (⌘, ⇧, ⌥, ↻): a fonte de texto tem o glifo, a de mono não — sem isso o navegador desenhava a caixa vazia (▯)                                                                                                   | `<Kbd symbol>` em atalhos; **tirar o contorno `font-sans` no app**                   |
 
 Tags nunca se movem: conteúdo corrigido sai em **versão nova**.
 
@@ -135,7 +138,7 @@ Tags nunca se movem: conteúdo corrigido sai em **versão nova**.
 2. Troque a tag no `package.json` e rode `npm install @nomad/ui@git+https://github.com/PedroPaduelo/nomad-ui.git#<tag>` (força a resolução; ver "Consumo por tag" acima).
 3. Confira `node -p "require('@nomad/ui/package.json').version"`.
 4. Rode os gates (seção 11) e a aceitação visual da barra (captura ao lado da Conta).
-5. Um commit só: `chore(deps): @nomad/ui v1.6.0`.
+5. Um commit só: `chore(deps): @nomad/ui v1.6.1`.
 
 Nunca aponte para `main`, branch ou sha solto. Não edite nada dentro de `node_modules/@nomad/ui`: mudança vai por PR
 no `nomad-ui` e sai numa versão nova. Componente que falta no kit: peça no `nomad-ui`; até sair, ele mora em
@@ -387,7 +390,7 @@ CI (GitHub Actions) em todo push na `main` e PR, na ordem: `npm ci` → `api:che
 
 ## 12. Checklist de migração de um app
 
-1. Instalar `@nomad/ui` (v1.6.0 ou acima) e os peers; trocar o tema (`@import '@nomad/ui/theme.css'`, providers e boot do pacote).
+1. Instalar `@nomad/ui` (v1.6.1 ou acima) e os peers; trocar o tema (`@import '@nomad/ui/theme.css'`, providers e boot do pacote).
 2. Trocar a barra pelo `@nomad/ui/topbar` com `model={…}` (validado com `topBarModelSchema`); apagar `src/shared/nomad-topbar/` e `scripts/sync-nomad-topbar.sh`.
 3. Trocar o kit local pelo do pacote e apagar `src/components/ui/` (e Astryx/StyleX, se houver).
 4. Trocar cliente HTTP e QueryClient pelas fábricas do `@nomad/ui/data`.

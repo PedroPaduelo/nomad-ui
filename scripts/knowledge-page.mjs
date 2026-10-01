@@ -31,7 +31,7 @@
  *   node scripts/knowledge-page.mjs              # gera dist/knowledge-690df27c.md
  *   node scripts/check-doc.mjs dist/knowledge-690df27c.md
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 
@@ -45,6 +45,18 @@ const REPO_AUDIT = `${REPO_URL}/docs/auditoria-apps.md`
 const fail = (msg) => {
   console.error(`✗ ${msg}`)
   process.exit(1)
+}
+
+// 0) Todo caminho que o ponteiro cita tem que EXISTIR no repo. Um ponteiro
+//    para arquivo que saiu ou mudou de nome é mentira silenciosa — a mesma
+//    classe de defeito que o knowledge-summary.test.mjs caça no texto, agora
+//    no alvo (pedido do orquestrador-93, 2026-10-01).
+const POINTER_TARGETS = [REPO_DOC, 'docs/auditoria-apps.md', 'CHANGELOG.md', 'README.md']
+const missing = POINTER_TARGETS.filter((t) => !existsSync(t))
+if (missing.length) {
+  fail(
+    `ponteiro aponta para alvo inexistente: ${missing.join(', ')} — corrija o ponteiro ou o repo`,
+  )
 }
 
 // 1) o doc do repo existe e passa no verificador (fonte corrompida não vira página)
@@ -68,6 +80,9 @@ const pointer = [
   '## O documento',
   '',
   'O padrão completo está no repositório, em **um** lugar: `docs/padrao-frontend.md`.',
+  'Os casos concretos por app estão em `docs/auditoria-apps.md`; o que cada versão do pacote',
+  'trouxe, em `CHANGELOG.md`; o pacote em si (entradas, vitrine, release), no `README.md`.',
+  '',
   'Esta página é o resumo e o ponteiro — não é uma cópia. Se as duas divergirem, o repositório vence.',
   '',
   'Para decidir, leia o resumo. Para implementar, abra o documento no repositório: é a versão',
@@ -88,6 +103,9 @@ if (checkOut.status !== 0)
   fail(`a página gerada não passa no verificador — ${OUT} deixado para inspeção, não publicar`)
 if (page.includes(readFileSync(REPO_DOC, 'utf8')))
   fail('a página ainda contém o documento inteiro — ela deve ser ponteiro, não cópia')
+for (const t of POINTER_TARGETS) {
+  if (!page.includes(t)) fail(`a página gerada não cita o alvo do ponteiro: ${t}`)
+}
 
 const lines = page.split('\n').length
 console.log(`✓ ${OUT} — ${lines} linhas (resumo + ponteiro; o documento fica no repo)`)

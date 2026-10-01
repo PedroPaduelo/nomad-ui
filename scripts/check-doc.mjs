@@ -90,11 +90,12 @@ for (const r of referenced) {
   if (!declared.has(r)) problems.push(`tag referada mas ausente da tabela de versões: ${r}`)
 }
 
-// 5) HEADERS: numeração de seção sequencial e sem duplicata.
+// 5) HEADERS: numeração sequencial, sem salto nem duplicata. A sequência começa
+//    na primeira seção numerada (permite uma §0 introdutória).
 const heads = [...text.matchAll(/^## (\d+)\./gm)].map((m) => Number(m[1]))
 for (let i = 0; i < heads.length; i++) {
-  if (heads[i] !== i + 1)
-    problems.push(`numeração de seção fora de ordem: esperava ${i + 1}, achou ${heads[i]}`)
+  if (heads[i] !== i + heads[0])
+    problems.push(`numeração de seção fora de ordem: esperava ${i + heads[0]}, achou ${heads[i]}`)
 }
 
 if (problems.length) {

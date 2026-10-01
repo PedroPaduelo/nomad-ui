@@ -7,6 +7,16 @@
 > Onde o documento diz **(revisar na v1.0.0)**, o nome exato da API do `@nomad/ui` ainda está sendo fechado
 > pelas outras fases do projeto NUI-00.
 
+## 0. Como este padrão se mantém
+
+Duas regras sobre o próprio documento, porque é ele que os quatro apps copiam:
+
+- **Referência se confere antes de integrar** — número, sha, arquivo:linha, citação. Um número que ninguém
+  reproduz é uma mentira que o typecheck não pega.
+- **Em documento normativo o defeito é a transcrição, não a revisão.** A fonte é uma (este arquivo); a página de
+  knowledge é ponteiro e tem teste de fidelidade (`npm run doc:check`). Texto longo transcrito à mão entre dois
+  sistemas diverge — já aconteceu, e o verificador existe para pegar a próxima.
+
 ## 1. Regras em uma tela
 
 1. O app instala o `@nomad/ui` numa **tag fixa** e não copia nada dele: tema, kit, barra, dados e presets vêm do pacote.
@@ -317,6 +327,90 @@ de `@nomad/ui/data` direto. `zod@^4` continua peer do pacote (o app usa o própr
 quebrado da Conta cai no seu tratamento de erro, não em `Error` crua); `parse` continua lançando. `apps` é validado
 com o shape real, e `href` de link só aceita http(s) ou caminho relativo.
 
+#### A1 — `.catch()` é proibido em schema Zod
+
+**Regra.** `Schema.catch(valor)` transforma qualquer falha de parse no valor: campo ausente, campo renomeado e tipo errado viram todos o valor. Use `.catch()` só em campo **genuinamente opcional** e **estreito** — nunca em número que a tela exibe, nunca no meio do caminho.
+
+Campo opcional de verdade se modela com `.optional()` e `?? valor` no transform: o transform só roda **depois** que o parse passou, então distingue "o servidor não mandou" de "o servidor mandou com outro nome". Com `.catch()`, os dois casos são indistinguíveis.
+
+**Por que.** O `.catch()` é simétrico: tolera o caso antigo e o caso quebrado do mesmo jeito. O schema que existe para pegar renomeação de campo vira o mecanismo que a esconde.
+
+**Teste que pega.** Payload real com o campo renomeado tem que **lançar** (`toThrow`), não devolver o valor de fallback. Sem esse teste, reintroduzir o `.catch()` é uma linha a mais e nada reclama.
+
+#### A2 — o schema do cliente é tão estrito quanto o do servidor
+
+**Regra.** O schema Zod do formulário é a **cópia de leitura** do contrato do servidor. Se a cópia é mais permissiva, a validação do cliente não valida nada: a pessoa preenche o formulário inteiro e só descobre no 400 do servidor.
+
+Use `uuid()` e `datetime()` no cliente quando o servidor usa. `z.string()` cru só para campo que o servidor também trata como string livre. Se o servidor restringe o **esquema** da URL (`http`/`https`), o cliente restringe igual — `z.string().url()` aceita `javascript:`, que não é o mesmo contrato.
+
+**Por que.** Comentário que afirma "mesmo contrato do backend" é uma **asserção**: vale como se fosse testada, porque diverge em silêncio quando o servidor muda.
+
+**Teste que pega.** Tabela de casos por campo (válido, inválido, limite) rodada **contra os dois schemas** — o do cliente e o import do do servidor — falhando se divergirem. Sem ele, "mesmo contrato" é só uma frase.
+
+#### A3 — variável de ambiente que governa segurança não tem default
+
+**Regra.** `z.enum([...]).default(...)` converte **ausente** em **valor**. Em variável de segurança, ausente tem que ser **erro de boot**, não valor. Sem ela, o boot falha com mensagem que **nomeia a variável**.
+
+E o ponto mais importante, que é uma forma e não uma lista: **guard escrito na direção errada não protege.**
+
+```ts
+// errado: protege quando é production, falha em silêncio quando não é — e é
+// exatamente o caso em que a variável pode faltar
+if (env.NODE_ENV === 'production') throw new Error('chave obrigatória')
+
+// certo: nega por omissão, libera explicitamente
+if (env.NODE_ENV !== 'test') throw new Error('chave obrigatória')
+```
+
+Variáveis de segurança (`NODE_ENV`, flag de recurso, chave, URL pública, CORS): **sem default**. Recurso de desenvolvimento (`devtools`, devtools de dado, rota de diagnóstico, caixa de e-mail): **opt-in explícito** — a ausência desliga, e ligar é ato consciente.
+
+**Teste que pega.** Parse da env **sem a variável**, exigindo que lance com mensagem que cite o nome dela. E com a variável ausente, afirmar que a rota de diagnóstico responde 404. A suíte com env completa não pega nada disso.
+
+#### A4 — `dotenv` não sobrescreve a env do processo
+
+**Regra.** `dotenvConfig({ override: true })` faz o `.env` do diretório de trabalho ganhar de toda variável já presente em `process.env`. Use o padrão, **`override: false`**: o `.env` preenche o que não foi definido e a env do orquestrador sempre vence.
+
+E: **`.env.example` comenta a linha sensível** em vez de trazer valor pronto. O exemplo não pode ser o valor perigoso — alguém copia.
+
+**Teste que pega.** `loadDotenvOnce()` num processo com `NODE_ENV=production` na env e `NODE_ENV=development` no `.env`, exigindo que o resultado continue `production`. Sem o teste, reintroduzir `override: true` passa em tudo, porque localmente a env já bate.
+
+#### A5 — teto de tamanho só desce, e contra baseline commitado
+
+**Regra.** `max-lines` valida o arquivo contra um teto. **Teto que mora no mesmo arquivo que a regra não é teto**: quem edita o número edita o gate.
+
+Portanto: **baseline commitado** com os tetos do dia, e o teste exige `atual <= baseline` — assim **subir teto quebra o teste**.
+
+E conte com **o algoritmo que a regra usa** (linhas de código, com `skipBlankLines` e `skipComments`), nunca com `wc -l`. Tetos calibrados no algoritmo errado deixam folga que ninguém vê, ou estouram no primeiro arquivo com muitos comentários.
+
+**Por que.** O teto congelado é o único mecanismo anti-crescimento do código. Se não é verificável, a regra vira "erro de estilo" que se renegocia a cada arquivo movido — que é o que aconteceu nos quatro apps.
+
+**Teste que pega.** O próprio teste de tamanho, com uma leitura a mais: `expect(atual).toBeLessThanOrEqual(baseline)`. E uma checagem de que nenhuma exceção tem folga ociosa — teto muito acima do arquivo é exceção **para remover**, não para manter.
+
+_O `@nomad/ui` ainda não impõe `max-lines` no preset — vale para o pacote no dia em que passar a
+impor, com o baseline dele no mesmo release. Enquanto isso o teto é prosa, e prosa não é teto._
+
+#### A6 — `test/` entra no typecheck
+
+**Regra.** `tsconfig.json` com `include: ["src/**/*"]` faz o `tsc` não enxergar nada de `test/`. O teste roda (esbuild transpila sem checar tipo) e nunca é typecheckado.
+
+`include` cobre `src`, `test`/`tests` e os configs. E o typecheck do CI roda **o mesmo `tsc --noEmit` que o dev roda**, senão o gate local e o gate do CI medem coisas diferentes.
+
+**Por que.** Cast em arquivo que o `tsc` não vê é tipo mentiroso sem fiscal: documenta uma mentira que nada pode contestar. Cast em teste é o lugar onde mais se esconde, porque "é só teste".
+
+**Teste que pega.** Script no `typecheck` que roda `tsc --noEmit --listFilesOnly` e **falha se a contagem de arquivos sob `test/` for zero**. O `tsc` sozinho não pega o próprio apagamento.
+
+#### A7 — helper de teste não engole status HTTP
+
+**Regra (helper de teste).** Helper de teste que devolve `{status, body, headers}` sem lançar em 4xx/5xx esconde o erro de quem chama. Quando o resultado é descartado — um `await` sem atribuição, num `describe` de setup — o 404 vira silêncio.
+
+Helper **lança em status >= 400** por padrão, com opção explícita e nomeada (`expectStatus(404)`, `raw: true`) para os testes que **querem** o erro — assim a exceção fica visível no código do teste.
+
+**Regra (asserção frouxa).** `expect.any(Number)` aceita zero, então não afirma nada sobre a coisa que o teste diz ter criado. O equivalente geral: quando a asserção precisa de `any` para passar, ela não está medindo o que o nome promete.
+
+**Por que.** Um `POST` em rota inexistente que engole 404 e passa com `unread: 0` é pior que teste ausente: dá confiança de que algo está coberto quando nada está.
+
+**Teste que pega.** O próprio helper: chamar com status de erro e exigir que lance. E no teste, mutação — remover a checagem tem que derrubar o teste.
+
 ### Zustand
 
 Só estado de tela: preferências (tema e paleta ficam no pacote), sidebar, toasts, paleta de comandos aberta, modo de
@@ -406,7 +500,31 @@ Scripts com estes nomes em todo app (o preset do `@nomad/ui` traz as configs):
 CI (GitHub Actions) em todo push na `main` e PR, na ordem: `npm ci` → `api:check` → `typecheck` → `lint` → `cycles` →
 `test` (com cobertura) → `test:a11y` → `build` → `audit`. Node pela `.nvmrc`.
 
-## 12. Checklist de migração de um app
+## 12. Gate que não existe é gate que não pega
+
+**A regra.** Gate que não roda é decoração: dá a mesma sensação de segurança que um gate que passa, e nenhuma das duas coisas. Três perguntas que separam gate de não-gate:
+
+1. **O script roda o que o nome diz?** `npm run test` na raiz apontando para um workspace só é gate pela metade.
+2. **A condição que faz o teste pular está satisfeita no CI?** `skipIf` numa variável que o job não define produz **verde com o teste não rodado**, e ninguém vê.
+3. **Um passo de setup que falha derruba os seguintes?** Se eles ficam `skipped` em silêncio, CI vermelho pode significar "nenhum gate rodou", não "código quebrado".
+
+**Checklist antes de confiar no seu CI:**
+
+- [ ] Todo script de gate roda **de verdade** no CI, não só local?
+- [ ] Cada job roda **todas** as partes do pacote, e o nome do job diz qual?
+- [ ] As condições de `skip`/`skipIf`: a variável exigida **está no `env:` do job**?
+- [ ] O job **falha** quando um passo de setup cai, ou os seguintes ficam `skipped`?
+- [ ] O `test/` está no `include` do `tsconfig`, e o typecheck do CI é o mesmo do dev?
+- [ ] O `test` roda **as duas metades do pacote** (frontend e backend), não só o frontend? Sem isso a regra
+      "helper de teste não engole status" não se sustenta: helper que engole erro só aparece quando os testes
+      que dependem dele rodam.
+- [ ] Existe `docker build`, `docker run` e smoke test no CI, fora do compose?
+- [ ] O `HEALTHCHECK` é exercitado **fora** do compose (que sobrescreve o da imagem)?
+- [ ] O número de testes **executados** é visível no log, e é comparável com o esperado?
+
+**Os casos concretos** ficam em `docs/auditoria-apps.md`, por app, porque envelhecem com cada app.
+
+## 13. Checklist de migração de um app
 
 1. Instalar `@nomad/ui` (v1.6.3 ou acima) e os peers; trocar o tema (`@import '@nomad/ui/theme.css'`, providers e boot do pacote).
 2. Trocar a barra pelo `@nomad/ui/topbar` com `model={…}` (validado com `topBarModelSchema`); apagar `src/shared/nomad-topbar/` e `scripts/sync-nomad-topbar.sh`.

@@ -52,14 +52,17 @@ const CLAIMS = [
   ['typecheck do CI é o mesmo do dev', 'listFilesOnly'],
   ['helper de teste lança em >= 400', 'expectStatus'],
   ['expect.any(Number) aceita zero', 'expect.any(Number)'],
-  ['apps rodam as duas metades do pacote', 'duas metades'],
+  ['apps rodam as duas metades do pacote', 'as duas metades do pacote'],
   ['gate que não existe não pega', 'Gate que não existe'],
   ['gate roda o que o nome diz', 'roda o que o nome diz'],
   ['skipIf com variável que o CI não define', 'skipIf'],
   ['passo de setup que falha', 'skipped'],
   ['gates obrigatórios', 'Gates obrigatórios'],
   ['a11y: axe no Chromium', 'test:a11y'],
-  ['referência se confere antes de integrar', 'conferir antes de integrar'],
+  // O resumo escreve "Referência em documento normativo se confere antes de
+  // integrar"; o documento escreve "Referência se confere antes de integrar".
+  // A claim casa com o documento (é ele que é conferido).
+  ['referência se confere antes de integrar', 'Referência se confere antes de integrar'],
   ['o defeito é a transcrição, não a revisão', 'defeito é a transcrição'],
 ]
 

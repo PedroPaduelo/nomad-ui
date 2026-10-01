@@ -1,6 +1,36 @@
-import type { z } from 'zod'
+/**
+ * Tipagem do Zod **estrutural** (sem `z.` no `.d.ts`) — PKG-FIXES `25d586a6`.
+ *
+ * O `.d.ts` do pacote é resolvido pelo TypeScript do app contra a cópia de
+ * `zod` que o app tem. Em monorepo com zod 3 na raiz (o `be` do motor precisa
+ * do 3.25.76) e zod 4 no `fe`, o `.d.ts` acabava tipado contra o zod 3 e o
+ * `parseEnv`/`parseResponse` do `fe` davam TS2345 — mesmo rodando igual, porque
+ * em runtime o pacote só usa `safeParse` (igual no 3 e no 4). Aqui nada de zod
+ * entra nos tipos públicos: o schema é um `SafeParseSchema<Out>` (o que o
+ * app já tem, seja do zod 3 ou 4) e os issues viram o `Issue` estrutural
+ * abaixo. A dependência declarada não muda: `zod@^4` segue peer (o `fe` usa
+ * o schema do app), o que muda é o `.d.ts`, que deixa de amarrar a versão.
+ */
 
-type Issue = z.core.$ZodIssue
+/**
+ * O que o `.d.ts` precisa saber de um schema: inferir a saída e ter
+ * `safeParse`. Estrutural — o `z.ZodType`/`z.ZodTypeAny` do zod 3 também
+ * satisfazem (é o que torna a ponte do motor desnecessária).
+ */
+export interface SafeParseSchema<Out> {
+  safeParse(
+    data: unknown,
+  ): { success: true; data: Out } | { success: false; error: { issues: readonly Issue[] } }
+}
+
+/** Issue do Zod sem depender da versão: o que o pacote usa é `path` e `message`. */
+export interface Issue {
+  readonly path: readonly PropertyKey[]
+  readonly message: string
+  readonly code?: string
+  readonly expected?: unknown
+  readonly received?: unknown
+}
 
 /** Caminho legível de um issue: `items[0].id`; vazio vira `(raiz)`. */
 export function issuePath(path: readonly PropertyKey[]): string {
@@ -51,11 +81,11 @@ export function isResponseParseError(error: unknown): error is ResponseParseErro
  * const project = parseResponse(projectSchema, data, 'GET /projects/:id')
  * ```
  */
-export function parseResponse<S extends z.ZodType>(
-  schema: S,
+export function parseResponse<Out>(
+  schema: SafeParseSchema<Out>,
   data: unknown,
   context?: string,
-): z.output<S> {
+): Out {
   const result = schema.safeParse(data)
   if (!result.success) throw new ResponseParseError(result.error.issues, context)
   return result.data
@@ -65,8 +95,8 @@ export function parseResponse<S extends z.ZodType>(
  * `parseResponse` para encadear no `.then` de uma chamada:
  * `http.get('/projects').then((r) => r.data).then(responseParser(listSchema, 'GET /projects'))`.
  */
-export function responseParser<S extends z.ZodType>(schema: S, context?: string) {
-  return (data: unknown): z.output<S> => parseResponse(schema, data, context)
+export function responseParser<Out>(schema: SafeParseSchema<Out>, context?: string) {
+  return (data: unknown): Out => parseResponse(schema, data, context)
 }
 
 /** Variáveis de ambiente inválidas ou ausentes. */
@@ -92,7 +122,7 @@ export class EnvError extends Error {
  * )
  * ```
  */
-export function parseEnv<S extends z.ZodType>(schema: S, source: unknown): z.output<S> {
+export function parseEnv<Out>(schema: SafeParseSchema<Out>, source: unknown): Out {
   const result = schema.safeParse(source)
   if (!result.success) throw new EnvError(result.error.issues)
   return result.data
@@ -103,9 +133,9 @@ export function parseEnv<S extends z.ZodType>(schema: S, source: unknown): z.out
  * `safeParse` que falhou: `{ name: 'Dá um nome', url: 'URL inválida' }`.
  * Issue sem caminho (regra do objeto inteiro) vai em `_form`.
  */
-export function fieldErrors<F extends string = string>(
-  error: z.ZodError | { issues: readonly Issue[] },
-): Partial<Record<F | '_form', string>> {
+export function fieldErrors<F extends string = string>(error: {
+  issues: readonly Issue[]
+}): Partial<Record<F | '_form', string>> {
   const out: Partial<Record<string, string>> = {}
   for (const issue of error.issues) {
     const key = issue.path.length > 0 ? issuePath(issue.path) : '_form'

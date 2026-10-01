@@ -5,7 +5,8 @@
 // seletor de empresa, grade de apps e menu da conta — mais o menu de ajuda e
 // o sino de notificações, sem nenhum item hard-coded por app:
 //
-//   launcher  = apps[] + launcherLinks[] (rodapé em tiles) + "Gerenciar sua Conta Nommand"
+//   launcher  = apps[] (grid) + launcherLinks[] (RODAPÉ de links com ícone
+//               pequeno, como na Conta) + "Gerenciar sua Conta Nommand" no fim
 //   empresas  = organizations[] + "Criar empresa" (createOrgUrl)
 //   conta     = account.profile + accountLinks[] + Tema (do ThemeProvider do
 //               pacote) + "Trocar de empresa" (se houver > 1) + "Sair"
@@ -25,7 +26,7 @@
 
 import { useState, type ReactNode } from 'react'
 import { AccountMenu } from './AccountMenu'
-import { AppSwitcher, type AppTile } from './AppSwitcher'
+import { AppSwitcher } from './AppSwitcher'
 import { HelpIcon, ThemeIcon } from './icons'
 import { NotificationsButton } from './NotificationsButton'
 import { OrgSwitcher, type TopbarOrganization } from './OrgSwitcher'
@@ -191,15 +192,36 @@ export function TopBarModelBar({
     ...themeItem,
   ]
 
-  const launcherTiles: AppTile[] = (model.launcherLinks ?? []).map((l) => ({
-    key: l.id,
-    label: l.label,
-    icon: (l.icon as ReactNode) ?? <LinkGlyph />,
-    href: l.href,
-    newTab: l.newTab,
-  }))
-
   const helpLinks = model.helpLinks ?? []
+
+  // Rodapé da grade: os `launcherLinks` ("Todos os aplicativos", "Status dos
+  // serviços") são LINKS com ícone pequeno numa linha abaixo dos tiles — é como
+  // a Conta mostra; antes eles entravam como `extraTiles` e pareciam apps
+  // (PKG-FIXES 25d586a6, o que o dono viu no motor). "Gerenciar sua Conta
+  // Nommand" fecha a linha (ou fica sozinho, se não houver links).
+  const launcherLinks = model.launcherLinks ?? []
+  const appsFooter =
+    launcherLinks.length > 0 || Boolean(model.account.manageAccountHref) ? (
+      <div className="ntb-foot-links">
+        {launcherLinks.map((l) => (
+          <a
+            key={l.id}
+            className="ntb-foot-link"
+            href={l.href}
+            target={l.newTab === false ? undefined : '_blank'}
+            rel={l.newTab === false ? undefined : 'noopener noreferrer'}
+          >
+            {l.icon ? <span className="ntb-foot-link__icon">{l.icon as ReactNode}</span> : null}
+            {l.label}
+          </a>
+        ))}
+        {model.account.manageAccountHref ? (
+          <a className="ntb-foot-link ntb-foot-link--manage" href={model.account.manageAccountHref}>
+            {manageLabel}
+          </a>
+        ) : null}
+      </div>
+    ) : undefined
 
   const org = (
     <OrgSwitcher
@@ -252,9 +274,7 @@ export function TopBarModelBar({
         orgId={model.organization.id}
         currentAppSlug={currentAppSlug}
         openInNewTab={openInNewTab}
-        extraTiles={launcherTiles.length > 0 ? launcherTiles : undefined}
-        accountUrl={model.account.manageAccountHref}
-        accountLabel={manageLabel}
+        footer={appsFooter}
         label={appsLabel}
         triggerLabel={appsLabel === 'Aplicativos' ? 'Aplicativos Nommand' : appsLabel}
         width={widths?.apps ?? 336}
@@ -262,7 +282,10 @@ export function TopBarModelBar({
       />
       <AccountMenu
         user={model.account.profile}
-        organization={{ name: model.organization.name, role: model.account.role ?? model.organization.role }}
+        organization={{
+          name: model.organization.name,
+          role: model.account.role ?? model.organization.role,
+        }}
         manageAccountHref={model.account.manageAccountHref}
         manageAccountLabel={manageLabel}
         extraItems={accountExtra}
@@ -303,27 +326,5 @@ export function TopBarModelBar({
       {search ? <div className="ntb-search">{search}</div> : null}
       {right}
     </>
-  )
-}
-
-/** Glifo padrão dos links do launcher sem ícone (seta para fora). */
-function LinkGlyph() {
-  return (
-    <svg
-      width={16}
-      height={16}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-      className="ntb-ico"
-    >
-      <path d="M7 17 17 7" />
-      <path d="M7 7h10v10" />
-    </svg>
   )
 }

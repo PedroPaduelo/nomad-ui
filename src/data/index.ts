@@ -47,6 +47,7 @@ export {
   ResponseParseError,
   responseParser,
 } from './zod'
+export type { Issue, SafeParseSchema } from './zod'
 export { createScreenStore } from './screenStore'
 export type {
   ScreenSetState,

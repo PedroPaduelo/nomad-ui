@@ -3,6 +3,25 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.6.2] — 2026-10-01
+
+Patch (PKG-FIXES `25d586a6`, reportado pela `[MOTOR] NUI-MIG-03b` `e18a625e` na validação da barra). Aditivo: nada quebra.
+
+### Corrigido
+
+- **`launcherLinks` é RODAPÉ da grade, não tile.** `TopBarModelBar` mapeava `launcherLinks` para `AppTile` e jogava no mesmo grid dos apps — "Todos os aplicativos" e "Status dos serviços" apareciam como apps (ícone + nome, mesma tile). Na Conta são **links de rodapé**; o próprio cabeçalho do arquivo documentava "rodapé", o código não criava. Agora são links com ícone pequeno numa linha abaixo do grid, com "Gerenciar sua Conta Nommand" no fim (à direita) — igual à Conta. CSS novo: `.ntb-foot-links`, `.ntb-foot-link`, `.ntb-foot-link__icon`, `.ntb-foot-link--manage` (fonte 12 px, um tamanho abaixo do rótulo do tile). `launcherLinks` com `newTab: false` seguem na mesma aba; os outros abrem em aba nova.
+- **A superfície Zod do pacote não amarra a versão do zod do consumidor.** `parseEnv`, `parseResponse`, `responseParser`, `fieldErrors`, `formatIssues` e os tipos de issue usavam `z.ZodType`, `z.output<S>`, `z.ZodError` e `z.core.$ZodIssue`: o `.d.ts` era resolvido contra a cópia de `zod` que o app tinha. Em workspace com **zod 3 na raiz** (o `be` do motor precisa do 3.25.76 por causa do `fastify-type-provider-zod`) e **zod 4 no `fe`**, o typecheck do `fe` quebrava (TS2345), embora em runtime só se usar `safeParse` (igual no 3 e no 4). Agora os tipos públicos são estruturais — `SafeParseSchema<Out>` (só `safeParse`), `Issue` (`path`, `message` + opcionais) — e **nenhum tipo de zod entra no `.d.ts`** (verificado: o `dist/types/data/zod.d.ts` gerado não tem `import … from 'zod'`). O schema do zod 3 também satisfaz `SafeParseSchema`, então a ponte de tipos que o motor precisou fazer (`fe/src/lib/zod/parse.ts`) **sai**. `zod@^4` continua peer do pacote (o app continua usando o próprio schema); o que mudou é o `.d.ts`. Tipos novos exportados: `SafeParseSchema`, `Issue`.
+
+### Testes
+
+- `topbarModel.test.tsx`: o teste da grade passou a afirmar que o grid tem **só os apps** e que `launcherLinks` estão em `.ntb-foot-links` (na ordem, com "Gerenciar" no fim e `target="_blank"`).
+- `topbar.browser.test.tsx` (novo bloco, 22 testes = 11 paletas × claro/escuro): com o `topbar.css` do pacote no Chromium — grid só com apps; rodapé com os 3 links; **geometria**: o rodapé está abaixo do grid (`foot.top > grid.bottom`) e com fonte menor que a dos tiles; axe sem violações. Vitest 150/150, test:a11y 242/242.
+- Prova do zod (fora da suíte, na hora do release): workspace de teste com `zod 3.25.76` hoisted na raiz e `zod 4.6.5` no `fe`, `skipLibCheck: false`. Contra a **v1.6.1**: TS2345 (o `.d.ts` tinha `import … from 'zod'`). Contra esta: **0 erros**, e o schema zod-4 do app satisfaz `SafeParseSchema`.
+
+### Consumidores
+
+A barra dos 4 apps: nada a mudar no código (o `model` é o mesmo) — os `launcherLinks` passam a parecer com os da Conta sem trocar nada. O **motor** pode remover a ponte `fe/src/lib/zod/parse.ts` e apontar para `@nomad/ui/data` direto; `parseEnv`/`parseResponse`/`fieldErrors` tipam contra o zod do `fe`.
+
 ## [1.6.1] — 2026-09-30
 
 Patch aditivo (PKG-FIXES `679ca2d8`, gap reportado pela `[MOTOR] [UI-FIX-MIG03] cd8ec6e4`).

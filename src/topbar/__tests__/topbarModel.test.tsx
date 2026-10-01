@@ -24,10 +24,34 @@ import {
 
 const MODEL = topBarModelSchema.parse({
   apps: [
-    { id: '1', slug: 'loadbalance', name: 'Loadbalance', iconUrl: null, launchUrl: 'https://lb.example/auth/sso' },
-    { id: '2', slug: 'motor', name: 'Motor', iconUrl: null, launchUrl: 'https://motor.example/auth/sso' },
-    { id: '3', slug: 'agent-package', name: 'Agent Package', iconUrl: null, launchUrl: 'https://ap.example/auth/sso' },
-    { id: '4', slug: 'conta', name: 'Conta', iconUrl: null, launchUrl: 'https://conta.example/auth/sso' },
+    {
+      id: '1',
+      slug: 'loadbalance',
+      name: 'Loadbalance',
+      iconUrl: null,
+      launchUrl: 'https://lb.example/auth/sso',
+    },
+    {
+      id: '2',
+      slug: 'motor',
+      name: 'Motor',
+      iconUrl: null,
+      launchUrl: 'https://motor.example/auth/sso',
+    },
+    {
+      id: '3',
+      slug: 'agent-package',
+      name: 'Agent Package',
+      iconUrl: null,
+      launchUrl: 'https://ap.example/auth/sso',
+    },
+    {
+      id: '4',
+      slug: 'conta',
+      name: 'Conta',
+      iconUrl: null,
+      launchUrl: 'https://conta.example/auth/sso',
+    },
   ],
   organization: { id: 'o1', name: 'Nommand Labs', slug: 'nommand-labs', role: 'Proprietário' },
   organizations: [
@@ -68,9 +92,9 @@ async function noAxeViolations() {
 
 /** Nomes dos gatilhos/ações da barra, na ordem do DOM (§10). */
 function barOrder(): (string | null)[] {
-  return Array.from(
-    screen.getByRole('banner').querySelectorAll('a, button, input'),
-  ).map((el) => el.getAttribute('aria-label') ?? el.textContent)
+  return Array.from(screen.getByRole('banner').querySelectorAll('a, button, input')).map(
+    (el) => el.getAttribute('aria-label') ?? el.textContent,
+  )
 }
 
 function renderBar(extra: Partial<React.ComponentProps<typeof TopBar>> = {}) {
@@ -98,8 +122,12 @@ describe('@nomad/ui/topbar: <TopBar model> monta as 3 peças a partir do TopBarM
     const open = vi.spyOn(window, 'open').mockImplementation(() => null)
     renderBar({ onSwitchOrg: switchOrg })
 
-    expect(screen.getByRole('button', { name: 'Empresa: Nommand Labs. Trocar de empresa' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Empresa: Nommand Labs. Trocar de empresa' }))
+    expect(
+      screen.getByRole('button', { name: 'Empresa: Nommand Labs. Trocar de empresa' }),
+    ).toBeInTheDocument()
+    await user.click(
+      screen.getByRole('button', { name: 'Empresa: Nommand Labs. Trocar de empresa' }),
+    )
     const menu = screen.getByRole('menu', { name: 'Trocar de empresa' })
     const orgItems = within(menu).getAllByRole('menuitemradio')
     const item = (i: HTMLElement) => ({
@@ -127,36 +155,54 @@ describe('@nomad/ui/topbar: <TopBar model> monta as 3 peças a partir do TopBarM
     expect(open).toHaveBeenCalledWith('https://conta.example/new', '_blank', 'noopener')
 
     // troca de empresa vai para o app com a empresa escolhida (callback do app)
-    await user.click(screen.getByRole('button', { name: 'Empresa: Nommand Labs. Trocar de empresa' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Empresa: Nommand Labs. Trocar de empresa' }),
+    )
     await user.click(screen.getByRole('menuitemradio', { name: /Serendiped/ }))
     expect(switchOrg).toHaveBeenCalledWith('o2', expect.objectContaining({ name: 'Serendiped' }))
     open.mockRestore()
   })
 
-  it('grade de apps: apps do model (com org), launcherLinks como tiles e rodapé "Gerenciar sua Conta Nommand"', async () => {
+  it('grade de apps: só os apps no grid; launcherLinks viram LINKS de rodapé (como na Conta) + "Gerenciar" no fim', async () => {
     const user = userEvent.setup()
     renderBar()
     await user.click(screen.getByRole('button', { name: 'Aplicativos Nommand' }))
     const dialog = screen.getByRole('dialog', { name: 'Aplicativos' })
-    const apps = within(dialog).getAllByRole('link').filter((a) => a.className.includes('ntb-tile'))
-    expect(apps.map((a) => a.querySelector('.ntb-tile__text')?.textContent)).toEqual([
+    // O grid tem SÓ os apps: "Todos os aplicativos"/"Status dos serviços" não
+    // podem parecer tiles (PKG-FIXES 25d586a6 — o dono viu isso no motor).
+    const grid = within(dialog).getByRole('list')
+    expect(Array.from(grid.querySelectorAll('.ntb-tile__text')).map((t) => t.textContent)).toEqual([
       'Loadbalance',
       'Motor',
       'Agent Package',
       'Conta',
+    ])
+    const tileLinks = within(dialog)
+      .getAllByRole('link')
+      .filter((a) => a.className.includes('ntb-tile'))
+    expect(tileLinks[0]).toHaveAttribute('href', 'https://lb.example/auth/sso?org=o1&next=%2F')
+    expect(tileLinks[0]).toHaveAttribute('aria-current', 'page')
+    expect(tileLinks[1]).not.toHaveAttribute('aria-current')
+    // Rodapé: os launcherLinks como links de texto com ícone pequeno, e
+    // "Gerenciar sua Conta Nommand" por último.
+    const foot = dialog.querySelector('.ntb-foot-links') as HTMLElement
+    expect(foot).not.toBeNull()
+    expect(Array.from(foot.querySelectorAll('.ntb-foot-link')).map((a) => a.textContent)).toEqual([
       'Todos os aplicativos',
       'Status dos serviços',
+      'Gerenciar sua Conta Nommand',
     ])
-    expect(decodeURIComponent(apps[0].getAttribute('href') ?? '')).toBe(
-      'https://lb.example/auth/sso?org=o1&next=/',
-    )
-    expect(apps[0]).toHaveAttribute('aria-current', 'page')
-    expect(apps[1]).not.toHaveAttribute('aria-current')
-    expect(apps[0]).toHaveAttribute('target', '_blank')
-    expect(apps[4]).toHaveAttribute('href', 'https://conta.example/apps')
-    expect(within(dialog).getByRole('link', { name: 'Gerenciar sua Conta Nommand' })).toHaveAttribute(
-      'href',
+    expect(foot.querySelector('.ntb-foot-link--manage')?.getAttribute('href')).toBe(
       'https://conta.example/account',
+    )
+    expect(within(foot).getByRole('link', { name: 'Todos os aplicativos' })).toHaveAttribute(
+      'href',
+      'https://conta.example/apps',
+    )
+    // launcherLinks abrem em aba nova por padrão
+    expect(within(foot).getByRole('link', { name: 'Status dos serviços' })).toHaveAttribute(
+      'target',
+      '_blank',
     )
   })
 
@@ -168,7 +214,11 @@ describe('@nomad/ui/topbar: <TopBar model> monta as 3 peças a partir do TopBarM
     expect(dialog).toHaveTextContent('Ana Souza')
     expect(dialog).toHaveTextContent('ana@nomad.dev')
     expect(dialog).toHaveTextContent('Nommand Labs · Proprietário')
-    expect(within(dialog).getAllByRole('menuitem').map((i) => i.textContent)).toEqual([
+    expect(
+      within(dialog)
+        .getAllByRole('menuitem')
+        .map((i) => i.textContent),
+    ).toEqual([
       'Gerenciar sua Conta Nommand',
       'Segurança',
       'Aparência',
@@ -238,16 +288,22 @@ describe('@nomad/ui/topbar: <TopBar model> monta as 3 peças a partir do TopBarM
     const { rerender } = renderBar()
     await user.click(screen.getByRole('button', { name: 'Ajuda' }))
     const menu = screen.getByRole('menu', { name: 'Ajuda' })
-    expect(within(menu).getAllByRole('menuitem').map((i) => i.textContent)).toEqual([
-      'Ajuda',
-      'Privacidade',
-      'Termos',
-    ])
-    expect(within(menu).getByRole('menuitem', { name: 'Termos' })).toHaveAttribute('href', 'https://conta.example/terms')
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((i) => i.textContent),
+    ).toEqual(['Ajuda', 'Privacidade', 'Termos'])
+    expect(within(menu).getByRole('menuitem', { name: 'Termos' })).toHaveAttribute(
+      'href',
+      'https://conta.example/terms',
+    )
 
     // sem helpLinks o botão não existe
     rerender(
-      <TopBar model={{ ...MODEL, helpLinks: undefined }} brand={<TopBarModelBrand product="Loadbalance" />} />,
+      <TopBar
+        model={{ ...MODEL, helpLinks: undefined }}
+        brand={<TopBarModelBrand product="Loadbalance" />}
+      />,
     )
     expect(screen.queryByRole('button', { name: 'Ajuda' })).toBeNull()
   })
@@ -287,7 +343,9 @@ describe('@nomad/ui/topbar: <TopBar model> monta as 3 peças a partir do TopBarM
       />,
     )
     expect(
-      screen.getByRole('link', { name: 'Notificações, 150 não lidas' }).querySelector('.ntb-notif-badge'),
+      screen
+        .getByRole('link', { name: 'Notificações, 150 não lidas' })
+        .querySelector('.ntb-notif-badge'),
     ).toHaveTextContent('99+')
     many.unmount()
 
@@ -308,7 +366,10 @@ describe('@nomad/ui/topbar: <TopBar model> monta as 3 peças a partir do TopBarM
   })
 
   it('ordem da barra §10: marca · empresa · busca · ações do app · sino · ajuda · apps · conta', () => {
-    renderBar({ search: <input aria-label="Buscar" />, actions: <button type="button" aria-label="Paleta" /> })
+    renderBar({
+      search: <input aria-label="Buscar" />,
+      actions: <button type="button" aria-label="Paleta" />,
+    })
     expect(barOrder()).toEqual([
       'Nommand Loadbalance, início',
       'Empresa: Nommand Labs. Trocar de empresa',
@@ -347,7 +408,12 @@ describe('@nomad/ui/topbar: <TopBar model> monta as 3 peças a partir do TopBarM
     const items = within(screen.getByRole('dialog', { name: 'Sua conta' }))
       .getAllByRole('menuitem')
       .map((i) => i.textContent)
-    expect(items).toEqual(['Gerenciar sua Conta Nommand', 'Segurança', 'Aparência', 'Tema · Escuro'])
+    expect(items).toEqual([
+      'Gerenciar sua Conta Nommand',
+      'Segurança',
+      'Aparência',
+      'Tema · Escuro',
+    ])
     expect(screen.queryByRole('link', { name: /Notificações/ })).toBeNull()
   })
 
@@ -378,16 +444,24 @@ describe('@nomad/ui/topbar: <TopBar model> monta as 3 peças a partir do TopBarM
     const legacy = topBarModelSchema.parse({
       profile: { name: 'Ana Souza', email: 'ana@nomad.dev', picture: null },
       organization: { id: 'o1', name: 'Nommand Labs', slug: 'nommand-labs', role: 'owner' },
-      organizations: [{ id: 'o1', name: 'Nommand Labs', slug: 'nommand-labs', role: 'owner', canOpenApp: true }],
+      organizations: [
+        { id: 'o1', name: 'Nommand Labs', slug: 'nommand-labs', role: 'owner', canOpenApp: true },
+      ],
       apps: MODEL.apps,
       accountUrl: 'https://conta.example/',
     })
-    render(<TopBar model={legacy} brand={<TopBarModelBrand product="Conta" />} onSignOut={() => {}} />)
-    expect(screen.getByRole('button', { name: 'Empresa: Nommand Labs. Trocar de empresa' })).toBeInTheDocument()
+    render(
+      <TopBar model={legacy} brand={<TopBarModelBrand product="Conta" />} onSignOut={() => {}} />,
+    )
+    expect(
+      screen.getByRole('button', { name: 'Empresa: Nommand Labs. Trocar de empresa' }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Conta de Ana Souza' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Conta de Ana Souza' }))
     // papel em inglês formatado para PT-BR; uma empresa só → sem "Trocar de empresa"
-    expect(screen.getByRole('dialog', { name: 'Sua conta' })).toHaveTextContent('Nommand Labs · Proprietário')
+    expect(screen.getByRole('dialog', { name: 'Sua conta' })).toHaveTextContent(
+      'Nommand Labs · Proprietário',
+    )
     expect(screen.queryByRole('menuitem', { name: 'Trocar de empresa' })).toBeNull()
     // sem notifications/helpLinks/links: só Gerenciar + Tema + Sair
     expect(
@@ -400,10 +474,14 @@ describe('@nomad/ui/topbar: <TopBar model> monta as 3 peças a partir do TopBarM
   it('onSwitchOrg opcional: o item troca o estado do chip sem quebrar', async () => {
     const user = userEvent.setup()
     render(<TopBar model={MODEL} brand={<TopBarModelBrand product="Loadbalance" />} />)
-    await user.click(screen.getByRole('button', { name: 'Empresa: Nommand Labs. Trocar de empresa' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Empresa: Nommand Labs. Trocar de empresa' }),
+    )
     await user.click(screen.getByRole('menuitemradio', { name: /Serendiped/ }))
     // sem callback, o chip continua no model (a troca é do app)
-    expect(screen.getByRole('button', { name: 'Empresa: Nommand Labs. Trocar de empresa' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Empresa: Nommand Labs. Trocar de empresa' }),
+    ).toBeInTheDocument()
   })
 })
 

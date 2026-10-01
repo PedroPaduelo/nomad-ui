@@ -137,6 +137,44 @@ for (const section of ['dependencies', 'devDependencies']) {
   }
 }
 
+// 2b) Dependência TRANSITIVA exigida pelo lock sem a entrada que a resolve.
+//    O check (1) só enxerga o que o app declara direto — o `sonner` do
+//    `@nomad/ui` é transitivo e escapava. Achado pela `loadbalance-33` ao
+//    rodar a mutação (remover a entrada do `sonner`) aqui: o gate passava.
+//    O `npm ci` pega essa forma, mas só no segundo passo; o gate deve
+//    reprovar antes de gastar minutos instalando.
+//
+//    Só conta dependência **de runtime** de pacote **instalado** (blocos
+//    `node_modules/…`): `devDependencies` e `peerDependencies` são opcionais
+//    por desenho e não podem exigir entrada.
+// `optionalDependencies` não são exigidas: o lock é multiplataforma e cada
+// plataforma resolve o seu binário (é o que o `npm ci` valida). Sem esta
+// exclusão o check acusa `@emnapi/*` e `@napi-rs/*` de um pacote wasm que
+// ninguém vai instalar nesta plataforma.
+const instaladas = Object.keys(packages).filter(
+  (k) =>
+    k.startsWith('node_modules/') && !k.slice('node_modules/'.length).includes('/node_modules/'),
+)
+const entradas = new Set(instaladas.map((k) => k.slice('node_modules/'.length)))
+for (const key of instaladas) {
+  const bloco = packages[key] ?? {}
+  // O lock marca com `optional: true` o pacote inteiro quando TODAS as suas
+  // dependências são opcionais (binário de outra plataforma, fallback wasm).
+  // É o próprio npm dizendo "isto não é exigido aqui" — respeitar é mais
+  // correto do que tentar adivinhar por nome de pacote.
+  if (bloco.optional === true) continue
+  const opcionais = new Set(Object.keys(bloco.optionalDependencies ?? {}))
+  for (const [nome, spec] of Object.entries(bloco.dependencies ?? {})) {
+    if (opcionais.has(nome)) continue // plataforma opcional, não é exigida
+    // Já instalado (nível raiz) ou resolvido por um link/file/git local.
+    if (entradas.has(nome)) continue
+    if (/^(git\+|https?:|file:|link:|workspace:)/.test(String(spec))) continue
+    problems.push(
+      `${key} exige "${nome}" (${spec}) mas não há entrada em node_modules/${nome} — o \`npm ci\` falha ao instalá-la`,
+    )
+  }
+}
+
 // 3) Dependência de git por ssh quebra o CI de quem consome: o runner não tem
 //    chave ssh, e na máquina do dono passa. Já apareceu em 3 projetos no mesmo
 //    dia (memória "gate tem camadas").

@@ -3,6 +3,32 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.8.10] — 2026-10-01
+
+Patch (`[NUI] 232d5cd6`). **Fecha uma fura do `check-lock` que a `loadbalance-33` achou rodando a mutação.** O item (4) do anúncio da v1.8.2 — _"não sobrou dependência órfã na raiz do lock"_ — **não existia no script**.
+
+### Corrigido
+
+- **Dependência transitiva exigida pelo lock, sem a entrada que a resolve.** O check (1) só enxergava o que o app declara **direto**; o `sonner` do `@nomad/ui` é transitivo e escapava. Medido na LB: lock com `node_modules/sonner` removido **passava** com exit 0, e o `npm ci` reprovava logo em seguida (`Missing: … from lock file`). **O gate reprova agora, antes do passo que gasta minutos instalando.**
+- A mensagem nomeia **quem exige** e o que falta: `node_modules/@nomad/ui exige "sonner" (^2.0.8) mas não há entrada em node_modules/sonner`.
+
+**Dois falso-positivo que a primeira versão acusava, e como foram resolvidos** (medidos contra o lock real do pacote, que tem 594 entradas):
+
+- **Binário de outra plataforma:** `@tailwindcss/oxide-wasm32-wasi` exige `@emnapi/*` e `@napi-rs/*`, que não têm entrada porque o lock é multiplataforma. Resolvido respeitando o marcador **`optional: true` que o próprio npm escreve no bloco** — é o npm dizendo "não é exigido aqui", mais confiável do que adivinhar por nome de pacote.
+- **`peerDependencies` e `devDependencies` de um transitive:** não são exigidas por desenho (o app as declara), então não contam.
+
+### Verificação (matriz de 5 casos)
+
+| caso                                     |           |
+| ---------------------------------------- | --------- |
+| lock íntegro                             | não acusa |
+| **transitiva ausente (a mutação da LB)** | **acusa** |
+| `git+ssh://` no `resolved`               | acusa     |
+| dependência opcional de plataforma       | não acusa |
+| `peerDependency` ausente                 | não acusa |
+
+Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
+
 ## [1.9.0] — 2026-10-01
 
 Minor (`[NUI] a2ca4a03`, decisão de padrão). **A regra da `connect-src` para os 4 apps** — vinda de um conflito real no AgentPack, em que um gate exigia uma origem absoluta que o desenho de produção declara desnecessária. Sem mudança de código: o `@nomad/ui` não publica CSP.

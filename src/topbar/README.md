@@ -19,30 +19,28 @@ import type { TopBarModel } from '@nomad/ui/topbar'
 const model: TopBarModel = {
   apps: [
     { id: 'app-load', slug: 'loadbalance', name: 'Loadbalance', launchUrl: '…' },
-    { id: 'app-motor', slug: 'motor',      name: 'Motor',      launchUrl: '…' },
+    { id: 'app-motor', slug: 'motor', name: 'Motor', launchUrl: '…' },
     /* … */
   ],
   organization: { id: 'org-1', name: 'Nommand Labs', slug: 'nommand-labs', role: 'Proprietário' },
-  organizations: [
-    /* 1+ entradas; o TopBar renderiza o "Trocar de empresa" só se len > 1 */
-  ],
+  organizations: [/* 1+ entradas; o TopBar renderiza o "Trocar de empresa" só se len > 1 */],
   account: {
     profile: { name: 'Ana Souza', email: 'ana@nomad.dev', picture: null },
     role: 'Proprietário',
     manageAccountHref: 'https://conta.example/account',
   },
   launcherLinks: [
-    { id: 'all-apps',  label: 'Todos os aplicativos', href: 'https://conta.example/apps' },
-    { id: 'status',    label: 'Status dos serviços',  href: 'https://status.example' },
+    { id: 'all-apps', label: 'Todos os aplicativos', href: 'https://conta.example/apps' },
+    { id: 'status', label: 'Status dos serviços', href: 'https://status.example' },
   ],
   accountLinks: [
-    { id: 'security',  label: 'Segurança',  href: 'https://conta.example/security' },
-    { id: 'theme',     label: 'Aparência',  href: '#theme' },   /* ação interna */
+    { id: 'security', label: 'Segurança', href: 'https://conta.example/security' },
+    { id: 'theme', label: 'Aparência', href: '#theme' } /* ação interna */,
   ],
   helpLinks: [
-    { id: 'help',        label: 'Ajuda',       href: 'https://help.example' },
-    { id: 'privacy',     label: 'Privacidade',  href: 'https://example/privacy' },
-    { id: 'terms',       label: 'Termos',       href: 'https://example/terms' },
+    { id: 'help', label: 'Ajuda', href: 'https://help.example' },
+    { id: 'privacy', label: 'Privacidade', href: 'https://example/privacy' },
+    { id: 'terms', label: 'Termos', href: 'https://example/terms' },
   ],
   createOrgUrl: 'https://conta.example/new',
   notifications: { unread: 3, href: 'https://conta.example/notifications' },
@@ -72,17 +70,17 @@ const model = topBarModelSchema.parse(await res.json()) // validado na borda
 />
 ```
 
-| Peça                                          | Do model                                         | Do app                       |
-| --------------------------------------------- | ------------------------------------------------ | ---------------------------- |
-| Grade de apps                                 | `apps[]` (links com `?org=&next=/`, aba nova)    | `currentAppSlug`             |
-| Rodapé da grade                               | `launcherLinks[]` + "Gerenciar sua Conta"        | —                            |
-| Seletor de empresa                            | `organizations[]`, empresa ativa, `createOrgUrl` | `onSwitchOrg`                |
-| Menu da conta                                 | `account`, `accountLinks[]`, "Gerenciar", "Sair" | `onSignOut`                  |
-| Ajuda                                         | `helpLinks[]`                                    | `topBarLabels.help`          |
-| Notificações                                  | `notifications { unread, href }`                 | `onNotificationsClick`       |
-| Marca e busca                                 | —                                                | `brand`, `search`, `actions` |
-| Tema ("Tema · Escuro", alterna claro/escuro)  | — (embutido; usa o `ThemeProvider` do pacote)    | `labels.themeItem`           |
-| "Trocar de empresa" (só com > 1 empresa)      | — (embutido; abre o seletor)                     | —                            |
+| Peça                                         | Do model                                         | Do app                       |
+| -------------------------------------------- | ------------------------------------------------ | ---------------------------- |
+| Grade de apps                                | `apps[]` (links com `?org=&next=/`, aba nova)    | `currentAppSlug`             |
+| Rodapé da grade                              | `launcherLinks[]` + "Gerenciar sua Conta"        | —                            |
+| Seletor de empresa                           | `organizations[]`, empresa ativa, `createOrgUrl` | `onSwitchOrg`                |
+| Menu da conta                                | `account`, `accountLinks[]`, "Gerenciar", "Sair" | `onSignOut`                  |
+| Ajuda                                        | `helpLinks[]`                                    | `topBarLabels.help`          |
+| Notificações                                 | `notifications { unread, href }`                 | `onNotificationsClick`       |
+| Marca e busca                                | —                                                | `brand`, `search`, `actions` |
+| Tema ("Tema · Escuro", alterna claro/escuro) | — (embutido; usa o `ThemeProvider` do pacote)    | `labels.themeItem`           |
+| "Trocar de empresa" (só com > 1 empresa)     | — (embutido; abre o seletor)                     | —                            |
 
 Tudo opcional: o que não vier no model não aparece (sem `notifications`, sem sino;
 sem `helpLinks`, sem menu de ajuda; sem `onSignOut`, sem "Sair"; uma empresa só,
@@ -111,11 +109,11 @@ schema na borda.
 
 ## O que vem embutido no TopBar (não vem da Conta)
 
-| Item                                | Por quê                                                              |
-|-------------------------------------|---------------------------------------------------------------------|
+| Item                                 | Por quê                                                              |
+| ------------------------------------ | -------------------------------------------------------------------- |
 | "Trocar de empresa" no `AccountMenu` | É a ação do `OrgSwitcher`; só aparece se `organizations.length > 1`. |
-| "Tema claro/escuro" no `AccountMenu` | Usa o `ThemeProvider` do pacote. Todos os apps já usam. |
-| `OrgSwitcher` com avatar da org     | O mark usa os tokens `--mark-bg` / `--mark-on` da paleta ativa.      |
+| "Tema claro/escuro" no `AccountMenu` | Usa o `ThemeProvider` do pacote. Todos os apps já usam.              |
+| `OrgSwitcher` com avatar da org      | O mark usa os tokens `--mark-bg` / `--mark-on` da paleta ativa.      |
 
 ## Decisões
 
@@ -131,22 +129,24 @@ schema na borda.
 6. **`helpLinks`**: opcional — o menu de ajuda só renderiza se vier preenchido.
 7. **"Criar empresa"**: abre `createOrgUrl` em nova aba (decisão do app).
 
-8. **`model` incompleto não derruba a barra** (v1.8.0): o `TopBarModelBar`
-   **não** desreferencia `model.account` sem guard. Se o app passar o JSON do
-   backend sem passar por `topBarModelSchema` e o `account` faltar, a peça da
-   conta degrada (sem "Gerenciar", avatar sem foto) e empresa, apps, ajuda e
-   sino continuam na barra. É rede de segurança do **render**, não validação:
-   o contrato segue exigindo `account`, e o app continua devendo validar a
-   resposta com `topBarModelSchema` na borda.
+8. **`model` incompleto não derruba a barra** (v1.8.0, ampliado na v1.8.1):
+   o `TopBarModelBar` **não** desreferencia os campos obrigatórios sem rede.
+   `account` ausente (shape legado `profile` + `accountUrl`), `organization`
+   ausente ou `organizations` ausente **degradam a peça** em vez de derrubar a
+   barra — antes, qualquer um dos três dava `TypeError` no render e a subárvore
+   inteira (com a moldura) sumia. `apps` já era coberto pelo `AppSwitcher`.
+   É rede de segurança do **render**, não validação: o contrato segue exigindo
+   os campos, e o app continua devendo validar a resposta com
+   `topBarModelSchema` na borda.
 
 ## Tipos exportados
 
-| Símbolo                            | Descrição                                         |
-|------------------------------------|---------------------------------------------------|
-| `TopBarModel`                      | Tipo canônico final (depois do transform).          |
-| `TopBarModelInput`                 | Tipo da entrada (aceita shape legado).             |
-| `TopBarProfile`, `TopBarAccount`, `TopBarAccountOrg`, `TopBarOrgOption`, `BarLink` | Sub-tipos. |
-| `topBarModelSchema`                | Zod schema (recomendado para validar a resposta).  |
+| Símbolo                                                                                                          | Descrição                                                  |
+| ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `TopBarModel`                                                                                                    | Tipo canônico final (depois do transform).                 |
+| `TopBarModelInput`                                                                                               | Tipo da entrada (aceita shape legado).                     |
+| `TopBarProfile`, `TopBarAccount`, `TopBarAccountOrg`, `TopBarOrgOption`, `BarLink`                               | Sub-tipos.                                                 |
+| `topBarModelSchema`                                                                                              | Zod schema (recomendado para validar a resposta).          |
 | `topBarProfileSchema`, `topBarAccountSchema`, `topBarAccountOrgSchema`, `topBarOrgOptionSchema`, `barLinkSchema` | Schemas auxiliares (para apps que queiram validar partes). |
 
 ## Tarefas relacionadas

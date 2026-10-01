@@ -114,7 +114,10 @@ export function AccountMenu({
         <button
           type="button"
           className="ntb-btn ntb-avatar-btn"
-          aria-label={triggerLabel ?? `Conta de ${user.name ?? ''}`}
+          // Sem nome o rótulo virava "Conta de " (espaço no fim, nome a11y
+          // inútil para leitor de tela) — o fallback mantém o rótulo inteiro
+          // quando o `account` degrada sem `profile` (v1.8.1).
+          aria-label={triggerLabel ?? `Conta de ${user.name ?? 'usuário'}`}
           {...p}
         >
           <Avatar name={user.name} src={user.picture} />
@@ -138,11 +141,12 @@ export function AccountMenu({
       <div role="menu" aria-label={label}>
         {/* "Gerenciar" só entra aqui quando não vier pelo `extraItems` (o
             `TopBarModelBar` já o coloca como primeiro item). */}
-        {!extraItems.some((i) => i.key === 'manage-account') && (manageAccountHref || onManageAccount) && (
-          <MenuItem icon={<UserIcon />} href={manageAccountHref} onSelect={onManageAccount}>
-            {manageAccountLabel}
-          </MenuItem>
-        )}
+        {!extraItems.some((i) => i.key === 'manage-account') &&
+          (manageAccountHref || onManageAccount) && (
+            <MenuItem icon={<UserIcon />} href={manageAccountHref} onSelect={onManageAccount}>
+              {manageAccountLabel}
+            </MenuItem>
+          )}
         <MenuItems items={extraItems} />
         {onSwitchOrganization && (
           <MenuItem icon={<SwitchIcon />} onSelect={onSwitchOrganization}>

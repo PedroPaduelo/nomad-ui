@@ -10,10 +10,11 @@
  * chega em runtime sem passar pelo `topBarModelSchema`. Em React, a exceção
  * derruba a subárvore — a barra inteira desaparece.
  *
- * Estes testes fixam a degradação: peça da conta sem "Gerenciar" e sem avatar,
- * resto da barra de pé.
+ * Estes testes fixam a degradação: peça da conta sem "Gerenciar" e a grade e a
+ * empresa de pé, para qualquer campo obrigatório que faltar no `model`.
  */
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 
 import { TopBar, topBarModelSchema, type TopBarModel } from '../index'
@@ -44,6 +45,8 @@ const LEGACY_RAW = {
   profile: { name: 'Ana Souza', email: 'ana@nomad.dev', picture: null },
 }
 
+const GERENCIAR = /Gerenciar sua Conta/i
+
 describe('TopBar: `model` incompleto não derruba a barra (LB 6be96af1)', () => {
   it('o ramo do `model` ignora os slots (o `.d.ts` está certo)', () => {
     render(
@@ -60,24 +63,66 @@ describe('TopBar: `model` incompleto não derruba a barra (LB 6be96af1)', () => 
     expect(screen.queryByTestId('slot-account')).toBeNull()
   })
 
-  it('model legado cru (sem `account`) não derruba a barra', () => {
+  it('model legado cru (sem `account`) não derruba a barra', async () => {
     // @ts-expect-error: reproduz o app que passa o JSON do backend sem validar
     const { container } = render(<TopBar model={LEGACY_RAW} />)
     // A barra continua de pé…
     expect(container.querySelector('header.ntb')).not.toBeNull()
     expect(screen.getByRole('button', { name: /aplicativos/i })).not.toBeNull()
     // …e a peça da conta degrada em vez de sumir com tudo.
-    expect(screen.getByRole('button', { name: /conta/i })).not.toBeNull()
+    expect(screen.getByRole('button', { name: /conta de/i })).not.toBeNull()
+    // Sem `manageAccountHref` não há item "Gerenciar" (é link, não ação) — e o
+    // menu ABRE, que é o que prova que a peça degradou em vez de sumir.
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /conta de/i }))
+    const panel = await screen.findByRole('menu', { name: /conta/i })
+    expect(within(panel).queryByRole('menuitem', { name: GERENCIAR })).toBeNull()
   })
 
-  it('sem `account` o item "Gerenciar" não aparece (não há href para seguir)', () => {
-    // @ts-expect-error: idem — shape legado cru
-    render(<TopBar model={LEGACY_RAW} />)
-    expect(screen.queryByRole('link', { name: /Gerenciar sua Conta/i })).toBeNull()
-  })
-
-  it('com `account` completo nada muda: "Gerenciar" segue no menu da conta', () => {
+  it('com `account` completo "Gerenciar" está no menu da conta', async () => {
+    const user = userEvent.setup()
     render(<TopBar model={VALID} />)
-    expect(screen.getByRole('button', { name: /conta/i })).not.toBeNull()
+    await user.click(screen.getByRole('button', { name: /conta de ana/i }))
+    const panel = await screen.findByRole('menu', { name: /conta/i })
+    // Contraprova do teste anterior: aqui o item EXISTE. Sem abrir o painel a
+    // asserção passaria com o item ausente — foi o que o revisor pegou.
+    expect(within(panel).getByRole('menuitem', { name: GERENCIAR })).not.toBeNull()
+  })
+
+  // A partir daqui: os mesmos campos que o `account`, pelo mesmo motivo. O
+  // `AppSwitcher` já fazia `apps ?? []`; `organization`/`organizations` eram
+  // os dois que faltavam (achado do revisor, confirmado por reprodução).
+  it.each([
+    ['organization', { organization: undefined }],
+    ['organizations', { organizations: undefined }],
+    ['apps', { apps: undefined }],
+  ])('model sem `%s` não derruba a barra', (_campo, patch) => {
+    const model = { ...VALID, ...patch } as unknown as TopBarModel
+    const { container } = render(<TopBar model={model} />)
+    expect(container.querySelector('header.ntb')).not.toBeNull()
+    // A barra continua navegável pela conta.
+    expect(screen.getByRole('button', { name: /conta de/i })).not.toBeNull()
+  })
+
+  it('model sem `organizations` não mostra "Trocar de empresa"', async () => {
+    const user = userEvent.setup()
+    const model = { ...VALID, organizations: undefined } as unknown as TopBarModel
+    render(<TopBar model={model} />)
+    await user.click(screen.getByRole('button', { name: /conta de ana/i }))
+    await waitFor(async () => {
+      const panel = await screen.findByRole('menu', { name: /conta/i })
+      // O item depende de `organizations.length > 1`; sem lista, não aparece.
+      expect(within(panel).queryByRole('menuitem', { name: /trocar de empresa/i })).toBeNull()
+    })
+  })
+
+  it('sem `profile` o rótulo acessível da conta não fica vazio', () => {
+    const model = {
+      ...VALID,
+      account: { ...VALID.account, profile: { name: null, email: null, picture: null } },
+    } as unknown as TopBarModel
+    render(<TopBar model={model} />)
+    // Antes virava "Conta de " (espaço no fim) — leitor de tela não anuncia nada.
+    expect(screen.getByRole('button', { name: /conta de usuário/i })).not.toBeNull()
   })
 })

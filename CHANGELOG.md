@@ -3,15 +3,32 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.8.1] — 2026-10-01
+
+Patch (`[NUI] 99d5f54d`, achado do revisor independente). Completa a rede de segurança da v1.8.0 para os **dois** campos que faltavam, e conserta dois testes que passavam pelo motivo errado.
+
+### Corrigido
+
+- **`model.organization` e `model.organizations` também não derrubam mais a barra.** Mesmo defeito, mesma classe de crash da v1.8.0: `organization` ausente dava `TypeError: Cannot read properties of undefined (reading 'id')` e `organizations` ausente dava `(reading 'length')` — nos dois, a barra inteira sumia. Já o `apps` era尔顿de parado (`AppSwitcher` faz `apps ?? []`), o que deixava o trio inconsistente. Agora o seletor de empresa simplesmente não aparece quando não há empresa ativa, e a barra segue de pé.
+- **Rótulo acessível da conta não fica mais vazio.** Sem `profile.name` o gatilho renderizava `aria-label="Conta de "` (espaço no fim) — leitor de tela não anunciava nada. Passa a "Conta de usuário".
+
+### Testes
+
+- `topBarModelDegrade.test.tsx` reescrito: 8 casos (era 4).
+- **Dois testes eram vacuous e agora mordem.** O painel da conta nasce fechado, então `queryByRole('link', {name:/Gerenciar/i})` dava `null` **também com o `model` válido** — os dois casos passavam pelo motivo errado. Passam a abrir o painel com `userEvent.click` e a procurar com `within(panel)`; o caso "com `account` completo" é a contraprova (o item EXISTE), sem a qual o outro não prova nada.
+- Cobertura por `it.each` para `organization`, `organizations` e `apps`, mais "sem `organizations` não mostra Trocar de empresa" e o rótulo acessível.
+- **Mutações verificadas:** reverter o guard de `account` derruba 1 dos 8; reverter o de `organization`/`organizations` derruba **3 dos 8**.
+- Vitest 185/185 em 27 arquivos, `test:a11y` 242/242, typecheck, lint, `doc:check`, build — tudo verde.
+
 ## [1.8.0] — 2026-10-01
 
 Patch de correção (`[LB] [TOPBAR-PARITY-03]` `6be96af1`, `[NUI] 99d5f54d`). Um `model` incompleto derrubava **a barra inteira** por exceção no render — o sintoma no app é "a barra some", e foi diagnosticado como "conflito de slots".
 
 ### Corrigido
 
-- **`<TopBar model>` não some mais por `model` incompleto.** O `TopBarModelBar` desreferenciava `model.account.manageAccountHref` sem guard. Quando o app passa o JSON do backend no shape legado (`profile` + `accountUrl`, **sem** `account` — o que `GET /api/oidc/topbar` devolveu até a Conta completar o repasse), o acesso é `undefined` e a `TypeError` derruba a subárvore: em React, exceção no render leva a peça **e a moldura** embora. Agora a peça da conta **degrada** (menu sem "Gerenciar", avatar sem foto) e o resto da barra — empresa, apps, ajuda, sino — fica de pé.
+- **`<TopBar model>` não some mais por `model` incompleto.** O `TopBarModelBar` desreferenciava `model.account.manageAccountHref` sem guard. Quando o app passa o JSON do backend no shape legado (`profile` + `accountUrl`, **sem** `account` — o que `GET /api/oidc/topbar` devolveu até a Conta completar o repasse), o acesso é `undefined` e a `TypeError` derruba a subárvore: em React, exceção no render leva a peça **e a moldura** embora. Agora a peça da conta **degrada** (menu sem "Gerenciar", avatar genérico) e o resto da barra — empresa, apps, ajuda, sino — fica de pé.
 
-  O contrato **não mudou**: `account` continua obrigatório no `TopBarModel` e `topBarModelSchema` continua exigindo `manageAccountHref`. Isto é rede de segurança do *render*, não validação — **o app continua devendo validar a resposta do backend com `topBarModelSchema` antes de passar para a barra**. Sem isso a barra aparece degradada em vez de aparecer errada, que é o objetivo; o defeito de contrato do backend segue de pé.
+  O contrato **não mudou**: `account` continua obrigatório no `TopBarModel` e `topBarModelSchema` continua exigindo `manageAccountHref`. Isto é rede de segurança do _render_, não validação — **o app continua devendo validar a resposta do backend com `topBarModelSchema` antes de passar para a barra**. Sem isso a barra aparece degradada em vez de aparecer errada, que é o objetivo; o defeito de contrato do backend segue de pé.
 
   Sem `manageAccountHref` não há item "Gerenciar" (é um link, não uma ação) e o rodapé da grade não o renderiza — coerente com o resto.
 

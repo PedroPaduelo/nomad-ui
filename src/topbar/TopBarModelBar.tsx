@@ -152,7 +152,12 @@ export function TopBarModelBar({
   const [accountOpen, setAccountOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
 
-  const orgs = model.organizations
+  // Mesma rede de segurança do `account` acima (v1.8.1): `organizations` e
+  // `organization` são obrigatórios no contrato, mas `AppSwitcher` já faz
+  // `apps ?? []` — a barra não pode depender de cada peça se defender sozinha.
+  // Sem `organization` não há empresa ativa; o seletor some e o resto fica.
+  const orgs = model.organizations ?? []
+  const orgInfo = model.organization
   const createOrgLabel = model.createOrgLabel ?? labels?.createOrg ?? 'Criar empresa'
   const manageLabel = labels?.manageAccount ?? 'Gerenciar sua Conta Nommand'
   const accountLabel = labels?.account ?? 'Sua conta'
@@ -249,7 +254,7 @@ export function TopBarModelBar({
   const org = (
     <OrgSwitcher
       organizations={orgs}
-      currentOrgId={model.organization.id}
+      currentOrgId={orgInfo?.id}
       onSwitch={onSwitchOrg ?? (() => {})}
       extraItems={createOrgItem}
       label={labels?.org ?? 'Trocar de empresa'}
@@ -294,7 +299,7 @@ export function TopBarModelBar({
       ) : null}
       <AppSwitcher
         apps={model.apps}
-        orgId={model.organization.id}
+        orgId={orgInfo?.id}
         currentAppSlug={currentAppSlug}
         openInNewTab={openInNewTab}
         footer={appsFooter}
@@ -305,10 +310,11 @@ export function TopBarModelBar({
       />
       <AccountMenu
         user={profile}
-        organization={{
-          name: model.organization.name,
-          role: account?.role ?? model.organization.role,
-        }}
+        organization={
+          orgInfo
+            ? { name: orgInfo.name, role: account?.role ?? orgInfo.role }
+            : { name: null, role: account?.role ?? null }
+        }
         manageAccountHref={manageAccountHref}
         manageAccountLabel={manageLabel}
         extraItems={accountExtra}

@@ -242,9 +242,23 @@ O que os dois scripts protegem, e por que existem: em 2026-10-01 a transcrição
 
 ```bash
 npm install
-npm run gates      # typecheck + lint + test + build
-npm run test:a11y  # axe em navegador real
+npm run gates      # typecheck + lint + doc:check + test + test:a11y + build
+npm run gates:ci   # npm ci do zero + gates  ← o que prova que o PACOTE INSTALA
 ```
+
+**`gates` roda sobre o `node_modules` que já está instalado; `gates:ci` apaga
+tudo e instala de novo com `npm ci`.** A diferença não é cosmética: o `sonner`
+ficou no `package.json` ~20 versões sem entrar no lock, e `gates` ficava verde
+o tempo todo — o defeito só apareceu quando alguém rodou `npm ci` do zero, que
+é o que um consumidor do pacote faz ao instalá-lo por git.
+
+O `check-lock` (dentro de `doc:check`) confere o **conteúdo** do lock — se
+falhar, o `npm ci` nem chega a instalar. Ele impede o defeito de voltar, mas
+confundir "o lock está certo" com "o pacote instala" é exatamente o erro que
+custou 20 versões. Por isso o `npm ci` fica no gate, e não só a conferência.
+
+**Antes de dar uma entrega por boa, rode `npm run gates:ci`.** `gates` sozinho
+não prova que o pacote instala.
 
 ## Dados (`@nomad/ui/data`)
 

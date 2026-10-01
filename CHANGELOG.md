@@ -3,6 +3,21 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.8.3] — 2026-10-01
+
+Patch (`[NUI] eee72d81`). **O gate local não provava que o pacote instala** — e é o pacote que os 4 apps consomem por git.
+
+### Corrigido
+
+- **`test:a11y` (242 testes, axe) entra no `gates`.** Rodava só quando alguém lembrava — ou seja, quase nunca por acidente. Hoje o gate é typecheck + lint + `doc:check` + 185 testes + **242 de a11y** + build.
+- **`gates:ci` novo: `npm ci` do zero antes dos gates.** `gates` roda sobre o `node_modules` que já está instalado; `gates:ci` apaga tudo e reinstala. É a diferença entre "o lock está certo" (o que o `check-lock` confere) e "o pacote instala" (o que só o `npm ci` prova). O `sonner` passou ~20 versões sem entrar no lock com `gates` verde o tempo todo — o defeito só apareceu quando alguém instalou do zero, que é o que todo consumidor faz.
+
+### Verificação
+
+- **Mutações:** tirar o `sonner` do lock faz o `gates:ci` reprovar no passo do `npm ci` (EUSAGE, exit 1); o `gates` sozinho pegaria pelo `check-lock`, mas não pelo install.
+- `npm run gates:ci` do zero: **exit 0 em 233 s** (Node 22, linux-x64) — `npm ci` + typecheck + lint + `doc:check` + 185/185 + **242/242** + build.
+- README: a seção de desenvolvimento agora diz qual gate usar e quando.
+
 ## [1.8.2] — 2026-10-01
 
 Patch (`[NUI] 58551c13`). **Este pacote não instalava com `npm ci`.** Corrigido, e a verificação que impede a volta entra no gate.

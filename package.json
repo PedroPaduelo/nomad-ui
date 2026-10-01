@@ -1,6 +1,6 @@
 {
   "name": "@nomad/ui",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "description": "Kit, tema (11 paletas), barra Nomad, camada de dados e presets compartilhados pelos apps da Nomad. Base: kit do AgentPack.",
   "type": "module",
   "license": "UNLICENSED",
@@ -61,8 +61,9 @@
     "gates": "npm run typecheck && npm run lint && npm run doc:check && npm test && npm run build",
     "showcase:dev": "vite --config examples/showcase/vite.config.ts",
     "showcase:build": "vite build --config examples/showcase/vite.config.ts",
-    "doc:check": "node scripts/check-doc.mjs docs/padrao-frontend.md && node scripts/knowledge-summary.test.mjs",
-    "doc:knowledge": "node scripts/knowledge-page.mjs"
+    "doc:check": "node scripts/check-doc.mjs docs/padrao-frontend.md && node scripts/knowledge-summary.test.mjs && node scripts/check-lock.mjs",
+    "doc:knowledge": "node scripts/knowledge-page.mjs",
+    "check-lock": "node scripts/check-lock.mjs"
   },
   "prettier": {
     "printWidth": 100,

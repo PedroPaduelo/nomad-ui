@@ -3,6 +3,26 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.8.2] — 2026-10-01
+
+Patch (`[NUI] 58551c13`). **Este pacote não instalava com `npm ci`.** Corrigido, e a verificação que impede a volta entra no gate.
+
+### Corrigido
+
+- **`sonner` estava no `package.json` desde a v1.3.0 e nunca entrou no `package-lock.json`.** O `npm ci` falha com `EUSAGE: package.json and package-lock.json are not in sync` — o pacote, como dependência git dos 4 apps, quebrava o build de quem consome. E aqui é pior que acidental: `sonner` é importada por `Toaster` e `useToast`, dois componentes publicados, então o lock quebrado entrega um pacote sem a dependência do toast.
+  - Por que ninguém viu: o fluxo do dia a dia é `npm install`, que "conserta" o lock sem reclamar. O pacote instalava, os 185 testes passavam, e a divergência só aparecia como `EUSAGE` no runner de quem consome. Varredura dos 40 deps da raiz: `sonner` era o único fora.
+  - O lock foi regenerado inteiro (`rm -rf node_modules package-lock.json && npm install`). Além do `sonner`, 31 entradas duplicadas de `@typescript-eslint` saíram (dedupe, mesmas versões) e 46 pacotes subiram de patch/minor dentro do range — nenhuma versão saiu do range declarado.
+
+### Adicionado
+
+- **`check-lock.mjs`, no `doc:check` (e portanto no `gates`):** confere que (1) toda `dependencies`/`devDependencies` está no lock, (2) a raiz do lock bate com o `package.json`, (3) a versão que o lock **instala** satisfaz o range pedido, (4) não sobrou dependência órfã na raiz do lock, (5) nenhum `resolved` em `git+ssh` (que passa na máquina do dono e quebra no CI), e (6) o lock não está truncado. Sem dependência nova: o range é conferido por uma função própria.
+  - **O caso (3) cobre um furo que o `npm ci` não acusa:** medir com a raiz do lock em `^3.0.0` e o `package.json` em `^4` **passa** no `npm ci` — ele instala o que a raiz do lock diz, não o que o app pediu. O check pega.
+  - **Mutação verificada:** tirar o `sonner` do lock reprova o `doc:check` com o erro nomeando o pacote; com o lock certo passa.
+
+### Para os apps
+
+Nenhuma mudança de API ou de contrato — é empacotamento. Mas quem regenerate o lock a partir deste tag passa a ter o `sonner` resolvido, e **rodar `npm ci` com o lock antigo do `@nomad/ui` era IMPOSSÍVEL** (o lock era do próprio pacote). Se o build de algum app falhou com `EUSAGE` depois do bump, era isto.
+
 ## [1.8.1] — 2026-10-01
 
 Patch (`[NUI] 99d5f54d`, achado do revisor independente). Completa a rede de segurança da v1.8.0 para os **dois** campos que faltavam, e conserta dois testes que passavam pelo motivo errado.

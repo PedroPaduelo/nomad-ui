@@ -115,17 +115,104 @@ export class EnvError extends Error {
  * tipado. O app passa a fonte (`import.meta.env` do Vite): o pacote nunca lê
  * o ambiente sozinho.
  *
+ * **Variável de segurança não tem default.** Se a URL da API pode ter
+ * default, um `.env` incompleto não quebra o boot — roda apontando para
+ * lugar errado, em silêncio. Ausente tem que ser erro de boot, com o nome da
+ * variável na mensagem. Recurso de desenvolvimento (flag opt-in) pode ter
+ * default: a ausência desliga, e ligar é ato consciente.
+ *
  * ```ts
+ * // ✗ default permissivo: um .env incompleto passa e aponta para o lugar errado
+ * z.object({ VITE_API_URL: z.url().default(`${location.origin}/api`) })
+ *
+ * // ✓ sem default: ausente quebra o boot nomeando a variável
  * export const env = parseEnv(
- *   z.object({ VITE_API_URL: z.url().default(`${location.origin}/api`) }),
+ *   secureEnv(
+ *     z.object({
+ *       VITE_API_URL: z.url(),                                  // segurança: obrigatória
+ *       VITE_FEATURE_NEW_UI: z.stringbool().default(false),       // recurso: opt-in
+ *     }),
+ *     ['VITE_API_URL'],        // o que o app promete fornecer
+ *   ),
  *   import.meta.env,
  * )
  * ```
  */
-export function parseEnv<Out>(schema: SafeParseSchema<Out>, source: unknown): Out {
-  const result = schema.safeParse(source)
+export function parseEnv<Input extends SafeParseSchema<unknown> | SecureEnvSchema<unknown>>(
+  schema: Input,
+  source: unknown,
+): Out<Input> {
+  // Detecção EXPLICITA: um `z.object()` também tem `required`, então testar
+  // a propriedade Mentiria e trataria todo schema puro como secureEnv. A marca
+  // é `schema` ser um `safeParse` — o app não a produz por acidente.
+  const maybeSecure = schema as Partial<SecureEnvSchema<unknown>>
+  const isSecure = typeof maybeSecure.schema?.safeParse === 'function'
+  const inner = (isSecure ? maybeSecure.schema : schema) as SafeParseSchema<unknown>
+  if (isSecure) {
+    // Antes do parse: variável de segurança ausente é erro de boot, mesmo que o
+    // schema tenha default nela (ver `secureEnv`).
+    const missing = (maybeSecure.required ?? []).filter((k) => isMissing(source, k))
+    if (missing.length > 0) {
+      throw new EnvError(
+        missing.map((k) => ({
+          path: [k],
+          code: 'missing_security_env',
+          message: `variável de segurança ausente na env: ${k} (declare no .env e no orquestrador; sem default de propósito)`,
+        })),
+      )
+    }
+  }
+  const result = inner.safeParse(source)
   if (!result.success) throw new EnvError(result.error.issues)
-  return result.data
+  return result.data as Out<Input>
+}
+
+/** Infere a saída: `parseEnv` devolve o que o schema declara, com ou sem `secureEnv`. */
+type Out<Input> =
+  Input extends SecureEnvSchema<infer O> ? O : Input extends SafeParseSchema<infer O> ? O : never
+
+/**
+ * Declara quais variáveis de ambiente o app **promete** fornecer, e entrega o
+ * schema para o `parseEnv`. A checagem é feita ANTES do parse: se alguma
+ * dessas variáveis não vier na fonte, o `parseEnv` lança `EnvError` nomeando
+ * ela — mesmo que o schema tenha `.default()` nela, que é justamente o
+ * default permissivo que a auditoria de 2026-10-01 encontrou em três apps
+ * (flag de dev ligada por omissão, guard que dependia da variável que
+ * deveria proteger).
+ *
+ * A lista mora junto do schema (`secureEnv(schema, [...])`) para não poder
+ * divergir dele: declarar em uma chamada e esquecer em outra é como o bypass
+ * entrou. Variável que **não** governa segurança (flag de recurso, porta de
+ * diagnóstico) fica fora da lista e pode ter default.
+ *
+ * ```ts
+ * export const env = parseEnv(
+ *   secureEnv(z.object({ VITE_API_URL: z.url() }), ['VITE_API_URL']),
+ *   import.meta.env,
+ * )
+ * ```
+ */
+export function secureEnv<Out>(
+  schema: SafeParseSchema<Out>,
+  required: readonly string[],
+): SecureEnvSchema<Out> {
+  return { [SECURE_ENV]: true, schema, required: [...required] }
+}
+
+/** O que `secureEnv` devolve: o schema e as variáveis obrigatórias. */
+/** Marca do wrapper: distingue de um `z.object()`, que também tem `required`. */
+const SECURE_ENV = Symbol('nomad-ui.secureEnv')
+
+export interface SecureEnvSchema<Out> {
+  readonly [SECURE_ENV]: true
+  schema: SafeParseSchema<Out>
+  readonly required: readonly string[]
+}
+
+function isMissing(source: unknown, key: string): boolean {
+  if (typeof source !== 'object' || source === null) return true
+  const value = (source as Record<string, unknown>)[key]
+  return value === undefined || value === null || value === ''
 }
 
 /**

@@ -364,6 +364,8 @@ if (env.NODE_ENV !== 'test') throw new Error('chave obrigatória')
 
 Variáveis de segurança (`NODE_ENV`, flag de recurso, chave, URL pública, CORS): **sem default**. Recurso de desenvolvimento (`devtools`, devtools de dado, rota de diagnóstico, caixa de e-mail): **opt-in explícito** — a ausência desliga, e ligar é ato consciente.
 
+No `@nomad/ui` isso é garantido por `secureEnv` (v1.7.0): `parseEnv(secureEnv(schema, ['VITE_API_URL']), import.meta.env)` lança `EnvError` **nomeando a variável** quando ela não vem na fonte, antes do parse, e mesmo que o schema tenha `.default()` nela. Use-o para toda variável de segurança; flag de recurso (opt-in) fica fora da lista.
+
 **Teste que pega.** Parse da env **sem a variável**, exigindo que lance com mensagem que cite o nome dela. E com a variável ausente, afirmar que a rota de diagnóstico responde 404. A suíte com env completa não pega nada disso.
 
 #### A4 — `dotenv` não sobrescreve a env do processo

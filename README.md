@@ -198,6 +198,31 @@ function App({ children }: { children: React.ReactNode }) {
 
 Tokens usados pelo shell: `--sidebar-width`, `--sidebar-collapsed-width`, `--content-max`, `--backdrop-bg`, `--surface-*`, `--color-*`, `--text-*`, `--border-*`. Tudo vem com o tema.
 
+## Variáveis de ambiente: `secureEnv`
+
+O `@nomad/ui` não lê `env` por conta própria — o `parseEnv` recebe a fonte do app (`import.meta.env` do Vite). Para
+garantir que **variável de segurança não suma com default**, o pacote oferece `secureEnv` (v1.7.0): a lista de
+obrigatórias mora junto do schema, e o `parseEnv` lança `EnvError` **nomeando a variável** quando ela não vem na fonte
+— antes do parse, e mesmo que o schema tenha `.default()` nela.
+
+```ts
+import { parseEnv, secureEnv } from '@nomad/ui/data'
+
+export const env = parseEnv(
+  secureEnv(
+    z.object({
+      VITE_API_URL: z.url(), // segurança: obrigatória
+      VITE_FEATURE_NEW_UI: z.stringbool().default(false), // recurso: opt-in
+    }),
+    ['VITE_API_URL'],
+  ),
+  import.meta.env,
+)
+```
+
+Sem `secureEnv`, o `parseEnv` se comporta exatamente como antes (compat). A regra vem da auditoria de segurança de
+2026-10-01: flag de dev ligada por omissão, e guard que dependia da variável que deveria proteger, em três apps.
+
 ## Documento normativo e a página de knowledge
 
 `docs/padrao-frontend.md` é a **fonte da verdade** do Padrão Frontend Nomad v1 — é ele que os quatro apps copiam e seguem. A página de knowledge do AgentPack (`690df27c`) é um **resumo com ponteiro**, não uma cópia: o resumo vem de `knowledge.knowledge.md` (verificado contra o documento) e a página aponta para o repo.

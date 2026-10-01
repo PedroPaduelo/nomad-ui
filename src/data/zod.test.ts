@@ -10,6 +10,7 @@ import {
   parseResponse,
   ResponseParseError,
   responseParser,
+  secureEnv,
 } from './zod'
 
 setupMswServer()
@@ -116,5 +117,80 @@ describe('fieldErrors', () => {
     expect(refined.success).toBe(false)
     if (!refined.success)
       expect(fieldErrors(refined.error)).toEqual({ _form: 'As senhas não batem' })
+  })
+})
+
+/**
+ * Variável de segurança não tem default (trava do pacote, 2026-10-01).
+ *
+ * O padrão apareceu em três apps: flag de dev ligada por omissão, guard que
+ * dependia da variável que deveria proteger. O pacote não tinha o defeito
+ * (não lê env sozinho), mas não tinha trava — e o exemplo do JSDoc ensinava
+ * `VITE_API_URL: z.url().default(...)`, que é o default permissivo.
+ *
+ * `secureEnv` carrega a lista de obrigatórias **junto do schema**, para não
+ * poder divergir dele.
+ */
+describe('secureEnv: variável de segurança ausente quebra o boot nomeando a variável', () => {
+  const schema = secureEnv(
+    z.object({
+      VITE_API_URL: z.url(),
+      VITE_FEATURE_X: z.stringbool().default(false), // recurso: default é correto
+    }),
+    ['VITE_API_URL'],
+  )
+
+  it('lança EnvError com o nome da variável quando a fonte não a traz', () => {
+    expect(() => parseEnv(schema, { VITE_FEATURE_X: 'true' })).toThrow(EnvError)
+    expect(() => parseEnv(schema, { VITE_FEATURE_X: 'true' })).toThrow(/VITE_API_URL/)
+    expect(() => parseEnv(schema, {})).toThrow(/variável de segurança ausente/)
+  })
+
+  it('o default permissivo no schema NÃO segura a variável declarada — é isso que trava', () => {
+    // schema com default na mesma variável: sem a trava do secureEnv, o parse
+    // passaria e o app rodaria apontando para o default em vez de quebrar.
+    const comDefault = secureEnv(
+      z.object({ VITE_API_URL: z.url().default('http://localhost/api') }),
+      ['VITE_API_URL'],
+    )
+    expect(() => parseEnv(comDefault, {})).toThrow(/VITE_API_URL/)
+  })
+
+  it('fonte não-objeto (ou null) também é falha nomeando a variável', () => {
+    expect(() => parseEnv(schema, undefined)).toThrow(/VITE_API_URL/)
+    expect(() => parseEnv(schema, null)).toThrow(/VITE_API_URL/)
+  })
+
+  it('string vazia conta como ausente (env de orquestrador pode vir vazia)', () => {
+    expect(() => parseEnv(schema, { VITE_API_URL: '' })).toThrow(/VITE_API_URL/)
+  })
+
+  it('com a variável presente, valida normal e o default da flag continua valendo', () => {
+    expect(parseEnv(schema, { VITE_API_URL: 'https://api.exemplo.com/api' })).toEqual({
+      VITE_API_URL: 'https://api.exemplo.com/api',
+      VITE_FEATURE_X: false,
+    })
+  })
+
+  it('mais de uma variável ausente: nomeia todas', () => {
+    const duas = secureEnv(z.object({ VITE_API_URL: z.url(), VITE_PUBLIC_KEY: z.string() }), [
+      'VITE_API_URL',
+      'VITE_PUBLIC_KEY',
+    ])
+    let msg = ''
+    try {
+      parseEnv(duas, {})
+    } catch (e) {
+      msg = (e as Error).message
+    }
+    expect(msg).toMatch(/VITE_API_URL/)
+    expect(msg).toMatch(/VITE_PUBLIC_KEY/)
+  })
+
+  it('parseEnv sem secureEnv não muda de comportamento (compat com os 4 apps)', () => {
+    // schema puro, sem lista: default continua valendo e fonte incompleta
+    // segue exatamente como antes desta trava.
+    const puro = z.object({ VITE_API_URL: z.url().default('http://localhost/api') })
+    expect(parseEnv(puro, {})).toEqual({ VITE_API_URL: 'http://localhost/api' })
   })
 })

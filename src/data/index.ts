@@ -23,6 +23,7 @@ export {
 } from './httpClient'
 export { defaultIsSessionExpired } from './httpClient'
 export type { HeaderSource, HttpClient, HttpClientOptions, UnauthorizedContext } from './httpClient'
+export type { Issue, SafeParseSchema, SecureEnvSchema } from './zod'
 export {
   clearCacheOnSessionChange,
   createQueryClient,
@@ -43,11 +44,11 @@ export {
   isResponseParseError,
   issuePath,
   parseEnv,
+  secureEnv,
   parseResponse,
   ResponseParseError,
   responseParser,
 } from './zod'
-export type { Issue, SafeParseSchema } from './zod'
 export { createScreenStore } from './screenStore'
 export type {
   ScreenSetState,

@@ -3,6 +3,38 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.7.0] — 2026-10-01
+
+Minor aditivo (`[NUI] 269f8dd4`, trava do padrão de env). A auditoria de segurança de 2026-10-01 encontrou o padrão "variável de ambiente que governa segurança não tem default" em três apps (flag de dev ligada por omissão, guard que dependia da variável que deveria proteger). O `@nomad/ui` **não tinha** o defeito (não lê env por conta própria — o `parseEnv` recebe a fonte do app), mas não tinha trava, e é consumido por quatro apps: um default permissivo novo aqui vale nos quatro.
+
+### Adicionado
+
+- **`secureEnv(schema, required)`** (`@nomad/ui/data`): declara quais variáveis o app **promete** fornecer, junto com o schema. O `parseEnv` checa a lista **antes** do parse: variável declarada e ausente na fonte lança `EnvError` **nomeando a variável**, mesmo que o schema tenha `.default()` nela — que é justamente o default permissivo que a auditoria encontrou. A lista mora junto do schema para não poder divergir dele (declarar em uma chamada e esquecer em outra é como o bypass entrou). Variável que não governa segurança (flag de recurso, porta de diagnóstico) fica fora da lista e pode ter default.
+- **`parseEnv` aceita o resultado de `secureEnv`**; sem ele, o comportamento é **idêntico** ao anterior (compat com os quatro apps). A detecção do wrapper é explícita (`schema` tem `safeParse`), não por ter a propriedade `required` — que um `z.object()` também tem.
+- Tipos `SecureEnvSchema`, `SafeParseSchema` e `Issue` exportados de `@nomad/ui/data`.
+
+### Corrigido
+
+- **O exemplo do JSDoc de `parseEnv` (`data/zod.ts`) não ensina mais default permissivo.** Mostrava `VITE_API_URL: z.url().default(...)` — exemplo é especificação, e foi copiado para `.env` de três apps. Agora mostra a variável de segurança sem default e a flag de recurso com default, com uma linha explicando a regra.
+
+### Testes
+
+- `zod.test.ts`: 7 testes novos — fonte incompleta lança `EnvError` nomeando a variável; **o default permissivo no schema não segura a variável declarada** (o teste que trava o padrão); fonte `undefined`/`null` também falha; string vazia conta como ausente; fonte completa valida e o default da flag continua valendo; mais de uma ausente nomeia todas; e `parseEnv` sem `secureEnv` não muda de comportamento. **Mutação verificada**: remover a trava derruba 6 testes; restaurada, 13 passam.
+- Vitest 177/177 (era 170/170), test:a11y 220/220, typecheck, lint, `doc:check`, build — tudo verde.
+
+### Para os apps
+
+```ts
+import { parseEnv, secureEnv } from '@nomad/ui/data'
+export const env = parseEnv(
+  secureEnv(
+    z.object({ VITE_API_URL: z.url(), VITE_FEATURE_X: z.stringbool().default(false) }),
+    ['VITE_API_URL'], // o que o app promete fornecer
+  ),
+  import.meta.env,
+)
+```
+
 ## [1.6.3] — 2026-10-01
 
 Patch (PKG-FIXES `4fa8bd30`, achados do revisor independente do `@nomad/ui` — escopo v1.1.2→v1.6.2). Aditivo: nada quebra.

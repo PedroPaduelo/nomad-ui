@@ -44,7 +44,7 @@ cliente HTTP escrito à mão com `fetch` quando o `createHttpClient` resolve.
 ```jsonc
 // package.json do app — URL git+https COMPLETA, nunca o atalho github:
 "dependencies": {
-  "@nomad/ui": "git+https://github.com/PedroPaduelo/nomad-ui.git#v1.6.1"
+  "@nomad/ui": "git+https://github.com/PedroPaduelo/nomad-ui.git#v1.6.2"
 }
 ```
 
@@ -81,7 +81,7 @@ vez** (`rm -f package-lock.json && npm install` na primeira instalação, ou no 
 | `@nomad/ui`                                                    | kit (`Button`, `Modal`, `Drawer`, `Menu`, `Popover`, `Tabs`, `Field`, `Input`, `Select`, `ConfirmDialog`, `EmptyState`, `Switch`, `Table`, `Pagination`, `Banner`, `MultiSelect`, `CodeBlock`, `StatusDot`, `Progress`, `Kbd`, `Toaster`…) e tema (`ThemeProvider`, `PaletteProvider`, `ThemeSwitcher`, hooks de tema e paleta, boot sem flash) | `src/components/ui/`, `providers/ThemeProvider`, `lib/theme*`, `styles/palettes.ts` |
 | `@nomad/ui/theme.css`                                          | o `globals.css` do agent-package: tokens, `@theme inline`, 10 paletas × claro/escuro, e o `@source` do pacote                                                                                                                                                                                                                                   | `src/styles/globals.css` e `palettes.css`                                           |
 | `@nomad/ui/topbar`                                             | `TopBar`, `TopBarModel` + `topBarModelSchema`, `TopBarModelBar`, `NotificationsButton`, `TopBarBrand`, `TopBarModelBrand`, `NommandMark`, `OrgSwitcher`, `AppSwitcher`, `AccountMenu` (Padrão SSO Nomad v1, §10)                                                                                                                                | `src/shared/nomad-topbar/` + `scripts/sync-nomad-topbar.sh`                         |
-| `@nomad/ui/data`                                               | `createQueryClient`, `createHttpClient({ baseURL, onUnauthorized, isSessionExpired })`, `ApiError` (`errorCode`, `body`), helpers de Zod e fábrica de query keys                                                                                                                                                                                | `lib/queryClient.ts`, o miolo de `api/client.ts`                                    |
+| `@nomad/ui/data`                                               | `createQueryClient`, `createHttpClient({ baseURL, onUnauthorized, isSessionExpired })`, `ApiError` (`errorCode`, `body`), `parseEnv`/`parseResponse`/`responseParser`/`fieldErrors` (tipos **estruturais**, sem zod no `.d.ts`), helpers de Zod e fábrica de query keys                                                                         | `lib/queryClient.ts`, o miolo de `api/client.ts`                                    |
 | `@nomad/ui/markdown`                                           | leitor de markdown do kit **(revisar na v1.0.0)**                                                                                                                                                                                                                                                                                               | `components/ui/Markdown.tsx`                                                        |
 | `@nomad/ui/tsconfig`, `@nomad/ui/eslint`, `@nomad/ui/prettier` | presets                                                                                                                                                                                                                                                                                                                                         | configs copiadas                                                                    |
 
@@ -129,6 +129,7 @@ pacote; o hash dele entra no `script-src` da CSP **(revisar na v1.0.0: nome do e
 | `v1.5.2` | o barrel de `@nomad/ui/topbar` passou a exportar o contrato (`topBarModelSchema` e tipos); `createHttpClient`: 401 de credencial (`invalid_credentials`, `mfa_*`) não derruba a sessão (`isSessionExpired`) e `UnauthorizedContext.refreshError` | aponta para `#v1.5.2` ou acima                                                       |
 | `v1.6.0` | `<TopBar model={…}>` monta as 3 peças + Ajuda + notificações a partir do `TopBarModel` (ver §8); `NotificationsButton`, `NommandMark`/`TopBarModelBrand`; `MenuItem.onNavigate`; `AccountMenu.onSignOut` opcional; nota de consumo por tag       | barra pelo model; conferir versão instalada                                          |
 | `v1.6.1` | `<Kbd symbol>` para glifo Unicode (⌘, ⇧, ⌥, ↻): a fonte de texto tem o glifo, a de mono não — sem isso o navegador desenhava a caixa vazia (▯)                                                                                                   | `<Kbd symbol>` em atalhos; **tirar o contorno `font-sans` no app**                   |
+| `v1.6.2` | `launcherLinks` como **rodapé** de links da grade (como a Conta), não tiles; tipos de Zod estruturais (`SafeParseSchema`, `Issue`): o `.d.ts` não amarra a versão de zod do consumidor                                                           | nada a mudar no código; **a ponte de tipos do zod sai**                              |
 
 Tags nunca se movem: conteúdo corrigido sai em **versão nova**.
 
@@ -138,7 +139,7 @@ Tags nunca se movem: conteúdo corrigido sai em **versão nova**.
 2. Troque a tag no `package.json` e rode `npm install @nomad/ui@git+https://github.com/PedroPaduelo/nomad-ui.git#<tag>` (força a resolução; ver "Consumo por tag" acima).
 3. Confira `node -p "require('@nomad/ui/package.json').version"`.
 4. Rode os gates (seção 11) e a aceitação visual da barra (captura ao lado da Conta).
-5. Um commit só: `chore(deps): @nomad/ui v1.6.1`.
+5. Um commit só: `chore(deps): @nomad/ui v1.6.2`.
 
 Nunca aponte para `main`, branch ou sha solto. Não edite nada dentro de `node_modules/@nomad/ui`: mudança vai por PR
 no `nomad-ui` e sai numa versão nova. Componente que falta no kit: peça no `nomad-ui`; até sair, ele mora em
@@ -305,6 +306,12 @@ Import só de tipo e `ApiError`/predicados `is*Error` estão liberados. Também:
 Mensagens em pt-BR no próprio schema. Os helpers de Zod do `@nomad/ui/data` padronizam o erro de parse como `ApiError`
 **(revisar na v1.0.0: nomes)**. A resposta do topbar se valida com o `topBarModelSchema` do pacote (ver §8).
 
+**Zod 3 + zod 4 no mesmo workspace (`v1.6.2`):** os tipos públicos de `parseEnv`/`parseResponse`/`responseParser`/
+`fieldErrors` são **estruturais** (`SafeParseSchema<Out>`, `Issue`) e o `.d.ts` do pacote **não importa zod** — então
+eles tipam contra o zod que o app tem, seja 3 ou 4. Num workspace com o `be` no zod 3 (fastify-type-provider-zod) e
+o `fe` no zod 4, a ponte de tipos que o motor precisou fazer **sai**: importe `parseEnv`/`parseResponse`/`fieldErrors`
+de `@nomad/ui/data` direto. `zod@^4` continua peer do pacote (o app usa o próprio schema).
+
 ### Zustand
 
 Só estado de tela: preferências (tema e paleta ficam no pacote), sidebar, toasts, paleta de comandos aberta, modo de
@@ -340,6 +347,9 @@ marca, busca (centro) e ações próprias (Paleta, Busca Ctrl K) nos slots, mais
 
 Nenhum app chama a Conta pelo navegador. Aceite: captura lado a lado com a Conta, mesma largura, grade de apps e menu da
 conta abertos — as três peças têm que ser idênticas, mudando só o tema.
+
+**`launcherLinks` são o rodapé da grade** (`v1.6.2`): links de texto com ícone pequeno numa linha abaixo dos tiles,
+com "Gerenciar sua Conta Nommand" no fim — como a Conta mostra, e não como tiles iguais aos apps.
 
 ## 9. Acessibilidade
 
@@ -390,7 +400,7 @@ CI (GitHub Actions) em todo push na `main` e PR, na ordem: `npm ci` → `api:che
 
 ## 12. Checklist de migração de um app
 
-1. Instalar `@nomad/ui` (v1.6.1 ou acima) e os peers; trocar o tema (`@import '@nomad/ui/theme.css'`, providers e boot do pacote).
+1. Instalar `@nomad/ui` (v1.6.2 ou acima) e os peers; trocar o tema (`@import '@nomad/ui/theme.css'`, providers e boot do pacote).
 2. Trocar a barra pelo `@nomad/ui/topbar` com `model={…}` (validado com `topBarModelSchema`); apagar `src/shared/nomad-topbar/` e `scripts/sync-nomad-topbar.sh`.
 3. Trocar o kit local pelo do pacote e apagar `src/components/ui/` (e Astryx/StyleX, se houver).
 4. Trocar cliente HTTP e QueryClient pelas fábricas do `@nomad/ui/data`.

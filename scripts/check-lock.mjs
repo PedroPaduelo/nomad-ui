@@ -106,8 +106,13 @@ for (const section of ['dependencies', 'devDependencies']) {
         `${section}: "${name}" é "${range}" no package.json e "${locked[name]}" na raiz do lock — divergência que o \`npm ci\` não acusa`,
       )
     }
+    // Dependência de git não tem range de semver: o "version" no lock é o
+    // commit (`0.0.0` ou um número derivado) e comparar com `satisfies()`
+    // acusaria uma dependência legítima. O shorthand da seção 3b é o que
+    // precisa ser pego nesses casos.
+    const ehGit = /^(git\+|github:|gitlab:|bitbucket:|https?:\/\/|git:\/\/)/.test(range)
     const version = packages[key].version
-    if (version && !satisfies(version, range)) {
+    if (version && !ehGit && !satisfies(version, range)) {
       problems.push(
         `${section}: "${name}" pede "${range}" mas o lock instala ${version} — \`npm ci\` não instala o que foi pedido`,
       )
@@ -132,14 +137,30 @@ for (const section of ['dependencies', 'devDependencies']) {
   }
 }
 
-// 3) Dependência por `git+ssh` no lock quebra o CI de quem consome: o runner
-//    não tem chave ssh e o `resolved` em ssh passa na máquina do dono. Já
-//    apareceu em 3 projetos no mesmo dia (memória "gate tem camadas").
+// 3) Dependência de git por ssh quebra o CI de quem consome: o runner não tem
+//    chave ssh, e na máquina do dono passa. Já apareceu em 3 projetos no mesmo
+//    dia (memória "gate tem camadas").
 const ssh = Object.entries(packages).filter(([, v]) =>
   String(v.resolved ?? '').startsWith('git+ssh'),
 )
 for (const [key, v] of ssh) {
   problems.push(`${key}: "resolved" em git+ssh (${v.resolved}) — o CI não tem chave ssh`)
+}
+
+// 3b) A ORIGEM do ssh: o shorthand `github: dono/repo#ref` (e `gitlab:`,
+//     `bitbucket:`) no `package.json`. Medido: `npm install` reescreve
+//     `github:…` para `git+ssh://git@github.com/…` no lock — o package.json
+//     parece innocent e o ssh só aparece depois. O LB levou 6 generating
+//     lock até isso virar `EUSAGE` no build. Pega na fonte, antes do lock.
+for (const section of ['dependencies', 'devDependencies', 'peerDependencies']) {
+  for (const [name, spec] of Object.entries(pkg[section] ?? {})) {
+    const valor = String(spec)
+    if (/^(github|gitlab|bitbucket):/.test(valor) && !valor.startsWith('git+')) {
+      problems.push(
+        `${section}: "${name}" usa o shorthand "${valor}" — o \`npm install\` escreve isso como git+ssh no lock e o CI não tem chave. Use git+https://`,
+      )
+    }
+  }
 }
 
 // 4) O lock precisa ter `lockfileVersion` e a lista de pacotes; sem isso o

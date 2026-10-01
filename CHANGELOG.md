@@ -3,6 +3,35 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.8.4] — 2026-10-01
+
+Patch (`[NUI] c5b28768`). Correção de uma afirmação errada no CHANGELOG da v1.8.2 e de um furo no `check-lock` — ambos sobre a mesma coisa: **lock e protocolo de git**.
+
+### Corrigido
+
+- **`check-lock` passa a pegar o atalho `github: dono/repo#ref`** (e `gitlab:`, `bitbucket:`) no `package.json`. Ele só checava `resolved` em `git+ssh`, e o atalho **parece inocente** — mas o `npm install` o reescreve para ssh no lock. Medido:
+  ```
+  "is-number": "github:jonschlinkert/is-number#master"
+  → resolved: git+ssh://git@github.com/jonschlinkert/is-number.git#98e8ff1
+  ```
+  É a 7ª ocorrência do mesmo defeito no loadbalance, e nenhuma delas apareceu pelo olho. Pega na fonte, com a instrução de usar `git+https://`.
+- **Dependência de git legítima deixou de ser acusada.** `git+https://…#master` caía na comparação de semver, porque a "versão" de uma dep de git no lock é o commit, não uma versão.
+
+### Correção de texto (o que a v1.8.2 falou de mais)
+
+A v1.8.2 disse: _"rodar `npm ci` com o lock antigo do `@nomad/ui` era IMPOSSÍVEL"_. **Só vale para o repositório do pacote.** Medido como consumidor:
+
+```
+npm install --package-lock-only   # OK
+npm ci                            # OK, exit 0
+```
+
+Quando o pacote vem por git, o npm resolve as dependências lendo o `package.json` **dele** — o `package-lock.json` do pacote não entra na conta. **O `npm ci` do consumidor não valida o lock do fornecedor**, então o `EUSAGE` nunca chegava ao build de nenhum app. Quem publica a dependência de git é a única parte que pode pegar lock fora de sincronia, e é onde o `check-lock` está.
+
+### Testes
+
+Mutações: o atalho `github:` é acusado; `git+ssh` no `resolved` continua sendo; `git+https://` legítimo passa (contraprova). Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
+
 ## [1.8.3] — 2026-10-01
 
 Patch (`[NUI] eee72d81`). **O gate local não provava que o pacote instala** — e é o pacote que os 4 apps consomem por git.

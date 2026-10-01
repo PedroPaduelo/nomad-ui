@@ -200,18 +200,18 @@ Tokens usados pelo shell: `--sidebar-width`, `--sidebar-collapsed-width`, `--con
 
 ## Documento normativo e a página de knowledge
 
-`docs/padrao-frontend.md` é a **fonte da verdade** do Padrão Frontend Nomad v1 — é ele que os quatro apps copiam e seguem. A página de knowledge do AgentPack (`690df27c`) é **derivada** dele, nunca editada à mão:
+`docs/padrao-frontend.md` é a **fonte da verdade** do Padrão Frontend Nomad v1 — é ele que os quatro apps copiam e seguem. A página de knowledge do AgentPack (`690df27c`) é um **resumo com ponteiro**, não uma cópia: o resumo vem de `knowledge.knowledge.md` (verificado contra o documento) e a página aponta para o repo.
 
 ```bash
-node scripts/generate-knowledge.mjs                     # gera dist/knowledge-690df27c.md
-node scripts/check-doc.mjs dist/knowledge-690df27c.md   # verifica a saída
+npm run doc:check       # check-doc.mjs no documento + teste do resumo contra o documento
+npm run doc:knowledge   # gera dist/knowledge-690df27c.md (publicar pela sessão com a API do AgentPack)
 ```
 
-O gerador exige que o documento do repo passe em `scripts/check-doc.mjs` **antes** de gerar (palavra não-portuguesa de transcrição automática, caractere fora do alfabeto esperado, backtick desenquadrado, tabela desalinhada, tag referada que não existe, seção fora de ordem) e confere a saída de novo. A publicação no AgentPack é feita pela sessão que tem a API, lendo o arquivo gerado — assim o texto não passa por transcrição de ninguém.
+O que os dois scripts protegem, e por que existem: em 2026-10-01 a transcrição manual de um documento normativo entre dois sistemas introduziu defeitos que a revisão estrutural não pegou (palavra em espanhol, palavra em holandês, aspa trocada quebrando um exemplo de rota) — e, no outro sentido, uma sessão escreveu três seções no repo sem revisão. Em documento normativo **o defeito é a transcrição, não a revisão**. Daí três regras que valem para quem mexe aqui:
 
-O cabeçalho da página (título, bloco de proveniência, para onde vão os casos por app) vive em `knowledge.knowledge.md` e é o único trecho preservado literalmente: tem julgamento humano. Todo o resto é o documento do repo.
-
-> Por que gerar em vez de sincronizar à mão: em 2026-10-01 a transcrição manual de um documento_normativo de ~400 linhas entre dois sistemas introduziu defeitos que a revisão estrutural não pegou (palavra em espanhol, palavra em holandês, aspa trocada quebrando um exemplo de rota) — e o defeito é a transcrição, não a revisão. A geração remove a classe inteira; o verificador pega a próxima ocorrência.
+- **A fonte é uma.** O padrão vive no documento do repo. A página de knowledge aponta para ele; os casos concretos por app vivem em `docs/auditoria-apps.md`, que envelhece junto com cada app.
+- **Referência se confere antes de integrar** — número, sha, arquivo:linha, citação. `check-doc.mjs` pega palavra não-portuguesa de transcrição automática, caractere fora do alfabeto esperado, backtick desenquadrado, tabela desalinhada, tag citada que não existe e seção fora de ordem.
+- **Quem publica a página é a sessão com a API do AgentPack, lendo o arquivo gerado** — o texto vem de `readFileSync`, não de digitação. Se o conteúdo passes por transcrição de alguém, a classe de defeito volta inteira.
 
 ## Desenvolvimento
 

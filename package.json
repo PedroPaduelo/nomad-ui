@@ -58,9 +58,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:a11y": "vitest run -c vitest.a11y.config.ts",
-    "gates": "npm run typecheck && npm run lint && npm test && npm run build",
+    "gates": "npm run typecheck && npm run lint && npm run doc:check && npm test && npm run build",
     "showcase:dev": "vite --config examples/showcase/vite.config.ts",
-    "showcase:build": "vite build --config examples/showcase/vite.config.ts"
+    "showcase:build": "vite build --config examples/showcase/vite.config.ts",
+    "doc:check": "node scripts/check-doc.mjs docs/padrao-frontend.md && node scripts/knowledge-summary.test.mjs",
+    "doc:knowledge": "node scripts/knowledge-page.mjs"
   },
   "prettier": {
     "printWidth": 100,

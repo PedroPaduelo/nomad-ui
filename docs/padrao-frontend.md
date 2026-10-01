@@ -562,6 +562,15 @@ CI (GitHub Actions) em todo push na `main` e PR, na ordem: `npm ci` → `api:che
 1. **O script roda o que o nome diz?** `npm run test` na raiz apontando para um workspace só é gate pela metade.
 2. **A condição que faz o teste pular está satisfeita no CI?** `skipIf` numa variável que o job não define produz **verde com o teste não rodado**, e ninguém vê.
 3. **Um passo de setup que falha derruba os seguintes?** Se eles ficam `skipped` em silêncio, CI vermelho pode significar "nenhum gate rodou", não "código quebrado".
+4. **O gate mede a coisa, ou a forma dela?** Gate que exige uma origem http(s) absoluta em `connect-src` reprova a configuração **mais segura** do caso (`'self'`, API na mesma origem). Gate que mede sintaxe em vez de intenção reprova o certo e deixa passar o errado — a mesma classe de "verde que não prova".
+
+**`connect-src` e a origem que não se declara (medido no AgentPack, 2026-10-01).** A pergunta que o gate tem de responder **não é "tem origem absoluta?"**, é **"a API é same-origin?"**:
+
+- **API na mesma origem** (front e API sob o mesmo host, cookie preso à origem que emitiu): `connect-src 'self'` está **certo e é o mais restritivo possível**. Declarar a própria API explicitamente não é mais seguro — é mais largo.
+- **API cross-origin** (outro host, issuer externo): a origem **tem** que estar na `connect-src`, e resolver a origem em runtime sem colocá-la na CSP quebra o `fetch` em produção.
+- **Origem resolvida em runtime que não entra na CSP** é **falha de boot**, não degradação silenciosa: o `ARG` com default vazio funciona no `docker build` local e só aparece como bloqueio de CSP no primeiro request.
+
+**Regra para os 4 apps:** `connect-src` leva as origens que o app **realmente chama**; same-origin não se declara. E nenhum `ARG` de origem deveria poder ficar vazio em produção sem o build recusar.
 
 **Checklist antes de confiar no seu CI:**
 

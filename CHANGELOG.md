@@ -3,6 +3,19 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.9.0] — 2026-10-01
+
+Minor (`[NUI] a2ca4a03`, decisão de padrão). **A regra da `connect-src` para os 4 apps** — vinda de um conflito real no AgentPack, em que um gate exigia uma origem absoluta que o desenho de produção declara desnecessária. Sem mudança de código: o `@nomad/ui` não publica CSP.
+
+### Documentado
+
+- **`connect-src` e a origem que não se declara.** A pergunta que o gate tem de responder **não é "tem origem absoluta?"**, é **"a API é same-origin?"**:
+  - **API na mesma origem** (cookie preso à origem que emitiu): `connect-src 'self'` está **certo e é o mais restritivo possível** — declarar a própria API explicitamente é mais largo, não mais seguro;
+  - **API cross-origin**: a origem **tem** que estar na `connect-src`; resolver em runtime sem declarar quebra o `fetch` em produção;
+  - **origem resolvida em runtime ausente da CSP** é **falha de boot**, não degradação silenciosa.
+- **Nova pergunta no checklist de gate (§12): "o gate mede a coisa, ou a forma dela?"** Gate que exige sintaxe em vez de intenção reprova o certo e deixa passar o errado — a mesma classe do "verde que não prova". É o quarto item, ao lado dos três que já existiam.
+- **Nenhum `ARG` de origem deveria poder ficar vazio em produção sem o build recusar.** Com default vazio, o `docker build` passa e o defeito só aparece como bloqueio de CSP no primeiro request.
+
 ## [1.8.9] — 2026-10-01
 
 Patch (`[NUI] 232d5cd6`). **Corrige o diagnóstico da v1.8.8**, que atribuiu ao motor uma correção que não era dele. Só texto.

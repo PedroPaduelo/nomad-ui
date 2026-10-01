@@ -225,7 +225,12 @@ if (problems.length) {
   for (const p of problems) console.error(`  · ${p}`)
   process.exit(1)
 }
+// A versão vai na saída de propósito: quem copia este script para o app
+// precisa saber de onde veio, porque a cobertura MUDA entre versões (a
+// v1.8.10 adicionou a dependência transitiva). Copiar de uma tag antiga e
+// acreditar que "o gate passa" não prova nada.
 console.log(
   `✓ package-lock.json — ok (${Object.keys(pkg.dependencies ?? {}).length} deps, ` +
-    `${Object.keys(pkg.devDependencies ?? {}).length} devDeps, ${Object.keys(packages).length} no lock)`,
+    `${Object.keys(pkg.devDependencies ?? {}).length} devDeps, ${Object.keys(packages).length} no lock)` +
+    ` · @nomad/ui ${pkg.version ?? 'sem versão'} check-lock`,
 )

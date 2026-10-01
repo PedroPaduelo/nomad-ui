@@ -3,6 +3,27 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.8.11] — 2026-10-01
+
+Patch (`[NUI] 232d5cd6`). **A regra do falso-positivo vai para o padrão**, e o `check-lock` passa a dizer de que versão ele é.
+
+### Documentado
+
+- **Gate que acusa caso legítimo é pior que gate que não pega** (§12). Furo é descoberto; falso-positivo é **desligado** — é a única classe em que **o conserto é pior que o defeito**, porque a equipe vê o gate barrando coisa certa e a resposta é tirar o gate.
+- **Nenhum gate novo entra sem contraprova**, e a contraprova é uma mutação do **caso legítimo** — não do defeito imaginado. **Mutação mostra que pega; só a contraprova mostra que é usável.** São coisas diferentes, e publicar só com a primeira entrega metade do gate.
+- **Os casos que NÃO acusam são parte da regra, não detalhe da matriz.** No `check-lock` são três (lock íntegro, opcional de plataforma, `peerDependency` ausente) — são o que torna o gate utilizável. **Gate só com mutação é metade do gate.**
+- _O mesmo erro pelo outro lado, no mesmo dia:_ `SIZE_EXCEPTIONS` subiu 3 vezes no dia em que foi criado (`33065ac1`). **Exceção que sobe sem consequência deixa de ser exceção** — teto precisa de medição junto, senão não segura nada.
+
+### Corrigido
+
+- **A saída do `check-lock` diz de que versão ele é** (`· @nomad/ui 1.8.11 check-lock`). Quem copia o script para o app precisa saber de onde veio, porque **a cobertura muda entre versões** — a v1.8.10 adicionou a transitiva. Copiar de tag antiga e ver "gate passa" não prova nada.
+
+### Verificação (v1.8.10 medida no shape de workspace, o do motor)
+
+O gate foi mediado num formato só (raiz). Testado agora contra **dois locks commitados** (raiz + `fe/`): motor íntegro **não** acusa; **mutação da transitiva ausente no shape de workspace acusa**; dependência opcional de plataforma **não** acusa. **Sem regressão.**
+
+Uma coisa que o teste mostrou e é intentional: **dependência de um workspace sem entrada no lock NÃO é accused** — e o `npm ci` também passa nesse caso (medido, exit 0), ou seja, é inofensivo. O gate fica quieto porque não há defeito.
+
 ## [1.8.10] — 2026-10-01
 
 Patch (`[NUI] 232d5cd6`). **Fecha uma fura do `check-lock` que a `loadbalance-33` achou rodando a mutação.** O item (4) do anúncio da v1.8.2 — _"não sobrou dependência órfã na raiz do lock"_ — **não existia no script**.

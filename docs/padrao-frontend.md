@@ -564,6 +564,16 @@ CI (GitHub Actions) em todo push na `main` e PR, na ordem: `npm ci` → `api:che
 3. **Um passo de setup que falha derruba os seguintes?** Se eles ficam `skipped` em silêncio, CI vermelho pode significar "nenhum gate rodou", não "código quebrado".
 4. **O gate mede a coisa, ou a forma dela?** Gate que exige uma origem http(s) absoluta em `connect-src` reprova a configuração **mais segura** do caso (`'self'`, API na mesma origem). Gate que mede sintaxe em vez de intenção reprova o certo e deixa passar o errado — a mesma classe de "verde que não prova".
 
+**Gate que acusa caso legítimo é pior que gate que não pega (v1.8.10).** Furo é descoberto; falso-positivo é **desligado**. É a única classe de falha de gate em que **o conserto é pior que o defeito**: a equipe vê o gate barrando coisa certa, e a resposta quase sempre é tirar o gate — e aí não sobra nada.
+
+**Regra: nenhum gate novo entra sem contraprova, e a contraprova é uma mutação do caso legítimo — não do defeito imaginado.** Mutação mostra que o gate pega; **só a contraprova mostra que ele é usável**. São coisas diferentes, e publicar só com a primeira entrega metade do gate.
+
+_O caso que establish a regra (2026-10-01, `@nomad/ui`):_ a primeira versão do `check-lock` acusava `@emnapi/*` e `@napi-rs/*` no lock real do pacote — dependências do binário wasm de outra plataforma, que o lock traz **sem entrada** porque é multiplataforma. Publicada assim, o gate reprovaria no registry inteiro. A correção foi respeitar o marcador **`optional: true` que o próprio npm escreve no bloco**, em vez de adivinhar por nome de pacote.
+
+**Os "não" da matriz são parte da regra, não detalhe dela.** A matriz do `check-lock` tem cinco casos; os que **não** acusam — lock íntegro, dependência opcional de plataforma, `peerDependency` ausente — são o que torna o gate utilizável. **Um gate só com mutação é metade do gate.**
+
+_O mesmo erro pelo outro lado, no mesmo dia:_ `SIZE_EXCEPTIONS` subiu 3 vezes no dia em que foi criado (`33065ac1`). **Exceção que sobe sem consequência deixa de ser exceção** — a mesma classe vista pelo outro lado: um limite que ninguém mede não segura nada. Teto que sobe precisa de medição junto, senão vira teto que não mede nada.
+
 **`connect-src` e a origem que não se declara (medido no AgentPack, 2026-10-01).** A pergunta que o gate tem de responder **não é "tem origem absoluta?"**, é **"a API é same-origin?"**:
 
 - **API na mesma origem** (front e API sob o mesmo host, cookie preso à origem que emitiu): `connect-src 'self'` está **certo e é o mais restritivo possível**. Declarar a própria API explicitamente não é mais seguro — é mais largo.

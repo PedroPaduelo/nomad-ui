@@ -198,6 +198,21 @@ function App({ children }: { children: React.ReactNode }) {
 
 Tokens usados pelo shell: `--sidebar-width`, `--sidebar-collapsed-width`, `--content-max`, `--backdrop-bg`, `--surface-*`, `--color-*`, `--text-*`, `--border-*`. Tudo vem com o tema.
 
+## Documento normativo e a página de knowledge
+
+`docs/padrao-frontend.md` é a **fonte da verdade** do Padrão Frontend Nomad v1 — é ele que os quatro apps copiam e seguem. A página de knowledge do AgentPack (`690df27c`) é **derivada** dele, nunca editada à mão:
+
+```bash
+node scripts/generate-knowledge.mjs                     # gera dist/knowledge-690df27c.md
+node scripts/check-doc.mjs dist/knowledge-690df27c.md   # verifica a saída
+```
+
+O gerador exige que o documento do repo passe em `scripts/check-doc.mjs` **antes** de gerar (palavra não-portuguesa de transcrição automática, caractere fora do alfabeto esperado, backtick desenquadrado, tabela desalinhada, tag referada que não existe, seção fora de ordem) e confere a saída de novo. A publicação no AgentPack é feita pela sessão que tem a API, lendo o arquivo gerado — assim o texto não passa por transcrição de ninguém.
+
+O cabeçalho da página (título, bloco de proveniência, para onde vão os casos por app) vive em `knowledge.knowledge.md` e é o único trecho preservado literalmente: tem julgamento humano. Todo o resto é o documento do repo.
+
+> Por que gerar em vez de sincronizar à mão: em 2026-10-01 a transcrição manual de um documento_normativo de ~400 linhas entre dois sistemas introduziu defeitos que a revisão estrutural não pegou (palavra em espanhol, palavra em holandês, aspa trocada quebrando um exemplo de rota) — e o defeito é a transcrição, não a revisão. A geração remove a classe inteira; o verificador pega a próxima ocorrência.
+
 ## Desenvolvimento
 
 ```bash

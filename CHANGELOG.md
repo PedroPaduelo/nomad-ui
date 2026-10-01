@@ -3,6 +3,31 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.8.0] — 2026-10-01
+
+Patch de correção (`[LB] [TOPBAR-PARITY-03]` `6be96af1`, `[NUI] 99d5f54d`). Um `model` incompleto derrubava **a barra inteira** por exceção no render — o sintoma no app é "a barra some", e foi diagnosticado como "conflito de slots".
+
+### Corrigido
+
+- **`<TopBar model>` não some mais por `model` incompleto.** O `TopBarModelBar` desreferenciava `model.account.manageAccountHref` sem guard. Quando o app passa o JSON do backend no shape legado (`profile` + `accountUrl`, **sem** `account` — o que `GET /api/oidc/topbar` devolveu até a Conta completar o repasse), o acesso é `undefined` e a `TypeError` derruba a subárvore: em React, exceção no render leva a peça **e a moldura** embora. Agora a peça da conta **degrada** (menu sem "Gerenciar", avatar sem foto) e o resto da barra — empresa, apps, ajuda, sino — fica de pé.
+
+  O contrato **não mudou**: `account` continua obrigatório no `TopBarModel` e `topBarModelSchema` continua exigindo `manageAccountHref`. Isto é rede de segurança do *render*, não validação — **o app continua devendo validar a resposta do backend com `topBarModelSchema` antes de passar para a barra**. Sem isso a barra aparece degradada em vez de aparecer errada, que é o objetivo; o defeito de contrato do backend segue de pé.
+
+  Sem `manageAccountHref` não há item "Gerenciar" (é um link, não uma ação) e o rodapé da grade não o renderiza — coerente com o resto.
+
+### Sem mudança de contrato
+
+- **O `.d.ts` do `TopBar` continua correto** ao dizer que `org`, `apps` e `account` são ignorados quando `model` vem. A hipótese de que o pacote ignorasse a peça errada **não se reproduz**: com `model` + qualquer slot, a barra renderiza as 3 peças normalmente. Quem esvaziou a barra foi o crash acima. Teste novo fixa esse comportamento para não ser redescoberto como bug.
+
+### Testes
+
+- `topBarModelDegrade.test.tsx` (novo, 4 casos): slots ignorados com `model`; `model` legado cru não derruba a barra; "Gerenciar" some sem href; `model` completo inalterado. **Mutação verificada**: voltar ao desreferenciamento sem guard derruba 2 dos 4.
+- Vitest 181/181 em 26 arquivos (era 177/177), typecheck, lint, `doc:check`, build — tudo verde.
+
+### Para os apps
+
+Quem usava `<TopBar>` com slots manuais e agora passa `model` **não precisa mais montar duas barras** para o fallback de Conta fora do ar: passar `model` e os slots juntos funciona (o `model` vence), e se o `model` vier incompleto a barra degrada em vez de sumir. Quem quiser seguir pela sessão local no 502 monta as peças à mão com `<TopBarModelBar>`.
+
 ## [1.7.0] — 2026-10-01
 
 Minor aditivo (`[NUI] 269f8dd4`, trava do padrão de env). A auditoria de segurança de 2026-10-01 encontrou o padrão "variável de ambiente que governa segurança não tem default" em três apps (flag de dev ligada por omissão, guard que dependia da variável que deveria proteger). O `@nomad/ui` **não tinha** o defeito (não lê env por conta própria — o `parseEnv` recebe a fonte do app), mas não tinha trava, e é consumido por quatro apps: um default permissivo novo aqui vale nos quatro.

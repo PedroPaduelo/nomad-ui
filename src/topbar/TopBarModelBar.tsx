@@ -189,10 +189,28 @@ export function TopBarModelBar({
             onSelect: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
           },
         ]
+  // `model.account` é obrigatório pelo CONTRATO (garantido pelo
+  // `topBarModelSchema`), mas o `model` chega em runtime por um app — e o
+  // shape legado `TopbarData` (`profile` + `accountUrl`, sem `account`) é
+  // justamente o que o backend devolvia. Sem o guard abaixo, este componente
+  // desreferenciava `model.account.manageAccountHref` e a EXCEÇÃO derrubava a
+  // subárvore inteira: a barra inteira some (o "a barra sai vazia" do LB,
+  // `6be96af1`) — não é falha de slot, é crash de render.
+  //
+  // A peça da conta degrada para um menu sem "Gerenciar" e sem avatar, em vez
+  // de levar o app inteiro embora. O contrato segue valendo para quem valida
+  // com `topBarModelSchema`; isto é só a rede de segurança do render.
+  const account = model.account
+  const profile = account?.profile ?? { name: null, email: null, picture: null }
+  const manageAccountHref = account?.manageAccountHref ?? ''
+
   // "Gerenciar" primeiro (decisão do contrato); depois os links da Conta, o
-  // tema e "Trocar de empresa"; "Sair" sempre por último.
+  // tema e "Trocar de empresa"; "Sair" sempre por último. Sem href não há item
+  // para pôr — "Gerenciar" é um link, não uma ação.
   const accountExtra: MenuItemSpec[] = [
-    { key: ACCOUNT_LINK_ID, label: manageLabel, href: model.account.manageAccountHref },
+    ...(manageAccountHref
+      ? [{ key: ACCOUNT_LINK_ID, label: manageLabel, href: manageAccountHref }]
+      : []),
     ...accountLinks.filter((l) => l.key !== ACCOUNT_LINK_ID),
     ...themeItem,
   ]
@@ -206,7 +224,7 @@ export function TopBarModelBar({
   // Nommand" fecha a linha (ou fica sozinho, se não houver links).
   const launcherLinks = model.launcherLinks ?? []
   const appsFooter =
-    launcherLinks.length > 0 || Boolean(model.account.manageAccountHref) ? (
+    launcherLinks.length > 0 || Boolean(manageAccountHref) ? (
       <div className="ntb-foot-links">
         {launcherLinks.map((l) => (
           <a
@@ -220,8 +238,8 @@ export function TopBarModelBar({
             {l.label}
           </a>
         ))}
-        {model.account.manageAccountHref ? (
-          <a className="ntb-foot-link ntb-foot-link--manage" href={model.account.manageAccountHref}>
+        {manageAccountHref ? (
+          <a className="ntb-foot-link ntb-foot-link--manage" href={manageAccountHref}>
             {manageLabel}
           </a>
         ) : null}
@@ -286,12 +304,12 @@ export function TopBarModelBar({
         inlinePanel={inlinePanels}
       />
       <AccountMenu
-        user={model.account.profile}
+        user={profile}
         organization={{
           name: model.organization.name,
-          role: model.account.role ?? model.organization.role,
+          role: account?.role ?? model.organization.role,
         }}
-        manageAccountHref={model.account.manageAccountHref}
+        manageAccountHref={manageAccountHref}
         manageAccountLabel={manageLabel}
         extraItems={accountExtra}
         onSwitchOrganization={

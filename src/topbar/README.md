@@ -131,6 +131,14 @@ schema na borda.
 6. **`helpLinks`**: opcional — o menu de ajuda só renderiza se vier preenchido.
 7. **"Criar empresa"**: abre `createOrgUrl` em nova aba (decisão do app).
 
+8. **`model` incompleto não derruba a barra** (v1.8.0): o `TopBarModelBar`
+   **não** desreferencia `model.account` sem guard. Se o app passar o JSON do
+   backend sem passar por `topBarModelSchema` e o `account` faltar, a peça da
+   conta degrada (sem "Gerenciar", avatar sem foto) e empresa, apps, ajuda e
+   sino continuam na barra. É rede de segurança do **render**, não validação:
+   o contrato segue exigindo `account`, e o app continua devendo validar a
+   resposta com `topBarModelSchema` na borda.
+
 ## Tipos exportados
 
 | Símbolo                            | Descrição                                         |

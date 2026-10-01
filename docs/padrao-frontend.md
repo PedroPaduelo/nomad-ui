@@ -564,6 +564,10 @@ CI (GitHub Actions) em todo push na `main` e PR, na ordem: `npm ci` → `api:che
 3. **Um passo de setup que falha derruba os seguintes?** Se eles ficam `skipped` em silêncio, CI vermelho pode significar "nenhum gate rodou", não "código quebrado".
 4. **O gate mede a coisa, ou a forma dela?** Gate que exige uma origem http(s) absoluta em `connect-src` reprova a configuração **mais segura** do caso (`'self'`, API na mesma origem). Gate que mede sintaxe em vez de intenção reprova o certo e deixa passar o errado — a mesma classe de "verde que não prova".
 
+**Gate que acusa com mensagem falsa é pior que os dois (v1.9.1).** Gate que reprova algo certo já é desligado; gate que reprova algo certo **e diz por quê errado** manda a pessoa corrigir um bug que não existe. _Sem mutação que reproduza o defeito, a mensagem não pode afirmar que o defeito acontece_ — pode convidar à verificação: _"o lock não declara esta transitiva; confirme com `npm ci` se ela resolve."_
+
+_O caso:_ o `check-lock` acusava 34 dependências que existiam no lock real do AgentPackage, com a mensagem _"o `npm ci` falha"_ — e o `npm ci` passava. Duas causas: **não resolvia aninhamento** (uma dep de `node_modules/@babel/core` resolve primeiro em `…/core/node_modules/<dep>`) e **não resolvia escopo** (em `@babel/core`, subir um nível corta o pacote inteiro, não a última barra). Contra-prova: o lock real do AP tem **870 entradas, 167 aninhadas**, e hoje acusa **0** — com a mutação real (remover uma aninhada) ainda acusando.
+
 **Gate que acusa caso legítimo é pior que gate que não pega (v1.8.10).** Furo é descoberto; falso-positivo é **desligado**. É a única classe de falha de gate em que **o conserto é pior que o defeito**: a equipe vê o gate barrando coisa certa, e a resposta quase sempre é tirar o gate — e aí não sobra nada.
 
 **Regra: nenhum gate novo entra sem contraprova, e a contraprova é uma mutação do caso legítimo — não do defeito imaginado.** Mutação mostra que o gate pega; **só a contraprova mostra que ele é usável**. São coisas diferentes, e publicar só com a primeira entrega metade do gate.

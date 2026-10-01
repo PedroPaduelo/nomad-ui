@@ -50,6 +50,32 @@ Patch (`[NUI] 232d5cd6`). **Fecha uma fura do `check-lock` que a `loadbalance-33
 
 Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
 
+## [1.9.1] — 2026-10-01
+
+Patch (`[NUI] 96106ee7`). **Corrige duas coisas: uma regressão que eu causei e 34 falsos em lock real.**
+
+## ⚠️ A v1.9.0 é REGRESSÃO — não adote
+
+A v1.9.0 foi commitada **antes** da v1.8.10, então a tag ficou mais antiga na linhagem e **não tem o bloco de transitiva** (231 → 193 linhas). Medido: mutação (remover `sonner`) → v1.8.10 reprova, **v1.9.0 passa**. Nenhum app deve adotar a v1.9.0.
+
+**A causa foi minha:** commitei a v1.9.0 (docs) enquanto a v1.8.10 (código) ainda estava em aberto, e numerei por ordem em vez de pela linhagem. **Regra: versão de código e versão de documento saem na ordem em que o commit entrou na main — sem exceção.** A main tem a ordem certa (`9790570` → `85ea5ef` → `32e148b`); as tags é que saíram fora.
+
+## Falsos em lock real (o achado do `agentepack-48`)
+
+O check acusava **34 dependências** que **existem** no lock do AgentPackage (870 entradas, 167 aninhadas) — e a mensagem dizia *"o `npm ci` falha"*, **quando o `npm ci` passa**. Eram dois defeitos:
+
+1. **Não resolvia aninhamento.** Uma dep de `node_modules/@babel/core` resolve primeiro em `node_modules/@babel/core/node_modules/<dep>`, e só cai no topo. Só olhar o topo acusava o que estava aninhado.
+2. **Não resolvia pacote com escopo.** Em `node_modules/@babel/core`, subir um nível não é cortar na última barra — é cortar o pacote inteiro. E o nível sai **com** barra: `${dir}/${PREFIXO}${nome}` sem normalizar dá `…/core//node_modules/x` e nunca casa.
+
+Além disso, o `jsesc` exigido por `@babel/generator` mora **irmão** do requerente (`node_modules/@babel/core/node_modules/jsesc`) — nem ancestral nem filho. A função `niveisVisiveis()` calcula os diretórios de busca pela ocorrência de `node_modules/` no caminho.
+
+**Mensagem honesta (a regra):** sem mutação que reproduza o defeito, a mensagem **não afirma** que o defeito acontece. Agora diz:
+> `node_modules/@babel/core/node_modules/@babel/generator declara "jsesc" (^3.0.2) e o lock não tem entrada para ela nem aninhada. Confirme com \`npm ci\`: se resolver em runtime, é falsa accusation.`
+
+**Contraprova no lock real do AgentPackage: 0 falsos** (era 34). Mutação real nesse lock (remover `node_modules/@babel/core/node_modules/jsesc`) → **acusa**. Matriz de 8 casos sintéticos: aninhada presente **não**, aninhada removida **sim**, aninhada em workspace **não**, escopo aninhado **não**, opcional **não**, `peerDependency` **não**, transitiva sem entrada (a mutação da LB) **sim**, íntegro **não**.
+
+Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
+
 ## [1.9.0] — 2026-10-01
 
 Minor (`[NUI] a2ca4a03`, decisão de padrão). **A regra da `connect-src` para os 4 apps** — vinda de um conflito real no AgentPack, em que um gate exigia uma origem absoluta que o desenho de produção declara desnecessária. Sem mudança de código: o `@nomad/ui` não publica CSP.

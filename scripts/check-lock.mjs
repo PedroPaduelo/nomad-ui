@@ -137,40 +137,88 @@ for (const section of ['dependencies', 'devDependencies']) {
   }
 }
 
-// 2b) Dependência TRANSITIVA exigida pelo lock sem a entrada que a resolve.
-//    O check (1) só enxerga o que o app declara direto — o `sonner` do
-//    `@nomad/ui` é transitivo e escapava. Achado pela `loadbalance-33` ao
-//    rodar a mutação (remover a entrada do `sonner`) aqui: o gate passava.
-//    O `npm ci` pega essa forma, mas só no segundo passo; o gate deve
-//    reprovar antes de gastar minutos instalando.
+// 2b) Dependência TRANSITIVA exigida por um pacote INSTALADO, sem entrada que
+//     a resolva. O check (1) só enxerga o que o app declara direto — o
+//     `sonner` do `@nomad/ui` é transitivo e escapava. Achado pela
+//     `loadbalance-33` rodando a mutação aqui: o gate passava.
 //
-//    Só conta dependência **de runtime** de pacote **instalado** (blocos
-//    `node_modules/…`): `devDependencies` e `peerDependencies` são opcionais
-//    por desenho e não podem exigir entrada.
-// `optionalDependencies` não são exigidas: o lock é multiplataforma e cada
-// plataforma resolve o seu binário (é o que o `npm ci` valida). Sem esta
-// exclusão o check acusa `@emnapi/*` e `@napi-rs/*` de um pacote wasm que
-// ninguém vai instalar nesta plataforma.
-const instaladas = Object.keys(packages).filter(
-  (k) =>
-    k.startsWith('node_modules/') && !k.slice('node_modules/'.length).includes('/node_modules/'),
-)
-const entradas = new Set(instaladas.map((k) => k.slice('node_modules/'.length)))
-for (const key of instaladas) {
-  const bloco = packages[key] ?? {}
-  // O lock marca com `optional: true` o pacote inteiro quando TODAS as suas
-  // dependências são opcionais (binário de outra plataforma, fallback wasm).
-  // É o próprio npm dizendo "isto não é exigido aqui" — respeitar é mais
-  // correto do que tentar adivinhar por nome de pacote.
+//     **A resolução é a do npm, não a minha (v1.9.1).** Uma dependência
+//     declarada por `node_modules/@babel/core` resolve primeiro em
+//     `node_modules/@babel/core/node_modules/<dep>` e só cai no topo. Só
+//     olhar o topo acusava `semver` no lock real do AgentPackage, que tem 139
+//     entradas aninhadas — e acusar caso legítimo é pior que não acusar
+//     (regra da §12 do padrão).
+//
+//     Só conta dependência de runtime de pacote instalado: `peerDependencies`
+//     e `devDependencies` de um transitive são opcionais por desenho, e bloco
+//     com `optional: true` é binário de outra plataforma — é o npm dizendo
+//     que não é exigido aqui.
+const PREFIXO = 'node_modules/'
+
+/**
+ * O pacote exige `nome`? O npm procura do mais interno ao mais externo:
+ * `node_modules/@babel/core` resolve primeiro em
+ * `node_modules/@babel/core/node_modules/<dep>` e só cai no topo.
+ *
+ * A parte difícil é o **escopo** (`@babel/core`): subir um nível não é cortar
+ * na última barra, é cortar o pacote inteiro — `node_modules/@babel/core` sobe
+ * para `node_modules/@babel` e daí para o topo. E o prefixo leva a barra,
+ * senão o caminho sai `…/@babel/corenode_modules/x` e a dependência some
+ * (foi exatamente o que aconteceu na primeira versão, dói record).
+ */
+/**
+ * Diretórios onde o npm procura uma dependência de `chave`, do mais interno ao
+ * mais externo.
+ *
+ * O caminho é uma alternância de `node_modules/<pacote>`. Cada ocorrência de
+ * `node_modules/` delimita um nível, e o diretório de busca é o que existe
+ * **antes** do pacote seguinte:
+ *
+ *   node_modules/@babel/core/node_modules/@babel/generator
+ *   └────────── busca 1 ─────────┘└──── busca 2 ────┘
+ *
+ * É por isso que subir "um pacote" não basta: o `jsesc` exigido pelo
+ * `generator` mora em `node_modules/@babel/core/node_modules/jsesc`, **irmão**
+ * do requerente, e não é ancestral nem filho. Sem este cálculo o lock real do
+ * AgentPackage (870 entradas, 167 aninhadas) acusava falsos.
+ */
+function niveisVisiveis(chave) {
+  const pos = []
+  for (let i = chave.indexOf(PREFIXO); i !== -1; i = chave.indexOf(PREFIXO, i + 1)) pos.push(i)
+  const niveis = pos.map((ini, k) => {
+    const fim = k + 1 < pos.length ? pos[k + 1] : chave.length
+    return chave.slice(0, fim)
+  })
+  niveis.push(chave)
+  // Os níveis saem JÁ com barra no fim (são cortes na ocorrência seguinte), e
+  // a chave não tem. Sem normalizar, `${dir}/${PREFIXO}${nome}` sai com barra
+  // dupla (`…/core//node_modules/x`) e nunca casa — foi o que deixou 11 (depois
+  // 21) falsos no lock do AgentPackage.
+  return [...new Set(niveis)].filter((x) => x !== '').map((x) => x.replace(/\/+$/, ''))
+}
+
+function resolveEntrada(deQuem, nome) {
+  for (const dir of niveisVisiveis(deQuem)) {
+    const cand = `${dir}/${PREFIXO}${nome}`
+    if (packages[cand]) return cand
+  }
+  return packages[PREFIXO + nome] ? PREFIXO + nome : null
+}
+
+for (const [key, bloco] of Object.entries(packages)) {
+  if (!key.startsWith(PREFIXO) || !bloco || typeof bloco !== 'object') continue
   if (bloco.optional === true) continue
   const opcionais = new Set(Object.keys(bloco.optionalDependencies ?? {}))
   for (const [nome, spec] of Object.entries(bloco.dependencies ?? {})) {
-    if (opcionais.has(nome)) continue // plataforma opcional, não é exigida
-    // Já instalado (nível raiz) ou resolvido por um link/file/git local.
-    if (entradas.has(nome)) continue
+    if (opcionais.has(nome)) continue
+    if (resolveEntrada(key, nome)) continue
     if (/^(git\+|https?:|file:|link:|workspace:)/.test(String(spec))) continue
+    // **A mensagem não afirma que o `npm ci` falha** (v1.9.1): a ausência da
+    // entrada no lock PODE resolver em runtime. Gate que afirma defeito sem
+    // mutação que o reproduza manda a pessoa consertar algo que não está
+    // quebrado — ver a regra nova na §12.
     problems.push(
-      `${key} exige "${nome}" (${spec}) mas não há entrada em node_modules/${nome} — o \`npm ci\` falha ao instalá-la`,
+      `${key} declara "${nome}" (${spec}) e o lock não tem entrada para ela nem aninhada. Confirme com \`npm ci\`: se resolver em runtime, é falsa accusation.`,
     )
   }
 }

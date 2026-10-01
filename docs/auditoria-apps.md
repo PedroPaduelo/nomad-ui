@@ -1,11 +1,11 @@
 # Auditoria dos 4 apps contra o Padrão Frontend Nomad v1
 
 > Auditoria **só leitura**, feita em 2026-09-29 (task NUI-04) contra o [Padrão Frontend Nomad v1](./padrao-frontend.md).
-> Nenhum app foi editado. A migração de cada app é task no board do próprio app, depois da `v1.0.0` do `@nomad/ui`.
+> Nenhum app foi editado. A migração de cada app é task do próprio app, depois da `v1.0.0` do `@nomad/ui`.
 
 ## Código auditado
 
-Clones novos (`git clone --depth 1`) em `/workspace/.ref/_audit/<repo>` na sandbox do nomad-ui:
+Clones rasos de leitura (`git clone --depth 1`) de cada repositório de app, numa pasta temporária (não versionada):
 
 | App           | Pasta do frontend                 | Commit (`main`)                            | Data do commit       |
 | ------------- | --------------------------------- | ------------------------------------------ | -------------------- |
@@ -16,14 +16,14 @@ Clones novos (`git clone --depth 1`) em `/workspace/.ref/_audit/<repo>` na sandb
 
 Versões conferidas no `package-lock.json` (instaladas), não só no range do `package.json`.
 
-## Achado inicial do orquestrador: conferência
+## Conferência inicial
 
-| Achado                                           | Situação hoje                                                                                                                                                                                                                                                                   |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Conta usa Astryx                                 | **Confirmado.** `@astryxdesign/core` 0.6.3 no kit (`Button`, `Menu`, `Modal`, `Feedback`) e no tema (`src/theme/nommand.*`). Não tem Base UI.                                                                                                                                   |
-| Motor usa Astryx + Base UI + StyleX              | **Em parte.** Astryx 0.1.6 em 159 arquivos (as telas usam o `src/shared/ui`, wrappers de Astryx). O kit Base UI do agent-package foi copiado para `src/components/ui` (MOTOR-UI-01), mas **nenhuma tela usa** ainda. StyleX ficou só no `package.json`: **zero imports**.       |
-| Motor não tem Zod nem Zustand                    | **Confirmado.** Nenhum dos dois é dependência direta. Estado de tela com `useSyncExternalStore` próprio (`components/layout/create-store.ts`); validação à mão (`entities/workflow/model/validate.ts`, 1.902 linhas).                                                           |
-| loadbalance sem Zod, sem ESLint, Vite 6 / TS 5.7 | **Confirmado, com ajuste:** Vite 6.4.3 e TypeScript 5.9.3 instalados (range `^5.7`). Também não tem Prettier nem `madge`. **Novidade:** o kit já é Base UI (cópia do agent-package, ref `2f7d056`, épico UI-STD) e o tema é a cópia íntegra do `globals.css` com as 10 paletas. |
+| Achado                                           | Situação hoje                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Conta usa Astryx                                 | **Confirmado.** `@astryxdesign/core` 0.6.3 no kit (`Button`, `Menu`, `Modal`, `Feedback`) e no tema (`src/theme/nommand.*`). Não tem Base UI.                                                                                                                                    |
+| Motor usa Astryx + Base UI + StyleX              | **Em parte.** Astryx 0.1.6 em 159 arquivos (as telas usam o `src/shared/ui`, wrappers de Astryx). O kit Base UI do agent-package foi copiado para `src/components/ui` (MOTOR-UI-01), mas **nenhuma tela usa** ainda. StyleX ficou só no `package.json`: **zero imports**.        |
+| Motor não tem Zod nem Zustand                    | **Confirmado.** Nenhum dos dois é dependência direta. Estado de tela com `useSyncExternalStore` próprio (`components/layout/create-store.ts`); validação à mão (`entities/workflow/model/validate.ts`, 1.902 linhas).                                                            |
+| loadbalance sem Zod, sem ESLint, Vite 6 / TS 5.7 | **Confirmado, com ajuste:** Vite 6.4.3 e TypeScript 5.9.3 instalados (range `^5.7`). Também não tem Prettier nem `madge`. **Novidade:** o kit já é Base UI (cópia do agent-package, ref `2f7d056`, frente UI-STD) e o tema é a cópia íntegra do `globals.css` com as 10 paletas. |
 
 ## (a) Tabela app × item
 
@@ -98,7 +98,7 @@ Tema e kit já são cópias do agent-package; o peso é a estrutura FSD, a camad
 
 ### motor (`fe/`)
 
-A camada de dados já é boa (fábricas de keys, hooks por entidade). O peso é o Astryx nas telas e a estrutura FSD. O épico MOTOR-UI-00 (fases MOTOR-UI-02..07) já planeja a troca do Astryx: ele deve mirar o `@nomad/ui`, não a cópia em `components/ui`.
+A camada de dados já é boa (fábricas de keys, hooks por entidade). O peso é o Astryx nas telas e a estrutura FSD. O principalico MOTOR-UI-00 (fases MOTOR-UI-02..07) já planeja a troca do Astryx: ele deve mirar o `@nomad/ui`, não a cópia em `components/ui`.
 
 1. **[M] Instalar `@nomad/ui@v1.0.0` e trocar tema + barra** — tema, `components/theme/*` (store próprio), boot e `styles/palettes.*` do pacote; `AppTopBar` sobre o `TopBar` do `@nomad/ui/topbar` (dados de `use-topbar.ts`). _Aceite:_ testes de tema e `AppTopBar.test` verdes e captura lado a lado com a Conta idêntica nas três peças.
 2. **[P] Remover a cópia do topbar e o kit copiado** — apagar `src/shared/nomad-topbar/`, `scripts/sync-nomad-topbar.sh` (raiz) e o ignore no ESLint; apagar a cópia `src/components/ui/` (nenhuma tela usa). _Aceite:_ `grep -r "nomad-topbar\|@/components/ui" fe/src` vazio.
@@ -112,7 +112,7 @@ A camada de dados já é boa (fábricas de keys, hooks por entidade). O peso é 
 10. **[M] Arquivos grandes** — quebrar os 48 `.tsx` > 300 linhas brutas (a maioria cai com a troca do Astryx) e ligar `max-lines` com exceções registradas. _Aceite:_ `lint` sem erro de `max-lines`.
 11. **[M] Gates e CI** — `madge`, `test:a11y` (contraste no Chromium), script `gates`, GitHub Actions. _Aceite:_ CI verde num push na `main`.
 
-## Decisões pendentes (para o tech lead e o orquestrador)
+## Decisões pendentes (para as sessões donas de cada app)
 
 1. **Paleta `nommand` da Conta:** o pacote tem as 10 do agent-package; a Conta usa uma 11ª como padrão. Entra no pacote (vira 11) ou a Conta adota uma das 10?
 2. **Ganchos do `createHttpClient`:** a Conta precisa de `Authorization` com token em memória e refresh em 401; o agent-package precisa de `x-request-id`, monitor de conexão e `skipSessionExpiry`; o loadbalance, de CSRF. Sem esses ganchos, esses apps não trocam o cliente.

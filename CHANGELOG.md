@@ -9,7 +9,7 @@ Patch aditivo (PKG-FIXES `679ca2d8`, gap reportado pela `[MOTOR] [UI-FIX-MIG03] 
 
 ### Corrigido
 
-- **`<Kbd symbol>` renderiza glifo Unicode (⌘, ⇧, ⌥, ↻, ⏎, ⌫) sem a "caixa vazia" (▯).** O `Kbd` tinha `font-mono` fixo e a regra base do `globals.css` (`code, pre, kbd, samp { font-family: var(--font-mono) }`, seletor de elemento) forçava a fonte de mono em TODO `kbd`. Nenhuma das fontes de mono do tema (JetBrains Mono, Fira Code) tem o glifo ⌘/⇧/⌥, então o navegador desenhava ▯ — o dono viu "▯K comandos" na barra. Com `symbol`, a peça usa a fonte de texto (`font-sans`, que cai no system-ui com esses glifos) e marca `data-kbd-symbol`; o `globals.css` ganha `kbd[data-kbd-symbol] { font-family: var(--font-sans) }` (seletor de atributo vence o de elemento). Default inalterado: sem `symbol`, segue mono.
+- **`<Kbd symbol>` renderiza glifo Unicode (⌘, ⇧, ⌥, ↻, ⏎, ⌫) sem a "caixa vazia" (▯).** O `Kbd` tinha `font-mono` fixo e a regra base do `globals.css` (`code, pre, kbd, samp { font-family: var(--font-mono) }`, seletor de elemento) forçava a fonte de mono em TODO `kbd`. Nenhuma das fontes de mono do tema (JetBrains Mono, Fira Code) tem o glifo ⌘/⇧/⌥, então o navegador desenhava ▯ — apareceu como "▯K comandos" na barra. Com `symbol`, a peça usa a fonte de texto (`font-sans`, que cai no system-ui com esses glifos) e marca `data-kbd-symbol`; o `globals.css` ganha `kbd[data-kbd-symbol] { font-family: var(--font-sans) }` (seletor de atributo vence o de elemento). Default inalterado: sem `symbol`, segue mono.
 - **`Header` do pacote**: o atalho "Buscar ou ir para…" passou a usar `<Kbd symbol>` em vez de um `<kbd>` cru com `font-mono` (o ▯K da barra).
 
 ### Adicionado
@@ -92,7 +92,7 @@ Republicação do conteúdo da v1.5.0. A tag `v1.5.0` foi criada no commit errad
 (`114e667`, que é o da v1.4.1): quem instalava `#v1.5.0` recebia o pacote da
 1.4.1 — sem `TopBarModel`/`topBarModelSchema` e sem o fix do brand mark
 (`--mark-bg`/`--mark-on`). O conteúdo nunca esteve errado; a tag apontava para
-o commit errado. Tags publicadas não se movem (regra do dono), então a
+o commit errado. Tags publicadas não se movem (decisão de produto), então a
 correção sai em versão nova: use `#v1.5.1`.
 
 Nada muda em relação à 1.5.0 para quem usa a `main`: é o mesmo código, com a
@@ -127,7 +127,7 @@ Minor aditivo (NUI-04 / TOPBAR-PARITY-01 `904e24cf`). Define o **modelo de dados
 
 ## [1.4.1] — 2026-09-30
 
-Patch visual do `Progress` (reportado pelo dono na vitrine logo após a v1.4.0). Trilha agora ocupa a largura toda do pai por padrão (`w-full`), evitando que o `flex` do contêiner colapse o componente para 0 px quando o pai não força largura. Comportamento de quem passava largura explícita (`className="w-32"` ou wrapper com largura) preservado.
+Patch visual do `Progress` (visto na vitrine logo após a v1.4.0). Trilha agora ocupa a largura toda do pai por padrão (`w-full`), evitando que o `flex` do contêiner colapse o componente para 0 px quando o pai não força largura. Comportamento de quem passava largura explícita (`className="w-32"` ou wrapper com largura) preservado.
 
 ### Corrigido
 
@@ -256,7 +256,7 @@ Patch aditivo: 11ª paleta oficial do @nomad/ui. Compatibilidade total — nenhu
 
 ### Adicionado
 
-- Paleta **`nommand`** (a 11ª, aditiva) — design v2 "Institucional" da Conta Nommand, aprovado pelo dono (2026-09-30). Mesmo formato das outras 10 (accent azul institucional + amber + status + bordas + onAccent explícito). Seletor de paletas da vitrine agora mostra as 11; `ThemeSwitcher`, `PALETTES`, `PaletteId`, `getPaletteById`, `paletteCssVars` cobrem a 11ª automaticamente.
+- Paleta **`nommand`** (a 11ª, aditiva) — design v2 "Institucional" da Conta Nommand, decisão de produto (2026-09-30). Mesmo formato das outras 10 (accent azul institucional + amber + status + bordas + onAccent explícito). Seletor de paletas da vitrine agora mostra as 11; `ThemeSwitcher`, `PALETTES`, `PaletteId`, `getPaletteById`, `paletteCssVars` cobrem a 11ª automaticamente.
 
 ### Testes
 
@@ -265,7 +265,7 @@ Patch aditivo: 11ª paleta oficial do @nomad/ui. Compatibilidade total — nenhu
 
 ## [1.0.0] — 2026-09-29
 
-Primeira versão pública do `@nomad/ui`. Marca o fechamento do épico NUI-00 (NUI-01 fundação, NUI-02 barra Nomad, NUI-03 dados + presets, NUI-04 documento + auditoria). Apps instalam por dependência git na tag `v1.0.0`.
+Primeira versão pública do `@nomad/ui`. Marca o fechamento da fundação do pacote (NUI-01 fundação, NUI-02 barra Nomad, NUI-03 dados + presets, NUI-04 documento + auditoria). Apps instalam por dependência git na tag `v1.0.0`.
 
 ### Adicionado
 

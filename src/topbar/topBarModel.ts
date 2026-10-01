@@ -8,7 +8,7 @@
  * (Zod 4) e passam para `<TopBar model={...} />`. Itens hardcoded por app
  * (Launcher extras, Conta menu, Aparência, Trocar de empresa) saem.
  *
- * Decisões do contrato (orquestrador-1f, 2026-09-30):
+ * Decisões do contrato (2026-09-30):
  * 1. Nomes: `apps`, `launcherLinks`, `accountLinks`, `helpLinks`, `createOrgUrl`,
  *    `activeOrgId`. Compatível com o `TopbarData` da v1.0.x (só acrescenta).
  * 2. "Trocar de empresa" é ação embutida do TopBar (abre o OrgSwitcher) — só

@@ -6,8 +6,8 @@ import { type HTMLAttributes } from 'react'
 //
 // Mono por padrão (letra de tecla: `⌘K`, `Esc`, `F2`). Quando o conteúdo é um
 // **símbolo Unicode** (⌘, ⇧, ⌥, ⌃, ↻, ⏎, ⌫…), a fonte de mono do tema não tem o
-// glifo e o navegador desenha a "caixa vazia" (▯) — foi o que o dono viu em
-// "▯K comandos". Nesse caso a peça usa a fonte de texto (`font-sans`), que cai no
+// glifo e o navegador desenha a "caixa vazia" (▯) — foi o que apareceu na
+// barra como "▯K comandos". Nesse caso a peça usa a fonte de texto (`font-sans`), que cai no
 // system-ui com esses glifos. A regra base `code, pre, kbd, samp { font-family:
 // var(--font-mono) }` do globals.css é de elemento e não sai por classe: por isso
 // `symbol` marca `data-kbd-symbol` e a folha do pacote sobrescreve com seletor de

@@ -1156,7 +1156,7 @@ export const PALETTES: Palette[] = [
   {
     id: 'nommand',
     name: 'Nommand',
-    description: 'Azul institucional da Conta Nommand — design v2 “Institucional”, aprovado pelo dono (2026-09-30). Mesmo accent das outras paletas azuis, com bordas mais sutis, status da paleta e onAccent explícito.',
+    description: 'Azul institucional da Conta Nommand — design v2 “Institucional”, decisão de produto (2026-09-30). Mesmo accent das outras paletas azuis, com bordas mais sutis, status da paleta e onAccent explícito.',
     preview: { accent: '#60a5fa', amber: '#b45309', surface: '#161b24' },
     dark: {
       surfaces: { body: '#161b24', base: '#1d242f', raised: '#252c38', overlay: '#28313e' },

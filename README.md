@@ -4,7 +4,7 @@ Kit de componentes, tema (10 paletas, claro/escuro/sistema), barra Nomad, camada
 compartilhados pelos apps da Nomad (agent-package, Conta Nommand, loadbalance e motor). A base é o
 kit do AgentPack.
 
-> Em construção (épico NUI-00). Instalação, entradas e exemplos entram aqui até a `v1.0.0`.
+> Em construção. Instalação, entradas e exemplos entram aqui até a `v1.0.0`.
 
 ## Instalação e consumo por tag
 

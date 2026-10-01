@@ -1,7 +1,7 @@
 # `@nomad/ui/data` — levantamento e regras
 
-Camada de dados do Padrão Frontend Nomad, extraída do `frontend/` do agent-package (a base que o
-dono escolheu). Aqui fica o levantamento (o que o agent-package faz e onde) e o que virou pacote. O
+Camada de dados do Padrão Frontend Nomad, extraída do `frontend/` do agent-package (a base
+escolhida como referência). Aqui fica o levantamento (o que o agent-package faz e onde) e o que virou pacote. O
 README da raiz tem os exemplos de uso; o documento "Padrão Frontend Nomad v1" cita esta página.
 
 ## Levantamento no agent-package

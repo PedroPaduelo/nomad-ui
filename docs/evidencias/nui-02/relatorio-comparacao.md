@@ -2,12 +2,12 @@
 
 ## Capturas efetivamente feitas
 
-- `conta-real-appbar-dark.png`: Conta Nommand no preview real da sandbox, sessão autenticada, tema escuro.
+- `conta-real-appbar-dark.png`: Conta Nommand no preview de desenvolvimento, sessão autenticada, tema escuro.
 - `conta-real-appbar-apps-open-dark.png`: mesma sessão com a grade de aplicativos aberta.
 - `conta-real-account-open-dark.png`: mesma sessão com o menu da conta aberto.
 - `pacote-vitrine-appbar-dark.png`: vitrine do `@nomad/ui/topbar`, mesmos dados falsos usados nos testes (Ana Souza, Nomad Labs), tema escuro.
 
-Os screenshots foram capturados no navegador em 29-09-2026. A Conta real tinha como usuário “Orquestrador Teste” e empresa “Empresa Teste Orq 2”; a vitrine usa “Ana Souza” / “Nomad Labs”, pois a vitrine não recebe dados da conta autenticada.
+Os screenshots foram capturados no navegador em 29-09-2026. A Conta real estava autenticada com uma conta e empresa de teste; a vitrine usa “Ana Souza” / “Nomad Labs”, pois a vitrine não recebe dados da conta autenticada.
 
 ## Limitação da comparação por pixels
 

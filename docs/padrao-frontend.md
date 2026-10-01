@@ -1,11 +1,11 @@
 # Padrão Frontend Nomad v1
 
 > Vale para todos os frontends da Nomad: agent-package, Conta Nommand, loadbalance e motor.
-> Base: o frontend do agent-package (`frontend/`, commit `95df4f2`), que o dono escolheu como referência.
-> Pedido do dono (2026-09-29): mesmo tema, mesmas bibliotecas, mesma organização de pastas, mesmo jeito de
+> Base: o frontend do agent-package (`frontend/`, commit `95df4f2`), escolhido como referência.
+> Decisão de produto (2026-09-29): mesmo tema, mesmas bibliotecas, mesma organização de pastas, mesmo jeito de
 > consumir dados e a mesma barra superior da Conta Nommand em todos os apps.
 > Onde o documento diz **(revisar na v1.0.0)**, o nome exato da API do `@nomad/ui` ainda está sendo fechado
-> pelas outras lanes do épico NUI-00.
+> pelas outras fases do projeto NUI-00.
 
 ## 1. Regras em uma tela
 

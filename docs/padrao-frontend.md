@@ -127,6 +127,26 @@ pacote cujo próprio lock está quebrado. Confirmado com o caso real do motor: `
 outros. Um app não tem como detectar, pelo próprio `npm ci`, que o pacote está com lock quebrado; e quando algo falha
 (`EUSAGE` no Dockerfile do LB), é por um **sintoma do consumidor** — o `git+ssh` — e não pelo lock do fornecedor.
 
+**Por git e por registry não dá no mesmo (medido, v1.9.1).** Mesma mutação — remover **só** a entrada de uma
+transitiva, deixando a referência:
+
+| como o pacote chegou                  | `npm ci --dry-run` | `npm ci` real                          | o que aconteceu                                               |
+| ------------------------------------- | ------------------ | -------------------------------------- | ------------------------------------------------------------- |
+| **registry** (`is-odd` num workspace) | exit 1             | **`EUSAGE: Missing: is-number@6.0.0`** | reprova, e o erro diz o quê                                   |
+| **git** (`@nomad/ui#v1.8.1`)          | **exit 0**         | **exit 0**                             | instala o pacote e **deixa a dependência de fora, sem aviso** |
+
+Dep de registry vem **descrita pelo lock**, então falta de entrada é `EUSAGE`. Dep de git vem **do `package.json` do
+pacote**, que o npm lê e **confia** — e a entrada que o lock descreve não é validada. **O `npm ci` sai 0 e não
+instalou.** Quem reproduz pelo `npm ci` não vê nada.
+
+**Por isso o `check-lock` é a única verificação que pega esse caso** — e ele concorda com o `npm ci` nos dois: acusa a
+transitiva sem entrada nos dois casos e fica quieto no lock coerente. **Gate que reprova o que o instalador aceita em
+silêncio é o gate funcionando.**
+
+⚠️ **Ao medir exit code: sem `| tail`, sem `| grep`, sem `&&` — ou `PIPESTATUS`.** Os três mascaram o `$?`, e um
+`exit 0` medido com pipe é exatamente o que esconde o defeito acima. E **antes de chamar duas medições de
+contradição, confirme que é o mesmo lock**: o `name` e a raiz do `package-lock.json` dizem de qual repositório ele é.
+
 **Regra:** _gate de instalação do consumidor não prova instalação do fornecedor._ Por isso o `check-lock` e o
 `gates:ci` vivem no repositório do pacote e **não** podem ficar só no app. Para os 4: a defesa é o `npm ci` do
 `@nomad/ui` passando, e nada substitui isso.

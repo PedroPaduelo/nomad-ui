@@ -50,6 +50,16 @@ Patch (`[NUI] 232d5cd6`). **Fecha uma fura do `check-lock` que a `loadbalance-33
 
 Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
 
+## [1.9.2] — 2026-10-01
+
+Documento (`[NUI] b9b07a86`). **Só papel: nenhuma mudança no `check-lock`.** Fecha a discussão que round-tripou a noite.
+
+### Documentado
+
+- **Por git e por registry não dá no mesmo** (§3, ao lado da assimetria): mesma mutação — remover **só** a entrada de uma transitiva, deixando a referência — dá **registry → `EUSAGE`** (erro nomeia o que falta) e **git → `exit 0`**, com o pacote instalado e a dependência **fora, sem aviso**. Dep de registry vem _descrita pelo lock_; dep de git vem do `package.json` **do pacote**, que o npm lê e confia. **O `npm ci` saiu 0 e não instalou** — quem reproduz pelo `npm ci` não vê nada.
+- **O `check-lock` é a única verificação que pega esse caso**, e concorda com o `npm ci` nos dois: acusa a transitiva sem entrada nos dois e fica quieto no lock coerente. **Gate que reprova o que o instalador aceita em silêncio é o gate funcionando.**
+- **Dois avisos de medição** que erraram nos dois lados hoje: **exit code sem `| tail`/`| grep`/`&&`** (ou `PIPESTATUS`) — um "exit 0" medido com pipe é o que esconde o defeito acima; e **antes de chamar duas medições de contradição, confirmar que é o mesmo lock** (o `name` e a raiz do `package-lock.json` dizem de qual repositório é).
+
 ## [1.9.1] — 2026-10-01
 
 Patch (`[NUI] 96106ee7`). **Corrige duas coisas: uma regressão que eu causei e 34 falsos em lock real.**
@@ -62,7 +72,7 @@ A v1.9.0 foi commitada **antes** da v1.8.10, então a tag ficou mais antiga na l
 
 ## Falsos em lock real (o achado do `agentepack-48`)
 
-O check acusava **34 dependências** que **existem** no lock do AgentPackage (870 entradas, 167 aninhadas) — e a mensagem dizia *"o `npm ci` falha"*, **quando o `npm ci` passa**. Eram dois defeitos:
+O check acusava **34 dependências** que **existem** no lock do AgentPackage (870 entradas, 167 aninhadas) — e a mensagem dizia _"o `npm ci` falha"_, **quando o `npm ci` passa**. Eram dois defeitos:
 
 1. **Não resolvia aninhamento.** Uma dep de `node_modules/@babel/core` resolve primeiro em `node_modules/@babel/core/node_modules/<dep>`, e só cai no topo. Só olhar o topo acusava o que estava aninhado.
 2. **Não resolvia pacote com escopo.** Em `node_modules/@babel/core`, subir um nível não é cortar na última barra — é cortar o pacote inteiro. E o nível sai **com** barra: `${dir}/${PREFIXO}${nome}` sem normalizar dá `…/core//node_modules/x` e nunca casa.
@@ -70,6 +80,7 @@ O check acusava **34 dependências** que **existem** no lock do AgentPackage (87
 Além disso, o `jsesc` exigido por `@babel/generator` mora **irmão** do requerente (`node_modules/@babel/core/node_modules/jsesc`) — nem ancestral nem filho. A função `niveisVisiveis()` calcula os diretórios de busca pela ocorrência de `node_modules/` no caminho.
 
 **Mensagem honesta (a regra):** sem mutação que reproduza o defeito, a mensagem **não afirma** que o defeito acontece. Agora diz:
+
 > `node_modules/@babel/core/node_modules/@babel/generator declara "jsesc" (^3.0.2) e o lock não tem entrada para ela nem aninhada. Confirme com \`npm ci\`: se resolver em runtime, é falsa accusation.`
 
 **Contraprova no lock real do AgentPackage: 0 falsos** (era 34). Mutação real nesse lock (remover `node_modules/@babel/core/node_modules/jsesc`) → **acusa**. Matriz de 8 casos sintéticos: aninhada presente **não**, aninhada removida **sim**, aninhada em workspace **não**, escopo aninhado **não**, opcional **não**, `peerDependency` **não**, transitiva sem entrada (a mutação da LB) **sim**, íntegro **não**.

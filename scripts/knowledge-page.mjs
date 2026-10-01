@@ -33,7 +33,7 @@
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
-import { dirname, resolve } from 'node:path'
+import { resolve } from 'node:path'
 
 const REPO_DOC = 'docs/padrao-frontend.md'
 const SUMMARY = 'knowledge.knowledge.md'
@@ -109,7 +109,11 @@ for (const t of POINTER_TARGETS) {
 
 const lines = page.split('\n').length
 console.log(`✓ ${OUT} — ${lines} linhas (resumo + ponteiro; o documento fica no repo)`)
-console.log(
-  `  publicar: agentpack_knowledge_update(id: 690df27c, content: <${resolve(OUT)}>, expectedVersion: <atual>)`,
-)
-console.log(`  caminho: ${resolve(OUT)}`)
+// NÃO imprimimos o comando de publicação. Em 2026-10-01 a página foi publicada
+// cinco vezes com defeito de transcrição, e as duas primeiras tentativas foram
+// "leia o dist/ e reescreva na chamada" — exatamente o caminho que este script
+// estava imprimindo. Publicar de novo só por um caminho que lê o arquivo e
+// escreve na API sem ninguém digitar o texto; enquanto esse caminho não existir,
+// a página fica ponteiro (v13) e este arquivo é a saída validada, não um
+// rascunho para reescrever.
+console.log(`  saída validada: ${resolve(OUT)} (não reescrever à mão; ver o comentário acima)`)

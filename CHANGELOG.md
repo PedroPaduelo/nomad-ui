@@ -3,6 +3,37 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.6.3] — 2026-10-01
+
+Patch (PKG-FIXES `4fa8bd30`, achados do revisor independente do `@nomad/ui` — escopo v1.1.2→v1.6.2). Aditivo: nada quebra.
+
+### Corrigido
+
+- **Item de menu com `href` e sem callback voltou a navegar** (regressão introduzida na v1.6.0, `src/topbar/shared.tsx`). Ao adicionar `MenuItemSpec.onNavigate`, o `preventDefault()` passou a ser incondicional: "Gerenciar sua Conta Nommand", **todo** `accountLinks` e **todo** `helpLinks` ficavam com o clique prevenido e sem função — inclusive no caminho legado do `AccountMenu` (apps que montam a barra pelos slots antigos). Agora o `preventDefault()` só acontece quando há ação a executar (`onSelect ?? onNavigate`). **Sem mudança de código no app** para consumir.
+- **`topBarModelSchema.safeParse()` não lança mais.** O `.transform()` fazia `throw` quando faltava `account.manageAccountHref`; quem segue o padrão do README (`safeParse` + `if (!r.success)`) não entrava no `if` e recebia `Error` crua, sem o tratamento desenhado. Agora a falha vira issue do Zod (`ctx.addIssue` + `z.NEVER`) e `safeParse` devolve `{ success: false }` como promete.
+- **`apps` é validado no schema.** Era `z.array(z.unknown())` + cast `as LauncherApp[]`: `apps=[null]`, `['x']`, `[{}]`, `[123]`, `[{id:'a'}]` passavam com `success=true` e só quebravam em runtime no `AppGrid`. Novo `launcherAppSchema` (`id`, `slug`, `name`, `launchUrl` obrigatórios; `iconUrl`/`description` nullables; campos extras da Conta tolerados).
+
+### Adicionado
+
+- **`href` dos links do topbar só http(s) ou caminho relativo.** `barLinkSchema` rejeita `javascript:`, `data:`, `vbscript:` e `//host` (protocol-relative); `launchHref` devolve `""` para esquema não-http (antes o `new URL()` aceitava e o payload sobrevivia no `href` da tile). Não é XSS (React escapa, `rel="noopener noreferrer"` presente), era open-redirect/navegação a host arbitrário se a URL viesse adulterada.
+- **`theme={null}` esconde o item "Tema"** do menu da conta (`undefined`/omitido continua seguindo o store do pacote). Antes a documentação dizia que omitir escondia, mas `undefined` caía no store e não havia como apagar o item pela API pública.
+- **`BarLinkJson` e `launcherAppSchema` no barrel público** de `@nomad/ui/topbar` — o app tinha o tipo documentado (`BarLinkJson`) sem conseguir importá-lo, e não tinha como validar um array de `apps`.
+
+### Corrigido (menor)
+
+- **`organize="trailing"` não renderiza mais `actions` duas vezes** (era `{actions}` fora + dentro de `<Actions>`; o botão de paleta/busca do app aparecia duplicado, com `id` repetido). O ramo `bar` estava certo.
+
+### Testes
+
+- `menuNavigation.test.tsx` (novo, 4): item com `href` **sem** callback não tem o clique prevenido ("Gerenciar" via `TopBar model`, `accountLinks`, `helpLinks`, caminho legado) e item **com** `onSelect` tem o clique prevenido e executa a ação. **Mutação verificada**: voltar ao `preventDefault()` incondicional da v1.6.0 derruba os 3 testes de navegação.
+- `topBarModelStrict.test.ts` (novo, 10): `safeParse` não lança e devolve issue em `account.manageAccountHref`; `parse` continua lançando; `apps` inválidos (`[null]`, `['x']`, `[{}]`, `[123]`, `[{id}]`, `launchUrl: ''`) rejeitados; app completo e com campos extras aceitos. **Mutação verificada**: voltar ao `throw`/`z.unknown()` derruba os testes.
+- `modelBarPolish.test.tsx` (novo, 6): `href` não-http rejeitado no schema e `launchHref` devolvendo `""`; `theme={null}` esconde o item; `theme="dark"` mostra "Tema · Escuro"; `actions` uma vez só no `trailing`; `BarLinkJson` importável.
+- Vitest 170/170 (era 150/150), test:a11y 242/242, typecheck (raiz + vitrine) ✓, eslint ✓, build + showcase:build ✓.
+
+### Ressalva do revisor — verificada, não é bug
+
+O revisor apontou que sobrou `import { z } from 'zod'` em `dist/types/topbar/topBarModel.d.ts` (usa `z.ZodPipe`/`z.core.$strip`) e que isso reproduziria o TS2345 em workspace com zod 3 na raiz. **Verificado em consumidor de teste** (zod 3.25.76 hoisted na raiz, zod 4.6.5 no `fe`, `skipLibCheck: false`, importando `topBarModelSchema`/`TopBarModel` de `@nomad/ui/topbar`): **0 erros**. Diferente de `data/zod.ts` (que _expunha_ a superfície Zod como tipo genérico), aqui `topBarModelSchema` **é** um schema Zod — referenciá-lo no `.d.ts` é honesto e não amarra a versão do consumidor. Mantido como está; a regra continua: `@nomad/ui/data` não expõe tipos de zod, `@nomad/ui/topbar` expõe o schema (que o app usa no `parse`/`safeParse`).
+
 ## [1.6.2] — 2026-10-01
 
 Patch (PKG-FIXES `25d586a6`, reportado pela `[MOTOR] NUI-MIG-03b` `e18a625e` na validação da barra). Aditivo: nada quebra.

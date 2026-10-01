@@ -32,7 +32,7 @@
 import type { ReactNode } from 'react'
 import { z } from 'zod'
 
-import type { LauncherApp } from './AppSwitcher'
+import { launcherAppSchema, type LauncherApp } from './AppSwitcher'
 import type { TopbarOrganization } from './OrgSwitcher'
 
 /** Link genérico (geral do launcher, conta ou ajuda). */
@@ -62,10 +62,29 @@ export interface BarLinkJson {
   newTab?: boolean
 }
 
+/**
+ * `href` tem que ser http(s) (v1.6.3): rejeita `javascript:`, `data:` e
+ * `//host` (protocol-relative), que passavam como `string().min(1)` e viravam
+ * `<a href>` no rodapé da grade e no menu da conta (PKG-FIXES 4fa8bd30 #4).
+ * Relativas da própria origem (`/apps`) continuam valendo.
+ */
+const httpHref = z
+  .string()
+  .min(1)
+  .refine(
+    (href) => {
+      if (href.startsWith('//')) return false
+      // relativa (sem esquema) ou absoluta http(s)
+      if (!/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(href)) return href.startsWith('/')
+      return href.startsWith('http://') || href.startsWith('https://')
+    },
+    { message: 'href deve ser uma URL http(s) ou um caminho relativo (/…)' },
+  )
+
 export const barLinkSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
-  href: z.string().min(1),
+  href: httpHref,
   icon: z.string().optional(),
   newTab: z.boolean().optional(),
 }) satisfies z.ZodType<BarLinkJson, BarLinkJson>
@@ -191,7 +210,7 @@ export const topBarNotificationsSchema = z.object({
  */
 export const topBarModelSchema = z
   .object({
-    apps: z.array(z.unknown()).transform((apps) => apps as LauncherApp[]),
+    apps: z.array(launcherAppSchema),
     organization: topBarAccountOrgSchema,
     organizations: z.array(topBarOrgOptionSchema),
     account: topBarAccountSchema.optional(),
@@ -204,7 +223,7 @@ export const topBarModelSchema = z
     helpLinks: z.array(barLinkSchema).optional(),
     notifications: topBarNotificationsSchema.optional(),
   })
-  .transform((raw): TopBarModel => {
+  .transform((raw, ctx): TopBarModel => {
     // Resolve a forma canônica a partir do shape da Conta (v1.0.x → v1.5.0):
     // se `account` não vier, monta com `profile` + `accountUrl` legados.
     const account: TopBarAccount =
@@ -215,9 +234,17 @@ export const topBarModelSchema = z
         manageAccountHref: raw.accountUrl ?? '',
       } satisfies TopBarAccount)
     if (!account.manageAccountHref) {
-      throw new Error(
-        '[topBarModelSchema] falta `account.manageAccountHref` (ou o legado `accountUrl`)',
-      )
+      // Issue do Zod, NÃO `throw`: `safeParse` promete devolver
+      // `{ success: false }`. Um `throw` aqui escapava do `safeParse` e
+      // quebrava o tratamento de erro desenhado (PKG-FIXES 4fa8bd30, item #2
+      // do revisor). Ver https://zod.dev/error-customization.
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'falta `account.manageAccountHref` (ou o legado `accountUrl`): não dá para montar o `account` da barra',
+        path: ['account', 'manageAccountHref'],
+      })
+      return z.NEVER
     }
     return {
       apps: raw.apps,

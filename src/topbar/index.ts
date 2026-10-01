@@ -37,11 +37,13 @@ export {
   type TopBarOrgOption,
   type TopBarNotifications,
   type BarLink,
+  type BarLinkJson,
 } from './topBarModel'
 export {
   AppSwitcher,
   AppGrid,
   AppIcon,
+  launcherAppSchema,
   type AppSwitcherProps,
   type AppTile,
   type LauncherApp,

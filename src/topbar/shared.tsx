@@ -147,10 +147,16 @@ export function MenuItem({
           if (disabled) return e.preventDefault()
           // `onSelect`: abre o item e executa a ação. `onNavigate`: só executa
           // (navegação SPA do app). Em ambos, ⌘/Ctrl+clique segue o `href`.
-          if (isPlainClick(e)) {
+          //
+          // O `preventDefault()` é SÓ quando há ação a executar: um item só
+          // com `href` (e sem callback) precisa navegar normal. A v1.6.0
+          // preventava sempre e deixou "Gerenciar sua Conta Nommand", todo
+          // `accountLinks` e todo `helpLinks` sem função (PKG-FIXES 4fa8bd30,
+          // achado do revisor independente).
+          const action = onSelect ?? onNavigate
+          if (action && isPlainClick(e)) {
             e.preventDefault()
-            if (onSelect) onSelect()
-            else onNavigate?.()
+            action()
           }
           close()
         }}

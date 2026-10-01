@@ -74,8 +74,13 @@ export type TopBarModelBarProps = {
   showNotifications?: boolean
   /** Clique no sino: chamado no lugar de seguir `notifications.href` (SPA). */
   onNotificationsClick?: () => void
-  /** Tema do item do menu da conta; omitir esconde o item (quem não tem tema na conta). */
-  theme?: Theme
+
+  /**
+   * Tema do item no menu da conta. `undefined` (ou omitido) = segue o store do
+   * pacote (padrão). `null` = ESCONDE o item (v1.6.3) — antes `undefined`
+   * caía no store e não havia como apagar o item pela API.
+   */
+  theme?: Theme | null
   onThemeChange?: (theme: Theme) => void
   /** Rótulos e nomes acessíveis (tradução/ajuste fino). */
   labels?: {
@@ -138,7 +143,7 @@ export function TopBarModelBar({
   // `theme`/`onThemeChange` explícitos mandam; senão o store do pacote.
   const storeTheme = useThemeStore((s) => s.theme)
   const storeSetTheme = useThemeStore((s) => s.setTheme)
-  const theme = themeProp === undefined ? storeTheme : themeProp
+  const theme = themeProp === null ? undefined : (themeProp ?? storeTheme)
   const setTheme = onThemeChange ?? storeSetTheme
 
   // "Trocar de empresa" fecha a conta e abre o seletor; controlado aqui porque
@@ -309,10 +314,11 @@ export function TopBarModelBar({
   )
 
   if (organize === 'trailing') {
+    // `right` já contém `{actions}` (dentro de <Actions>); renderizar aqui de
+    // novo duplicava o botão (v1.6.3, PKG-FIXES 4fa8bd30 #6).
     return (
       <>
         {leading}
-        {actions}
         {org}
         {right}
       </>

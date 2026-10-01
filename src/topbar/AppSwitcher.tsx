@@ -6,6 +6,7 @@ import {
   type MouseEvent,
   type ReactNode,
 } from 'react'
+import { z } from 'zod'
 import { Popover, usePopoverClose } from './Popover'
 import { GridIcon } from './icons'
 import { launchHref } from './launchHref'
@@ -20,6 +21,25 @@ export type LauncherApp = {
   launchUrl: string
   description?: string | null
 }
+
+/**
+ * Schema Zod do app do launcher (v1.6.3): valida a resposta da Conta no
+ * `topBarModelSchema` em vez de confiar num cast. Antes, `apps` era
+ * `z.array(z.unknown())` + `as LauncherApp[]` e qualquer coisa passava
+ * (`[null]`, `[{}]`, `[123]`) para quebrar só em runtime no `AppGrid`
+ * (PKG-FIXES 4fa8bd30, item #3 do revisor). Campos extras da Conta são
+ * tolerados (`.loose()`).
+ */
+export const launcherAppSchema = z
+  .object({
+    id: z.string().min(1),
+    slug: z.string().min(1),
+    name: z.string().min(1),
+    launchUrl: z.string().min(1),
+    iconUrl: z.string().nullable().optional(),
+    description: z.string().nullable().optional(),
+  })
+  .loose()
 
 /** Bloco extra na grade (ex.: atalhos do próprio app, app bloqueado com "Solicitar acesso"). */
 export type AppTile = {

@@ -3,6 +3,27 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.8.8] — 2026-10-01
+
+Patch (`[NUI] 232d5cd6`). **`check-lock` passa a ler os workspaces** — pedido da `loadbalance-33` e necessidade real do motor. Sem mudança de comportamento no pacote.
+
+### Corrigido
+
+- **O atalho `github:` dentro de um workspace deixou de passar.** O §3b comparava só o `package.json` **da raiz** com a raiz do lock. No motor o `@nomad/ui` vive em `pkg['fe'].dependencies` do lock (`fe/package-lock.json` nem existe), e é **lá** que o `github:` estava — o script pegava o `git+ssh://` do `resolved`, mas **não** a origem. Agora varre `dependencies`/`devDependencies`/`peerDependencies` de cada bloco de workspace, e a mensagem diz **onde** está (`workspace fe:dependencies`).
+
+### Verificação (matriz medida, 4 acusam + 2 não)
+
+| caso                                                          | resultado                          |
+| ------------------------------------------------------------- | ---------------------------------- |
+| divergência `package.json` × raiz do lock (o `f88ed6d` da LB) | acusa                              |
+| `git+ssh://` no `resolved`                                    | acusa                              |
+| atalho `github:` no `package.json`                            | acusa (2 problemas: atalho + ssh)  |
+| atalho `github:` em workspace (motor)                         | acusa (2 problemas, com o caminho) |
+| lock inteiro em `git+https://` legítimo                       | **não acusa**                      |
+| projeto sem dependência de git                                | **não acusa**                      |
+
+O caso da divergência é o que o `npm ci` **não** pega (medido na LB: 739 pacotes, exit 0) — e é exatamente o que sobrou no `3ca84a8`.
+
 ## [1.8.7] — 2026-10-01
 
 Patch (`[NUI] 232d5cd6`). **Corrige uma simplificação da v1.8.5**, depois que a sessão do motor mediu o lock dela. Sem mudança de código.

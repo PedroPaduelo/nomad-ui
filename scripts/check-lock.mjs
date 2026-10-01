@@ -152,14 +152,28 @@ for (const [key, v] of ssh) {
 //     `github:…` para `git+ssh://git@github.com/…` no lock — o package.json
 //     parece innocent e o ssh só aparece depois. O LB levou 6 generating
 //     lock até isso virar `EUSAGE` no build. Pega na fonte, antes do lock.
+// `package.json` E cada workspace dele: no motor o `@nomad/ui` vive em
+// `pkg['fe'].dependencies` do lock, e é lá que o atalho `github:` aparece.
+const specs = []
 for (const section of ['dependencies', 'devDependencies', 'peerDependencies']) {
   for (const [name, spec] of Object.entries(pkg[section] ?? {})) {
-    const valor = String(spec)
-    if (/^(github|gitlab|bitbucket):/.test(valor) && !valor.startsWith('git+')) {
-      problems.push(
-        `${section}: "${name}" usa o shorthand "${valor}" — o \`npm install\` escreve isso como git+ssh no lock e o CI não tem chave. Use git+https://`,
-      )
+    specs.push([`package.json:${section}`, name, spec])
+  }
+}
+for (const [rota, bloco] of Object.entries(packages)) {
+  if (rota === '' || !bloco || typeof bloco !== 'object') continue
+  for (const section of ['dependencies', 'devDependencies', 'peerDependencies']) {
+    for (const [name, spec] of Object.entries(bloco[section] ?? {})) {
+      specs.push([`${rota === '' ? 'lock' : `workspace ${rota}`}:${section}`, name, spec])
     }
+  }
+}
+for (const [onde, name, spec] of specs) {
+  const valor = String(spec)
+  if (/^(github|gitlab|bitbucket):/.test(valor) && !valor.startsWith('git+')) {
+    problems.push(
+      `${onde}: "${name}" usa o shorthand "${valor}" — o \`npm install\` escreve isso como git+ssh no lock e o CI não tem chave. Use git+https://`,
+    )
   }
 }
 

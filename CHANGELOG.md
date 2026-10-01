@@ -3,6 +3,20 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.8.6] — 2026-10-01
+
+Patch (`[NUI] 232d5cd6`, fecho). **Documenta os specs medidos dos 4 apps e o que fazer no bump.** Sem mudança de código.
+
+### Documentado
+
+- **Spec por app (medido nos repositórios, 2026-10-01):** loadbalance `git+https://…#v1.8.2` · conta_nommand, agent-package `git+https://…#v1.6.2` · **motor `github:PedroPaduelo/nomad-ui#v1.6.2`**.
+- **O motor usa o atalho, e é o caso mais grave** porque o atalho é o que **produz** o ssh: com `github:` o próprio `npm install` já escreve `resolved: git+ssh://` no lock dele, sem ninguém pedir. **Ao bumpar, corrige o spec no mesmo commit** — trocar só a tag deixa o atalho quieto e o próximo `npm install` reintroduz o defeito.
+- **Os 3 apps em v1.6.2 estão na versão com o defeito de lock** (`sonner` no `package.json`, ausente no `package-lock.json` — confirmado por `git show v1.6.2:` nos dois arquivos). Nenhum vai falhar no `npm ci` (o consumidor é cego, § abaixo); o sintoma apareceria em build limpo, e seria do app.
+
+### Sem mudança de código
+
+O `check-lock` do pacote já accuse o atalho (§3b) e o `gates:ci` já prova a instalação limpa. O que faltava era o **padrão** dizer qual spec usar e o que corrigir no bump — está agora em `docs/padrao-frontend.md` § "Consumo por tag", com a tabela dos 4.
+
 ## [1.8.5] — 2026-10-01
 
 Patch (`[NUI] 232d5cd6`). Documenta a assimetria que o pacote tem em relação aos 4 apps — **não muda código**.

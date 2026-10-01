@@ -84,6 +84,20 @@ Docker sem chave ssh (os 3 frontends de produção caíram nisso em 2026-09-30).
 grava `resolved: git+ssh://git@github.com/…#<sha>` no lock (medido). Para um CI/Docker sem chave: **regere o lock uma
 vez** (`rm -f package-lock.json && npm install` na primeira instalação, ou no CI) para ele ficar em https.
 
+**Spec do app: sempre `git+https://`, nunca o atalho `github:`.** Estado medido dos 4 em 2026-10-01:
+
+| app           | spec no `package.json`                                       |
+| ------------- | ------------------------------------------------------------ |
+| loadbalance   | `git+https://github.com/PedroPaduelo/nomad-ui.git#v1.8.2` ✅ |
+| conta_nommand | `git+https://github.com/PedroPaduelo/nomad-ui.git#v1.6.2`    |
+| agent-package | `git+https://github.com/PedroPaduelo/nomad-ui.git#v1.6.2`    |
+| **motor**     | **`github:PedroPaduelo/nomad-ui#v1.6.2`** ⚠️                 |
+
+O motor é o caso mais grave porque o atalho é o que **produz** o ssh: com `github:` o próprio `npm install` já escreve
+`resolved: git+ssh://` no lock dele, sem ninguém pedir. **Ao bumpar, corrige o spec no mesmo commit** — trocar só a tag
+deixa o atalho quieto e o próximo `npm install` reintroduz o defeito. O `check-lock` do pacote (§ `gates`) accuse o
+atalho na origem, mas ele roda no repositório do `@nomad/ui`: **no app, quem pega é o gate do próprio app**.
+
 #### O `npm ci` do app é cego para o lock do pacote (v1.8.4)
 
 Medido em 2026-10-01 como consumidor, com o `@nomad/ui` real:

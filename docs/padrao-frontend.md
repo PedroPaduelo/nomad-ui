@@ -102,15 +102,20 @@ atalho na origem, mas ele roda no repositório do `@nomad/ui`: **no app, quem pe
 
 Medido em 2026-10-01 como consumidor, com o `@nomad/ui` real:
 
-|                                         | o que acontece                                            |
-| --------------------------------------- | --------------------------------------------------------- |
-| Lock do app prende o commit             | `resolved: …#096d19c` (a v1.8.1), mesmo pedindo `#v1.8.1` |
-| `npm ci` do app                         | **passa** — `added 50 packages`, exit 0                   |
-| O lock do pacote, com `sonner` faltando | **ninguém acusa**                                         |
+|                                          | o que acontece                                            |
+| ---------------------------------------- | --------------------------------------------------------- |
+| Lock do app **fixa a versão** (o commit) | `resolved: …#096d19c` (a v1.8.1), mesmo pedindo `#v1.8.1` |
+| `npm ci` do app                          | **passa** — `added 50 packages`, exit 0                   |
+| O lock do pacote, com `sonner` faltando  | **ninguém acusa**                                         |
 
-**O npm resolve a árvore do pacote lendo o `package.json` DELE.** O `package-lock.json` do `@nomad/ui` não entra na
-conta de ninguém: instalar a v1.8.1 (que tinha esse defeito) funcionou e o `sonner` apareceu, porque o `package.json`
-dela declara a dependência.
+**O lock do consumidor faz duas coisas, e elas precisam ser separadas:** ele **fixa a versão** do pacote (é por isso que
+trocar só a tag no `package.json` pode manter o commit antigo em silêncio), mas **não valida a árvore** do pacote. O npm
+resolve as dependências **dele** lendo o `package.json` **dele** — o `package-lock.json` do `@nomad/ui` não entra na
+conta de ninguém.
+
+**As duas coisas juntas são o que engana.** O lock do app "funciona" (fixa o commit certo) **e mesmo assim** entrega um
+pacote cujo próprio lock está quebrado. Confirmado com o caso real do motor: `npm ci` instala a **v1.6.2** — que tem
+`sonner` no `package.json` e fora do lock — e sai **exit 0**.
 
 **Consequência — a assimetria do stack:** o `@nomad/ui` é o **único** projeto em que o lock é gate de produção dos
 outros. Um app não tem como detectar, pelo próprio `npm ci`, que o pacote está com lock quebrado; e quando algo falha

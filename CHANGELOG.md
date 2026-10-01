@@ -3,6 +3,17 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.8.7] — 2026-10-01
+
+Patch (`[NUI] 232d5cd6`). **Corrige uma simplificação da v1.8.5**, depois que a sessão do motor mediu o lock dela. Sem mudança de código.
+
+### Documentado
+
+- **O lock do consumidor faz duas coisas, e elas precisam ser separadas:** **fixa a versão** do pacote (por isso trocar só a tag no `package.json` pode manter o commit antigo em silêncio — foi o caso do motor na v1.5.0) **e não valida a árvore** dele (o npm resolve as dependências lendo o `package.json` do pacote). A v1.8.5 dizia "o lock prende o commit" e parava aí, o que sugeria que o lock validava mais do que valida.
+- **As duas juntas são o que engana:** o lock do app "funciona" — fixa o commit certo — **e mesmo assim** entrega um pacote cujo próprio lock está quebrado. **Confirmado com o caso real do motor:** `npm ci` instala a **v1.6.2** (que tem `sonner` no `package.json` e fora do lock) e sai **exit 0**.
+
+Isso refina a regra da v1.8.5 sem mudá-la: _gate de instalação do consumidor não prova instalação do fornecedor._ O que faltava era dizer **por quê** — não é que o lock é ignorado, é que ele só cobre metade do problema.
+
 ## [1.8.6] — 2026-10-01
 
 Patch (`[NUI] 232d5cd6`, fecho). **Documenta os specs medidos dos 4 apps e o que fazer no bump.** Sem mudança de código.

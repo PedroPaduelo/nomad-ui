@@ -69,13 +69,17 @@ writeFileSync(OUT, page, 'utf8')
 const checkOut = spawnSync('node', ['scripts/check-doc.mjs', OUT], { encoding: 'utf8' })
 process.stdout.write(checkOut.stdout ?? '')
 process.stderr.write(checkOut.stderr ?? '')
-if (checkOut.status !== 0) fail(`a página gerada não passa no verificador — ${OUT} foi deixado para inspeção, não publicar`)
+if (checkOut.status !== 0)
+  fail(`a página gerada não passa no verificador — ${OUT} foi deixado para inspeção, não publicar`)
 
 // 5) prova de que é o mesmo texto: a página contém o repo inteiro, sem reescrita
 const bodyStart = page.indexOf(ANCHOR) + ANCHOR.length
-if (!page.slice(bodyStart).includes(body)) fail('o corpo da página não contém o documento do repo literalmente')
+if (!page.slice(bodyStart).includes(body))
+  fail('o corpo da página não contém o documento do repo literalmente')
 
 const lines = page.split('\n').length
 console.log(`✓ ${OUT} — ${lines} linhas (cabeçalho do template + ${REPO_DOC} literal)`)
-console.log(`  publicar: agentpack_knowledge_update(id: 690df27c, content: <conteúdo de ${resolve(OUT)}>, expectedVersion: <versão atual>)`)
+console.log(
+  `  publicar: agentpack_knowledge_update(id: 690df27c, content: <conteúdo de ${resolve(OUT)}>, expectedVersion: <versão atual>)`,
+)
 console.log(`  caminho do arquivo: ${resolve(OUT)}`)

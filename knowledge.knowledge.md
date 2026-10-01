@@ -6,6 +6,7 @@
   `docs/padrao-frontend.md` via `scripts/generate-knowledge.mjs` — não edite
   abaixo do marcador, a próxima geração sobrescreve; edite o repo.
 -->
+
 # Padrão Frontend Nomad v1
 
 > Vale para todos os frontends da Nomad: agent-package, Conta Nommand, loadbalance e motor.
@@ -18,4 +19,5 @@
 > **gerado** desse arquivo (`scripts/generate-knowledge.mjs`) — se as duas divergirem, o repo vence.
 > Os casos concretos por app (arquivo:linha, número medido, sha) vivem em `docs/auditoria-apps.md`, que
 > envelhece junto com cada app; no padrão entra a regra, não o caso.
+
 <!-- repo:docs/padrao-frontend.md -->

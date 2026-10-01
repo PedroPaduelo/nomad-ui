@@ -84,6 +84,28 @@ Docker sem chave ssh (os 3 frontends de produção caíram nisso em 2026-09-30).
 grava `resolved: git+ssh://git@github.com/…#<sha>` no lock (medido). Para um CI/Docker sem chave: **regere o lock uma
 vez** (`rm -f package-lock.json && npm install` na primeira instalação, ou no CI) para ele ficar em https.
 
+#### O `npm ci` do app é cego para o lock do pacote (v1.8.4)
+
+Medido em 2026-10-01 como consumidor, com o `@nomad/ui` real:
+
+|                                         | o que acontece                                            |
+| --------------------------------------- | --------------------------------------------------------- |
+| Lock do app prende o commit             | `resolved: …#096d19c` (a v1.8.1), mesmo pedindo `#v1.8.1` |
+| `npm ci` do app                         | **passa** — `added 50 packages`, exit 0                   |
+| O lock do pacote, com `sonner` faltando | **ninguém acusa**                                         |
+
+**O npm resolve a árvore do pacote lendo o `package.json` DELE.** O `package-lock.json` do `@nomad/ui` não entra na
+conta de ninguém: instalar a v1.8.1 (que tinha esse defeito) funcionou e o `sonner` apareceu, porque o `package.json`
+dela declara a dependência.
+
+**Consequência — a assimetria do stack:** o `@nomad/ui` é o **único** projeto em que o lock é gate de produção dos
+outros. Um app não tem como detectar, pelo próprio `npm ci`, que o pacote está com lock quebrado; e quando algo falha
+(`EUSAGE` no Dockerfile do LB), é por um **sintoma do consumidor** — o `git+ssh` — e não pelo lock do fornecedor.
+
+**Regra:** _gate de instalação do consumidor não prova instalação do fornecedor._ Por isso o `check-lock` e o
+`gates:ci` vivem no repositório do pacote e **não** podem ficar só no app. Para os 4: a defesa é o `npm ci` do
+`@nomad/ui` passando, e nada substitui isso.
+
 ### O que vem de lá
 
 | Import                                                         | Conteúdo                                                                                                                                                                                                                                                                                                                                        | Substitui no app                                                                    |

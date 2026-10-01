@@ -3,6 +3,18 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.8.5] — 2026-10-01
+
+Patch (`[NUI] 232d5cd6`). Documenta a assimetria que o pacote tem em relação aos 4 apps — **não muda código**.
+
+### Documentado
+
+- **O `npm ci` de um app é cego para o lock do `@nomad/ui`.** Medido como consumidor: instalar a v1.8.1 (que tinha `sonner` faltando no lock) **passa** — `added 50 packages`, exit 0, com o `sonner` presente. O npm resolve a árvore do pacote lendo o `package.json` **dele**; o `package-lock.json` do pacote não entra na conta de nenhum consumidor.
+- **A assimetria:** o `@nomad/ui` é o único projeto do stack em que **o lock é gate de produção dos outros**. Nenhum app detecta, pelo próprio `npm ci`, que o pacote está com lock quebrado. E quando algo falha, é por um sintoma do consumidor (o `git+ssh` no Dockerfile), não pelo lock do fornecedor.
+- **A regra:** _gate de instalação do consumidor não prova instalação do fornecedor._ Por isso `check-lock` e `gates:ci` vivem no repositório do pacote — e por isso o bump do app **não pode** ser considerado validado só porque o `npm ci` do app passou.
+
+Escrito em `docs/padrao-frontend.md` § "Consumo por tag", ao lado do que já falava do `git+ssh`. Os specs do LB e do motor ainda estão sendo medidos pelas sessões deles; a entrada não depende disso — a assimetria vale para qualquer dependência por git.
+
 ## [1.8.4] — 2026-10-01
 
 Patch (`[NUI] c5b28768`). Correção de uma afirmação errada no CHANGELOG da v1.8.2 e de um furo no `check-lock` — ambos sobre a mesma coisa: **lock e protocolo de git**.

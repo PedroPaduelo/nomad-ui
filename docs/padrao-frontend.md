@@ -93,10 +93,16 @@ vez** (`rm -f package-lock.json && npm install` na primeira instalação, ou no 
 | agent-package | `git+https://github.com/PedroPaduelo/nomad-ui.git#v1.6.2`    |
 | **motor**     | **`github:PedroPaduelo/nomad-ui#v1.6.2`** ⚠️                 |
 
-O motor é o caso mais grave porque o atalho é o que **produz** o ssh: com `github:` o próprio `npm install` já escreve
-`resolved: git+ssh://` no lock dele, sem ninguém pedir. **Ao bumpar, corrige o spec no mesmo commit** — trocar só a tag
-deixa o atalho quieto e o próximo `npm install` reintroduz o defeito. O `check-lock` do pacote (§ `gates`) accuse o
-atalho na origem, mas ele roda no repositório do `@nomad/ui`: **no app, quem pega é o gate do próprio app**.
+O motor é o caso mais grave porque o atalho é o que **produz** o ssh: com `github:` o próprio `npm install` escreve
+ssh no lock, sem ninguém pedir. **Ao bumpar, corrige o spec no mesmo commit** — trocar só a tag deixa o atalho quieto e o
+próximo `npm install` reintroduz o defeito. O `check-lock` do pacote (§ `gates`) acusa o atalho na origem, mas ele roda
+no repositório do `@nomad/ui`: **no app, quem pega é o gate do próprio app**.
+
+**Onde a entrada mora varia por app** (medido 2026-10-01): no loadbalance é a raiz do `frontend/package-lock.json`; no
+motor é `packages[""]` do `fe/package-lock.json`, com o atalho **nos dois lados** (`fe/package-lock.json` **existe** — o
+`resolved` dele é `null`, e o `git+ssh` que se vê em `node_modules` local não está no lock commitado); um spec
+declarado só dentro de um workspace fica em `pkg['<workspace>'].dependencies`. Por isso o `check-lock` varre a raiz
+**e** cada workspace — **um gate escrito para um formato só dá confiança falsa nos outros**.
 
 #### O `npm ci` do app é cego para o lock do pacote (v1.8.4)
 

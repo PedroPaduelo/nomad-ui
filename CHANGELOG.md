@@ -3,13 +3,30 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.8.9] — 2026-10-01
+
+Patch (`[NUI] 232d5cd6`). **Corrige o diagnóstico da v1.8.8**, que atribuiu ao motor uma correção que não era dele. Só texto.
+
+### Correção de texto
+
+A v1.8.8 dizia que o `check-lock` não pegava o atalho do motor porque o `@nomad/ui` vivia em `pkg['fe'].dependencies` e `fe/package-lock.json` "nem existe". **Medido, as duas estavam erradas:**
+
+- `fe/package-lock.json` **existe** (380 KB), e o `@nomad/ui` está em `packages[""]` — na **raiz**, não em workspace;
+- o atalho `github:` está **nos dois lados** (`fe/package.json` e a raiz do lock), então a **v1.8.7 já pegava** — verificado rodando as duas versões contra o mesmo lock.
+
+E o `resolved` do motor é **`null`**, não `git+ssh://`: o `git+ssh` que se vê é do `node_modules` local, não do lock commitado.
+
+**Logo: a v1.8.8 é reforço, não a correção do motor.** O que fecha o motor é o `check-lock` desde a **v1.8.4**, que acusa o atalho na origem. O que a v1.8.8 acrescenta de fato é o caso em que o spec está **só** dentro de um workspace — esse a v1.8.7 deixava passar (medido: v1.8.7 não pega, v1.8.8 pega).
+
 ## [1.8.8] — 2026-10-01
 
-Patch (`[NUI] 232d5cd6`). **`check-lock` passa a ler os workspaces** — pedido da `loadbalance-33` e necessidade real do motor. Sem mudança de comportamento no pacote.
+Patch (`[NUI] 232d5cd6`). **`check-lock` passa a ler os workspaces** — pedido da `loadbalance-33`. Sem mudança de comportamento no pacote.
 
 ### Corrigido
 
-- **O atalho `github:` dentro de um workspace deixou de passar.** O §3b comparava só o `package.json` **da raiz** com a raiz do lock. No motor o `@nomad/ui` vive em `pkg['fe'].dependencies` do lock (`fe/package-lock.json` nem existe), e é **lá** que o `github:` estava — o script pegava o `git+ssh://` do `resolved`, mas **não** a origem. Agora varre `dependencies`/`devDependencies`/`peerDependencies` de cada bloco de workspace, e a mensagem diz **onde** está (`workspace fe:dependencies`).
+- **O atalho `github:` declarado só dentro de um workspace deixou de passar.** O §3b comparava só o `package.json` **da raiz** com a raiz do lock; um spec declarado apenas em `pkg['<workspace>'].dependencies` do lock não era visto. Agora varre `dependencies`/`devDependencies`/`peerDependencies` de cada bloco de workspace, e a mensagem diz **onde** está (`workspace fe:dependencies`).
+
+**Correção de diagnóstico (medido depois de publicar).** A nota anterior dizia que o motor era o caso que motivou a mudança, e **não é**: o `@nomad/ui` do motor está em `packages[""]` do `fe/package-lock.json`, com o atalho **nos dois lados** (`package.json` e raiz do lock) — e a v1.8.7 **já pegava**, verificado rodando as duas versões contra o mesmo lock. O que o motor tem de fato é `resolved: null` (não `git+ssh://`); o `git+ssh` que a sessão mediu vinha do `node_modules` local, não do lock commitado. **O v1.8.8 é reforço, não a correção do motor** — e o que fecha o motor é o `check-lock` desde a v1.8.4, que acusa o atalho na origem.
 
 ### Verificação (matriz medida, 4 acusam + 2 não)
 

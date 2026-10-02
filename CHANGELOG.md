@@ -50,6 +50,20 @@ Patch (`[NUI] 232d5cd6`). **Fecha uma fura do `check-lock` que a `loadbalance-33
 
 Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
 
+## [1.9.8] — 2026-10-02
+
+Documento. **Corrige uma afirmação minha que o padrão fazia parecer verdade.** Sem mudança de código.
+
+### Corrigido
+
+- **A §5 dizia que fechar o furo do barrel era um subpath "`@nomad/ui/ui`" — sem dizer que ele NÃO EXISTE.** Conferi no `exports` map: `@nomad/ui/ui` não está lá. Lido depressa, vira importação que funciona, e ela **não funciona** (`import { Button } from '@nomad/ui/ui'` daria erro de módulo). Agora está escrito que é **ideia de empacotamento, decisão do dono** (`91de99cf`), não importação disponível.
+
+### Medido nesta rodada
+
+- **Subpaths que existem** (verificados no `exports` map): `@nomad/ui/topbar`, `/data`, `/markdown`, `/theme-boot`, `/tsconfig`, `/eslint`, `/prettier`.
+- **O padrão não viaja no pacote.** `files` = `dist`, `src`, `presets`, `README.md`, `CHANGELOG.md` — **sem `docs/`**. E `docs/padrao-frontend.md` tem **729 linhas contra 453 do README**: o documento que os 4 consultam é o maior dos dois e **só chega por clone do repo**. Mesma família do `scripts` fora do `files`.
+- **As duas regras escritas na v1.9.7 (`timeZone` e barrel × subpath) são decorativas** pela §12 do próprio padrão: nenhum gate as mede. `typecheck`/`lint`/`test`/`build`/`check-lock` medem; elas não. Proposta de `check-scripts.mjs` (~30 linhas) na `9c722d58` — **é decisão do dono**, porque muda o gate de todo mundo.
+
 ## [1.9.7] — 2026-10-02
 
 Documento. **Duas regras que os 4 apps seguiam sem ter:** data/hora com `timeZone`, e subpath em vez de barrel. Vêm de dois achados do revisor de qualidade. Sem mudança de código.

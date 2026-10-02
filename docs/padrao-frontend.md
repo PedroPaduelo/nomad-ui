@@ -440,9 +440,16 @@ import { Button, Toaster } from '@nomad/ui'
 
 **Subpaths disponíveis hoje:** `@nomad/ui/topbar`, `@nomad/ui/data`, `@nomad/ui/markdown`, `@nomad/ui/theme-boot`.
 **O kit (`components/ui`) não tem subpath** — é o furo aberto: enquanto não tiver, `Button`/`Toaster`/`Modal` chegam
-pelo barrel, e a garantia de não puxar contexto **não existe para o kit**. Fechá-lo é um subpath novo (`@nomad/ui/ui`),
-que **muda o que os apps recebem** — decisão de empacotamento, não do padrão. O CSS é `@import` direto
-(`@nomad/ui/theme.css`, `@nomad/ui/topbar.css`).
+pelo barrel, e a garantia de não puxar contexto **não existe para o kit**.
+
+**Fechar o furo exige criar um subpath novo — hoje ele NÃO existe:** `import { Button } from '@nomad/ui/ui'` seria
+**erro de módulo**, porque `@nomad/ui/ui` não está no `exports` map do pacote. É uma ideia de empacotamento, não
+uma importação que funciona — e criá-la **muda o que os apps recebem**, então é decisão do dono (task `91de99cf`),
+não regra do padrão.
+
+**Subpaths que existem hoje (verificado no `exports` map):** `@nomad/ui/topbar`, `@nomad/ui/data`,
+`@nomad/ui/markdown`, `@nomad/ui/theme-boot`, `@nomad/ui/tsconfig`, `@nomad/ui/eslint`, `@nomad/ui/prettier`.
+O CSS é `@import` direto (`@nomad/ui/theme.css`, `@nomad/ui/topbar.css`).
 
 ⚠️ **Quando a garantia quebrar:** um dia o barrel puxa o store inteiro, e um componente que só queria um `Button` passa
 a exigir contexto no boot — com o build verde e o teste verde, porque **dependência faltando só aparece em runtime**.

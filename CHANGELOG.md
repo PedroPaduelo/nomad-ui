@@ -3,6 +3,37 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.11.0] — 2026-10-02
+
+Minor (`[NUI] 91de99cf`). **Dois furos que nenhum dos verificadores pegava, ambos relatados por outra sessão rodando o pacote em app consumidor.**
+
+### Corrigido
+
+- **`publish.test.mjs` acusava o pacote de estar errado quando rodado de um app que o instalou** (achado pela sessão da Conta, que reproduziu: 5 "problemas" num pacote correto). A causa era `readFileSync('package.json')` e `npm pack` com `cwd: process.cwd()` — caminho relativo, que lê o `package.json` do **app**. O gate agora acha a raiz do pacote pelo próprio `import.meta.url` e usa `join(raizDoPacote, …)` em tudo. **Medido: rodar no pacote e rodar do app dá o mesmo resultado.**
+- **O `npm pack` é impossível a partir do pacote instalado** — o `prepare` chama `vite`, que é devDependency e não vem no `node_modules` instalado (`vite: not found`). Então o empacotamento é a verificação **do repo**; de um pacote já instalado, a mesma afirmação é medida lendo o `package.json` e conferindo o arquivo no disco. Cada uma onde é possível, as duas medindo a mesma coisa.
+- **Nova §3c no `check-lock.mjs`: `version` de workspace ≠ `spec` de outro** (o `76dd00a` do motor, cinco horas de bump pela metade com a suíte verde). O §1 compara a raiz do lock com o `package.json` **do mesmo diretório**, e em workspace os dois não são o mesmo lugar: lock da raiz com `@nomad/ui` em `1.9.2` e o `fe` declarando `v1.10.1` passava nos três verificadores ao mesmo tempo — o do pacote, o `check-lock-root` do motor e o `npm ci --dry-run`. ⚠️ **Quem pega esse caso é a §3c e não o §1** (medido: rodando na raiz, o §1 não vê a dep porque ela está declarada só no `fe`).
+
+### A mensagem da §3c, e o que ela ensina sobre gate
+
+⚠️ **A primeira versão acusava um lock que o próprio npm gerou, e não estava errado** — achado pelo revisor independente, que montou o caso com git e npm reais. Com a raiz pedindo `#v1.0.1` e o `fe` pedindo `#v1.0.0` da mesma dep por git, o npm **hoista** e entrega ao `fe` a versão da raiz, sem entrada aninhada. A seção acusava isso e mandava *"regere o lock"*; **regerar dá lock idêntico** (medido), porque é assim que o npm resolve.
+
+**A correção não foi silenciar o caso — foi fazer a mensagem distinguir os dois**, que só quem olha o `package.json` do outro lado sabe:
+
+- **ninguem mais pede essa dep** → o lock está velho → *regere o lock*;
+- **o outro lado pede outra tag** → divergência entre lados → *alinhe as tags*, nomeando as duas. Regenerar não muda nada.
+
+⚠️ **Gate que manda fazer algo que não muda nada é pior que gate frouxo**: a pessoa obedece, não vê diferença, e desliga — é a §12 do padrão, e é por isso que a contraprova do lock gerado pelo npm é parte da verificação e não um extra.
+
+### Documentado
+
+- **A inversão de semver é de ordem de commit, e só a data resolve.** O README agora separa as duas perguntas: *qual versão é a boa* (a **data** — `git tag --sort=-creatordate`, porque `sort -V` mente e leva à `v1.9.0`, que o CHANGELOG proíbe adotar) e *qual número está instalado* (o **derivado** — `node -p "require('@nomad/ui/package.json').version"`, porque número escrito à mão envelhece e foi assim que a `v1.10.0` perdeu a linha). Nenhuma forma de escrever o número conserta a inversão.
+
+### Verificação
+
+Três mutações, todas caindo: `files` sem `scripts` · `exports` sem `./scripts/*` · §3c com `1.9.2` na raiz do lock (nos dois sentidos). Contraprovas, todas passando: lock íntegro do pacote (594 entradas) · workspace coerente · `publish.test` do app consumidor.
+
+⚠️ **A §3c acusou o caso legítimo na primeira versão** — comparava `#v1.10.1` do spec com `1.10.1` do `version` como string, e a contraprova reprovou. Gate que acusa caso legítimo é desligado (§12), então a correção foi comparar versão a versão. **E ela não pegava o caso invertido** porque o laço pulava a rota `''`; a raiz do lock participa agora.
+
 ## [1.10.1] — 2026-10-02
 
 Patch (`[NUI] 91de99cf`). **A linha da versão recomendada com data só entrou na `main` depois da tag `v1.10.0`** — quem instalou pela tag não recebeu a resposta do dono.

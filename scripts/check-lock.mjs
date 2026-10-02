@@ -273,6 +273,87 @@ for (const [onde, name, spec] of specs) {
   }
 }
 
+// 3c) A INVERSÃO de workspace: o que um lugar pede (`spec`) contra o que o
+//     outro instalou (`version`). É a §1 levada para o monorepo.
+//
+//     Existe porque o §1 compara a raiz do lock com o `package.json` **do
+//     mesmo diretório** — e em workspace os dois não são o mesmo lugar. Medido
+//     (motor, `76dd00a`): lock da raiz com `@nomad/ui` em `1.9.2` e o `fe`
+//     declarando `v1.10.1` passa nos três verificadores ao mesmo tempo —
+//     `check-lock` do pacote, o `check-lock-root` do motor e o `npm ci
+//     --dry-run`. Cinco horas de bump pela metade com a suíte inteira verde.
+//
+//     **O `npm` resolve pelo `version` instalado, não pelo `resolved`**, então
+//     é a entrada velha que sai na imagem e o `resolved` correto não salva
+//     nada (medido). E o `npm ci` não acusa: ele lê a entrada da raiz como
+//     derivada.
+//
+//     ⚠️⚠️ **E "divergência" aqui tem que ser DISTINGUÍVEL de um conflito de tag
+//     que o npm já resolveu** — a primeira versão desta seção não era, e o
+//     revisor independente mediu o estrago. Com a raiz pedindo `#v1.0.1` e o
+//     `fe` pedindo `#v1.0.0` da mesma dep por git, o npm **hoista** e entrega
+//     ao `fe` a versão da raiz, sem entrada aninhada (medido, lock gerado pelo
+//     próprio npm). A seção acusava esse lock — que o npm julga correto — e
+//     mandava "regere o lock"; regerar produz **lock idêntico** (medido),
+//     porque é assim que o npm resolve. Gate que manda fazer algo que não
+//     muda nada é §12 de novo: a pessoa obedece, não vê diferença, desliga.
+//
+//     ⚠️ **Quem pega o caso do motor é esta seção e não o §1** (medido: rodando
+//     na raiz, o §1 não vê a dep porque ela está declarada só no `fe`).
+//
+//     A mensagem dá os DOIS consertos porque só quem olha o `package.json` do
+//     outro lado sabe qual é, e eles são diferentes: se o outro lado pede a
+//     mesma tag que está instalada, é lock velho e regenerar resolve; se pede
+//     outra tag, é divergência entre lados e regenerar não muda nada.
+for (const [rota, bloco] of Object.entries(packages)) {
+  if (!bloco || typeof bloco !== 'object') continue
+  // ⚠️ A rota `''` (a raiz do lock) PARTICIPA, e sem ela o caso invertido
+  // escapava: raiz do lock pedindo `v1.9.2` com um workspace pedindo `v1.10.1`
+  // passava, e é a direção que mais custa — é a que sai na imagem.
+  for (const [name, spec] of Object.entries(bloco.dependencies ?? {})) {
+    const pedido = String(spec)
+    // Só spec de tag: é o caso do @nomad/ui e de qualquer pacote por git fixado
+    // em tag. Spec de range (`^1.2.3`) não tem "a versão certa" — comparar
+    // seria acusar o caso legítimo, e gate que acusa caso legítimo é desligado.
+    const porTag = /[#&]v?\d+\.\d+\.\d+/.exec(pedido)?.[0]
+    if (!porTag) continue
+    const instalado = resolveEntrada(rota, name)
+    if (!instalado) continue
+    const version = packages[instalado]?.version
+    if (!version) continue
+    // Compara VERSÃO, não string: o `spec` é `#v1.10.1` e o `version` do
+    // lock é `1.10.1`. Comparar os dois literalmente acusava o caso
+    // LEGÍTIMO em que os dois concordam — e a contraprova reprovou, que é o
+    // pior desfecho de um gate (regra da §12: falso-positivo é desligado).
+    const pedidoVersion = porTag.replace(/^[#&]v?/, '')
+    if (pedidoVersion === version.replace(/^v/, '')) continue
+    const de = rota === '' ? 'a raiz' : `workspace ${rota}`
+    // Quem mais pede essa MESMA dep, e com qual tag? Sem isso a mensagem
+    // oferecer "regere o lock" como conserto principal seria errada metade das
+    // vezes: quando os dois lados pedem tags DIFERENTES, o npm hoista e
+    // regenerar dá lock idêntico (medido). Com o dado, o conserto é o certo.
+    const outros = []
+    for (const [outraRota, outroBloco] of Object.entries(packages)) {
+      if (outraRota === rota || !outroBloco || typeof outroBloco !== 'object') continue
+      const outroSpec = String(outroBloco.dependencies?.[name] ?? '')
+      const achado = /[#&]v?\d+\.\d+\.\d+/.exec(outroSpec)
+      if (!achado) continue
+      outros.push({
+        onde: outraRota === '' ? 'a raiz' : `workspace ${outraRota}`,
+        tag: achado[0].replace(/^[#&]v?/, ''),
+      })
+    }
+    const conserto = outros.length
+      ? `alinhe as tags — ${de} pede ${pedidoVersion} e ${outros.map((o) => `${o.onde} pede ${o.tag}`).join(', ')}; o npm hoista e entrega a mesma versão para os dois lados, então regenerar o lock não muda nada`
+      : 'regere o lock a partir do `package.json` desta tag — nenhum outro lado pede essa dep, então o lock está velho'
+    problems.push(
+      `${de} pede "${name}" em "${porTag}" e o lock instala ${version} para ela. ` +
+        '`npm ci` NÃO acusa e sai a versão do `version`, não do `resolved`. ' +
+        `Para corrigir: ${conserto}.`,
+    )
+  }
+}
+
 // 4) O lock precisa ter `lockfileVersion` e a lista de pacotes; sem isso o
 //    arquivo está truncado e o erro do npm é ilegível.
 if (!lock.lockfileVersion) problems.push('package-lock.json sem "lockfileVersion"')

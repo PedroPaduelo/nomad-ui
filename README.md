@@ -8,8 +8,33 @@ kit do AgentPack.
 
 ## Versão recomendada
 
-**A recomendada é a tag que aponta para a `main` agora** — e o número dela é o
-`"version"` do `package.json` desta tag, que é a única fonte que não mente:
+**São duas coisas, e elas respondem perguntas diferentes.** A inversão de semver
+deste projeto (abaixo) só a **data** resolve; o **número** derivado é o
+conforto do dia a dia. Quem ler só um dos dois continua perdido — o número sem
+a ressalva leva à `v1.9.0`, que o CHANGELOG proíbe adotar.
+
+### 1. Qual versão é a boa — a DATA decide
+
+```bash
+git tag --sort=-creatordate | head -1        # com o clone
+```
+
+Sem clone, a forma equivalente ordena por número e **mente** neste projeto:
+
+```bash
+git ls-remote --tags https://github.com/PedroPaduelo/nomad-ui.git \
+  | grep -oE 'v1\.[0-9]+\.[0-9]+$' | sort -V | tail -1
+```
+
+⚠️ **Por que a ordem de commit importa e o número não resolve:** a `v1.9.0`
+foi commitada **antes** da `v1.8.10` (medido: `git merge-base --is-ancestor
+v1.9.0 v1.8.10` → True). Então `1.9.0 > 1.8.10` no semver **para sempre**, e a
+`v1.9.0` é a versão que o CHANGELOG diz para não adotar (perdeu 38 linhas do
+bloco de transitiva no `check-lock.mjs`). **Nenhuma forma de escrever o
+número conserta isso** — a inversão é de ordem de commit, e só a data a
+desmente.
+
+### 2. Qual número está instalado — o DERIVADO resolve
 
 ```bash
 node -p "require('@nomad/ui/package.json').version"   # num app já instalado
@@ -27,27 +52,7 @@ não está publicado no npm (o registry responde 404; é distribuído por git).
 Não use `latest`/HEAD — o `HEAD` deste repo aponta para `refs/heads/main`, que
 **por coincidência** é a tag atual, não por decisão de canal.
 
-A forma confiável, na **data** de criação da tag (a data não mente):
-
-```bash
-git tag --sort=-creatordate | head -1
-```
-
-A forma sem clone, ordenando por número — **com ressalva**:
-
-```bash
-git ls-remote --tags https://github.com/PedroPaduelo/nomad-ui.git \
-  | grep -oE 'v1\.[0-9]+\.[0-9]+$' | sort -V | tail -1
-```
-
-⚠️ **A semver deste projeto está invertida na linha `1.9.0`/`1.8.10`** — a `v1.9.0`
-foi commitada **antes** da `v1.8.10` (medido: `git merge-base --is-ancestor v1.9.0 v1.8.10`
-→ True). Por isso a `v1.9.0`, que é REGRESSÃO (perdeu 38 linhas do bloco de transitiva
-no `check-lock.mjs`), fica acima da `v1.8.10` no `sort -V` para sempre. **A `v1.10.0`
-escapa** por ser a maior em número e a mais recente em data ao mesmo tempo, mas a
-regra geral continua valendo: **não ordene por número.**
-
-Antes de bump, confirme que a versão tem a cobertura que o gate promete:
+### 3. Antes de bump, confira a cobertura do gate
 
 ```bash
 git show vX.Y.Z:scripts/check-lock.mjs | head -1
@@ -108,6 +113,37 @@ node -p "require('@nomad/ui/package.json').version"
 Em monorepo/workspace, o lock **da raiz manda**: bump só no `package.json` do pacote (ex.: `motor/fe`)
 não instala nada enquanto a entrada da raiz continuar pinada — atualize os dois locks e confira
 `require('@nomad/ui/package.json').version` (`npm ls @nomad/ui` na raiz).
+
+### O verificador de lock vem no pacote — não copie o arquivo
+
+Desde a `v1.10.0` o `scripts/` é publicado, então o gate sai com o `npm install`
+e **cada app usa o do pacote, na versão que ele pediu**:
+
+```json
+{
+  "scripts": { "check-lock": "check-lock-nomad" }
+}
+```
+
+**Caminho completo, se o `bin` não estiver linkado** (é o que roda quando o
+`node_modules` foi **copiado à mão** em vez de instalado — `cp -a`, restore de
+cache, volume montado):
+
+```bash
+node node_modules/@nomad/ui/scripts/check-lock.mjs
+```
+
+⚠️ **`cp -a` do `node_modules` NÃO cria o `node_modules/.bin/`** — é o npm que
+linka o bin na instalação. Sem o link, o `npx check-lock-nomad` não falha com
+"comando não encontrado": ele **vai ao registry** e responde `E404`, que parece
+"o pacote não existe" (medido). **Sempre instale; nunca copie o `node_modules`.**
+
+⚠️ **O `npm outdated` não avisa de bump** (dependência por git não tem coluna
+"Latest"), e o `npm install` **diz que atualizou sem atualizar**. Confira sempre
+`node -p "require('@nomad/ui/package.json').version"` depois do bump.
+
+O verificador lê o `package-lock.json` **do `cwd`**, então roda em qualquer
+subdiretório do app — mas a raiz do lock é a que ele varre inteiro.
 
 ## Entradas
 

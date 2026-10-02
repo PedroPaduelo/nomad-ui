@@ -3,6 +3,18 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.10.1] — 2026-10-02
+
+Patch (`[NUI] 91de99cf`). **A linha da versão recomendada com data só entrou na `main` depois da tag `v1.10.0`** — quem instalou pela tag não recebeu a resposta do dono.
+
+### Corrigido
+
+- **`README.md` § `Versão recomendada`: a linha concreta `v1.10.x — 2026-10-02`.** A seção existia na v1.10.0 com os comandos e a ressalva da semver invertida, mas **sem dizer qual versão era a recomendada** — que é a pergunta que a seção existe para responder. Registra também que o registry npm responde 404 (o pacote é distribuído por git, então `npm view` e `npm outdated` não são instrumento) e que o `HEAD` remoto aponta para `refs/heads/main`, que coincide com a tag por acaso e não por decisão.
+
+### Por que uma patch e não um amend
+
+⚠️ A `v1.10.0` **já está publicada** e tag publicada é imutável (regra 2 das regras de publicação deste repo). A correção sai em versão nova — e foi o que aconteceu de fato: a linha foi para a `main` em `4c7325b`, depois da tag. Sem isso, o gate `publish.test.mjs` desta sessão não pegaria nada, porque **ninguém compara a tag com a `main`**.
+
 ## [1.10.0] — 2026-10-02
 
 Minor (`[NUI] dba667f0` + `[NUI] 91de99cf`). **O `scripts/` passa a viajar no pacote, e o pacote declara a versão recomendada.** Fecho o "entrega tudo" do dono sem ambiguidade sobre qual tag adotar.

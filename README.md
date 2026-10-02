@@ -8,8 +8,18 @@ kit do AgentPack.
 
 ## Versão recomendada
 
-**`v1.10.0` — 2026-10-02.** É a tag mais recente por data de criação e a mais
-recente por número, então as duas formas abaixo concordam nela.
+**A recomendada é a tag que aponta para a `main` agora** — e o número dela é o
+`"version"` do `package.json` desta tag, que é a única fonte que não mente:
+
+```bash
+node -p "require('@nomad/ui/package.json').version"   # num app já instalado
+git show vX.Y.Z:package.json | grep '"version"'       # conferindo uma tag
+```
+
+⚠️ **O número escrito à mão no README envelhece e mente** — foi assim que a
+`v1.10.0` perdeu a linha da versão: a seção entrou na `main` **depois** da tag
+`v1.10.0`, e quem instalou pela tag não recebeu a resposta. Por isso a linha
+concreta é derivada, não digitada.
 
 **Não use `npm outdated`** — dependência por git não tem coluna "Latest" e o
 verificador não enxerga bump. Não use `npm view @nomad/ui version` — o pacote

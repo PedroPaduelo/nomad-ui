@@ -22,8 +22,8 @@
  * não pegava nada, e o valor dele foi estar dentro do `docker build`. Publicar
  * o arquivo é o que esta sessão entrega; **usá-lo é decisão de cada app.**
  */
-import { execFileSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { mkdtempSync, mkdirSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -56,6 +56,56 @@ try {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
   if (!pkg.files?.includes('scripts')) {
     problems.push('package.json → "files" não inclui "scripts" — o gate não viaja no pacote')
+  }
+
+  // 1b) A ÚLTIMA tag tem que estar no topo da `main` — nada de `main` à frente
+  //     dela. Existe porque isso aconteceu na v1.10.0: a linha da versão
+  //     recomendada foi para a `main` DEPOIS da tag, e quem instalou pela tag
+  //     (que é como todo mundo consome) não recebeu a resposta. O sintoma é
+  //     silencioso — a `main` estava certa, a tag é que ficou para trás, e
+  //     ninguém olha a tag depois de criá-la.
+  //
+  //     Só mede em repo com histórico. Em tarball sem `.git` não há o que
+  //     comparar, e o gate não pode ser a razão de um `npm ci` falhar.
+  if (existsSync('.git')) {
+    let ultima = ''
+    try {
+      ultima = execFileSync('git', ['tag', '--sort=-creatordate'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+        .split('\n')
+        .filter(Boolean)[0]
+      if (ultima) {
+        // `spawnSync` e não `execFileSync`: `merge-base --is-ancestor` sai 1
+        // justamente no caso que este gate quer reportar, e `execFileSync`
+        // LANÇA nesse caso — o `catch` não distingue "a main andou" de
+        // "repo sem histórico" e a mensagem saía errada. `spawnSync` devolve
+        // o status e o caso vira uma asserção, não uma exceção.
+        const anc = spawnSync('git', ['merge-base', '--is-ancestor', 'HEAD', ultima])
+        if (anc.status === 0) {
+          // HEAD está contido na tag: a tag é a boa.
+        } else if (anc.status === 1) {
+          const quantos = execFileSync('git', ['rev-list', '--count', `${ultima}..HEAD`], {
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'pipe'],
+          }).trim()
+          problems.push(
+            `a \`main\` está ${quantos} commit(s) À FRENTE da última tag (${ultima}) — ` +
+              'quem instalar por ela não recebe o que está na main. Publique a tag depois do commit, não antes.',
+          )
+        } else {
+          problems.push(`git merge-base --is-ancestor falhou com status ${anc.status}: ${anc.stderr ?? ''}`)
+        }
+      }
+    } catch (e) {
+      // Só chega aqui se o `git tag` ou o `rev-list` quebrarem — o
+      // `is-ancestor` não lança mais, é `spawnSync`. Repo sem histórico
+      // utilizável (shallow, sem tag) não é motivo de reprovar.
+      problems.push(
+        `não consegui comparar a main com a última tag (${ultima || 'sem tag'}): ${e?.message ?? e}`,
+      )
+    }
   }
 
   // 2) O tarball tem que CONTER o script. `files` sozinho não basta: com

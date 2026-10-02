@@ -50,6 +50,23 @@ Patch (`[NUI] 232d5cd6`). **Fecha uma fura do `check-lock` que a `loadbalance-33
 
 Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
 
+## [1.9.3] — 2026-10-01
+
+Patch (`[NUI] b9b07a86`). **Corrige três afirmações do README que apontam o debug para o lado errado**, e a mensagem do `check-lock`.
+
+### Corrigido
+
+- **O README dizia que o `npm ci` quebra em Docker sem chave ssh por causa do `resolved` em `git+ssh://`. Não quebra** (medido): o `npm ci` busca a dependência git pelo **spec**, não pelo `resolved`. O que quebra é a falta de chave **quando não há `insteadOf`** no Dockerfile — condição que o README não mencionava, e que o `fe/Dockerfile` do motor resolve.
+- **O README não dizia que o `npm ci` sai 0 e não instala a transitiva** (dependência por git): medido, instalou 136 de 941 pacotes com `@nomad/ui` inteiro ausente, **sem erro**. É o caso que mais custa — o build passa e a feature não funciona.
+- **A ordem do que pega** está explícita: (1) o **atalho `github:`** no spec (a causa — o `npm install` o transforma em ssh sozinho, e o §3b barra); (2) **transitiva sem entrada** (§2b barra; `npm ci` não acusa nada); (3) `resolved` em `git+ssh://` (risco de lockfile; só quebra sem chave **e** sem `insteadOf`).
+- **A mensagem do `check-lock` deixou de apontar para o `npm ci` como teste**, porque para dependência por git ele **aceita e não instala** — agora aponta o campo que de fato importa: o `dependencies` do requerente.
+
+### O que NÃO mudou (e a limitação que eu tinha anotado)
+
+**A v1.9.3 pega transitiva aninhada ausente** — verificado de novo nesta versão: lock íntegro com `jsesc` aninhado → exit 0; removida a entrada aninhada → **exit 1**. A limitação que circulava ("a v1.9.2 não pega aninhada") **não se reproduz**; se ela veio de um lock real, vale pedir o `sha256sum` do script, como já fizemos com o "34 falsos".
+
+Contraprova: lock real do AP (870 entradas) e os 3 lockfiles do motor → **0 falsos**. Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
+
 ## [1.9.2] — 2026-10-01
 
 Documento (`[NUI] b9b07a86`). **Só papel: nenhuma mudança no `check-lock`.** Fecha a discussão que round-tripou a noite.

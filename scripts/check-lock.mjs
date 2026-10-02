@@ -218,7 +218,10 @@ for (const [key, bloco] of Object.entries(packages)) {
     // mutação que o reproduza manda a pessoa consertar algo que não está
     // quebrado — ver a regra nova na §12.
     problems.push(
-      `${key} declara "${nome}" (${spec}) e o lock não tem entrada para ela nem aninhada. Confirme com \`npm ci\`: se resolver em runtime, é falsa accusation.`,
+      // A mensagem não afirma que o `npm ci` falha, porque para dependência
+      // por **git** ele **não** falha: sai 0 e não instala (medido). Aponta o
+      // caminho que de fato importa — o campo `dependencies` do requerente.
+      `${key} declara "${nome}" (${spec}) e o lock não tem entrada para ela nem aninhada. Se este veio por git, o \`npm ci\` aceita e nao instala — confira o "dependencies" do requerente.`,
     )
   }
 }

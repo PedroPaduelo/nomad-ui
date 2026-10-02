@@ -17,21 +17,27 @@ O app instala por dependência git numa tag fixa (sem publicar no npm). **Use a 
 }
 ```
 
-Por que a URL completa: o atalho `github:PedroPaduelo/nomad-ui#vX.Y.Z` faz o npm
-resolver por git+ssh e `npm ci` quebra em imagem Docker sem chave ssh — os 3 frontends
-de produção caíram nisso em 2026-09-30.
+Por que a URL completa: **o atalho `github:PedroPaduelo/nomad-ui#vX.Y.Z` é o que produz o ssh.** O `npm install`
+reescreve o atalho para `git+ssh://git@github.com/…` no `resolved` (medido 2026-09-30 e reproduzido), e é esse
+`resolved` que o `check-lock` (§3b) barra. **Use `git+https://`.**
 
-**Atenção ao lock:** o `resolved` gravado é `git+ssh://git@github.com/…#<sha>` mesmo
-instalando por `git+https://` (o npm normaliza para ssh ao gravar; verificado em
-2026-09-30). Em máquina **sem** chave ssh (CI/Docker), regenere o lock na primeira
-instalação para ele ficar em https:
+**O `npm ci` NÃO quebra por causa do `resolved` em ssh** (corrigido em 2026-10-01, medido): ele busca a dependência
+git pelo **spec**, não pelo `resolved`. O que quebra é a falta de chave ssh **quando não há rewrite** — que se resolve
+com o `insteadOf` no Dockerfile (`git config --system --add url."https://github.com/".insteadOf ssh://git@github.com/`,
+usado pelo `fe/Dockerfile` do motor). Sem ele, regenere o lock uma vez:
 
 ```bash
 rm -f package-lock.json && npm install   # grava git+https://…#<sha>
 ```
 
-Depois disso `npm ci` funciona sem ssh. Quem já tem lock com `git+ssh://` e CI sem chave:
-apague o `package-lock.json` uma vez (não por app, no CI).
+**O que pega de verdade, em ordem:**
+
+1. **O atalho `github:` no spec** — é a causa; o `npm install` transforma em ssh sozinho. O `check-lock` §3b barra.
+2. **Dependência transitiva sem entrada no lock** — aqui o `npm ci` **sai 0 e não instala**, em silêncio, para
+   dependência por git (medido: installou 136 de 941 pacotes, `@nomad/ui` inteiro ausente). O `check-lock` §2b barra;
+   `npm ci` **não** accuse nada. **É o caso que mais custa, porque o build passa e a feature não funciona.**
+3. **`resolved` em `git+ssh://`** — risco de lockfile: o próximo `npm install` reescreve. Só quebra se não houver
+   chave **e** não houver `insteadOf`.
 
 ### Bump de tag: reinstale e confira (importante)
 

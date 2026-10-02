@@ -533,21 +533,30 @@ O CSS de tema exportado importa a base Tailwind e declara `@source` para o pacot
 pacotes locais cujas classes Tailwind devam ser varridas. O CSS específico da aplicação vem depois
 do tema, sempre usando os tokens Nomad.
 
-## GitHub Actions está DESLIGADO — não espere CI, não o religue
+## GitHub Actions NÃO EXISTE aqui — não crie, não sugira, não religue
 
-Decisão do dono em 2026-10-02: o Actions foi **desligado nesta conta inteira**
-(`enabled=false` nos 5 repos). E mais: **na `main` não existe workflow nenhum** — a
-pasta `.github/` não está lá. O `gates.yml` existe só na branch `ci/gates-workflow`
-(`e1abd0e1`), **que não foi mergeada**. **Nenhuma entrega é validada por CI aqui.**
+Decisão do dono em 2026-10-02, por **custo**: ele não paga GitHub Actions. Não é
+configuração pendente — é decisão.
+
+> *"Não é só não religar, é não ter nada. Não é pra ter nem pra possibilidade de
+> ligar."*
+
+**Estado medido:** `enabled=false` na conta inteira, **nenhum arquivo de workflow
+em nenhuma branch do `nomad-ui`** — a pasta `.github/` não existe. A branch
+`ci/gates-workflow` (que tinha um `gates.yml` de 41 linhas, nunca mergeado) foi
+**apagada** justamente para não deixar a possibilidade de ligar.
+
+**A regra do modelo de trabalho:**
+> **Teste roda na sandbox. Publicação roda no painel. O GitHub só guarda o código.
+> Actions não existe e não pode ser criado.**
 
 **O que isso muda na tua rotina:**
 - **`git push` não dispara nada.** Continua fazendo push — a regra de merge na
-  `main` continua valendo — mas não espere nenhum badge, nenhum check, nenhum log.
-- **Não gaste tempo lendo `gh run list`/`gh run view`.** Não há o que ler: um job
-  que falha sem executar passo é infraestrutura, não código.
+  `main` continua valendo — mas não espere badge, check nem log.
+- **Não gaste tempo lendo `gh run list`/`gh run view`.** Não há o que ler.
 - **Verifica em clone limpo**, que é como os defeitos de 2026-10-02 apareceram:
   `git clone --depth 1 -b main <url> /tmp/x && cd /tmp/x && npm ci && npm run …`.
 
-**Se algum dia precisar de CI**, é o dono que religa (botão em cada repo, ou
-`gh api -X PUT repos/:r/actions/permissions --input '{"enabled": true}'`). **Não
-religue por conta própria.**
+**A publicação automática NÃO depende do GitHub.** O painel clona e constrói no
+servidor dele; o GitHub só guarda o código. Por isso apagar os workflows não
+quebra deploy.

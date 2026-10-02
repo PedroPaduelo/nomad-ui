@@ -3,6 +3,39 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.12.0] — 2026-10-02
+
+Minor (`[NUI] 91de99cf`). **GitHub Actions não existe mais neste repositório — decisão do dono por CUSTO.**
+
+### Removido
+
+- **A branch `ci/gates-workflow` foi apagada** (local e remoto). Ela tinha um `gates.yml` de 41 linhas, nunca mergeado na `main`, e era a única forma de o Actions existir aqui. O dono foi explícito: *"não é só não religar, é não ter nada. Não é pra ter nem pra possibilidade de ligar."* ⚠️ **O conteúdo está no histórico do git** (`e1abd0e1`), caso precise como referência — mas **não deve ser restaurado**.
+- **A `main` nunca teve `.github/`** — não havia workflow nela para apagar. O que existia era só a branch.
+
+### Documentado
+
+- **A regra do modelo de trabalho, no `README.md` e no §11 do padrão:**
+  > **Teste roda na sandbox. Publicação roda no painel. O GitHub só guarda o código. Actions não existe e não pode ser criado.**
+- **"Desligado" é frase de quem planeja religar.** O README agora diz que não existe workflow em **nenhuma** branch, e manda não criar, não sugerir e não religar.
+- **A publicação automática NÃO depende do GitHub:** o painel clona e constrói no servidor dele. Apagar os workflows **não quebra deploy** — quem confunde "sem CI" com "sem deploy" para por um motivo que não existe.
+- **O §11 do padrão estava desatualizado em dois pontos** que a `v1.10.0` já tinha resolvido: dizia que o `check-lock` chega ao app *"por cópia manual, porque `scripts` não está no `files` do pacote"*. Desde a `v1.10.0` ele **vem no pacote** (com `bin` e `exports`), e **copiar o arquivo para o app é agora o erro**.
+
+## [1.11.1] — 2026-10-02
+
+Patch (`[NUI] 91de99cf`). **O `.bin` funciona por git — e o gate passou a medir por git.**
+
+Três sessões reportaram que `npx check-lock-nomad` não funcionava. **Não se confirma:** medindo por git numa tag real (`v1.11.0`), o `npm install` cria e linka `node_modules/.bin/check-lock-nomad`, o arquivo vem com bit de execução e o `npx` roda. O `bin` também vai para o `package-lock.json`.
+
+**O `E404` é `cp -a` do `node_modules`** — o npm cria o `.bin` na instalação, cópia não cria. E o `npx`, sem o link local, **vai ao registry procurar**, então o `E404` se lê como "o pacote não existe" e desvia para o pacote errado.
+
+### Corrigido
+
+- **`publish.test.mjs` media o bin só por tarball** — um caminho que nenhum dos 4 apps usa. Agora tem §3b, que instala **por git a tag de verdade** quando `PUBLISH_TEST_GIT=1` (precisa de rede e ~40 s).
+
+### Documentado
+
+- **O `npm install` escreve `resolved` em `git+ssh` mesmo com `git+https://` no `package.json`** (medido: o `package.json` fica em `git+https://…#v1.11.0` e a entrada instalada sai `git+ssh://…#<sha>`). **Não é o shorthand do §3b.** É defeito do lock do app, e o §3 do `check-lock` acusa. Conserto: `rm -f package-lock.json && npm install`, ou `insteadOf` no Dockerfile.
+
 ## [1.11.0] — 2026-10-02
 
 Minor (`[NUI] 91de99cf`). **Dois furos que nenhum dos verificadores pegava, ambos relatados por outra sessão rodando o pacote em app consumidor.**

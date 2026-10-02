@@ -8,10 +8,14 @@ kit do AgentPack.
 
 ## Versão recomendada
 
+**`v1.10.0` — 2026-10-02.** É a tag mais recente por data de criação e a mais
+recente por número, então as duas formas abaixo concordam nela.
+
 **Não use `npm outdated`** — dependência por git não tem coluna "Latest" e o
 verificador não enxerga bump. Não use `npm view @nomad/ui version` — o pacote
-não está publicado no npm. Não use `latest`/HEAD — o `HEAD` deste repo aponta
-para a `main`, que **por coincidência** é uma tag, não por decisão de canal.
+não está publicado no npm (o registry responde 404; é distribuído por git).
+Não use `latest`/HEAD — o `HEAD` deste repo aponta para `refs/heads/main`, que
+**por coincidência** é a tag atual, não por decisão de canal.
 
 A forma confiável, na **data** de criação da tag (a data não mente):
 

@@ -176,6 +176,12 @@ contradição, confirme que é o mesmo lock**: o `name` e a raiz do `package-loc
 
 ```tsx
 // src/main.tsx
+// ⚠️ o barrel "@nomad/ui" reexporta ThemeProvider, que é CONTEXTO. Em main.tsx
+// isso é inofensivo (você quer o provider mesmo). Em qualquer outro arquivo —
+// componente, hook, página — importe pelo SUBPATH, que não puxa contexto:
+//   import { TopBar } from '@nomad/ui/topbar'            // ✅ subpath, não puxa contexto
+//   import { Button } from '@nomad/ui'                    // ❌ o kit só sai pelo barrel: puxa ThemeProvider
+// Ver "Subpath, não barrel" na §5.
 import { ThemeProvider, PaletteProvider } from '@nomad/ui'
 import './styles/globals.css'
 
@@ -391,6 +397,56 @@ Regras:
   (sobre o `api` acima); não se escreve à mão interface que o gerado já tem, e o CI roda `api:check`.
 - Tempo real (WebSocket, SSE): o cliente mora em `src/api/` (ex. `ws.ts`); o hook que assina aplica cada evento no
   cache (`setQueryData` ou `invalidateQueries`). Nada de store paralelo com cópia dos dados.
+
+### Data e hora: sempre com `timeZone`
+
+Toda data que o app **mostra** vai com `timeZone` explícito. Sem ele, o resultado depende da máquina de quem
+renderizou — o mesmo dado sai em dia diferente, e em **idioma diferente** conforme o locale do navegador.
+
+```tsx
+// ❌ depende da máquina e do navegador
+new Date(createdAt).toLocaleDateString('pt-BR')
+
+// ✅ UTC na tabela/dado; 'America/Sao_Paulo' quando o dado é inherently local
+new Date(createdAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+```
+
+**Regra:** dado que vem do servidor é **UTC** e se mostra em UTC. Só se usa zona local quando o próprio dado é local
+(nascimento, endereço). **E o `locale` vai explícito junto** — `'pt-BR'` não é o default em navegador en-US.
+
+⚠️ **Por que isso é padrão e não preferência:** medido em 2026-10-02, são 11 `toLocaleDateString` sem `timeZone` nos
+4 apps, **2 deles com saída em inglês** — o build passa, o teste passa, e o defeito só aparece na tela de alguém cujo
+browser não está em pt-BR. **Nenhum gate pega isso**: é dado que sai errado, não código que quebra.
+
+### Subpath, não barrel (fora do `main.tsx`)
+
+O barrel `@nomad/ui` reexporta **`ThemeProvider`**, que é **contexto de React**. Quem importa o barrel para pegar
+`Button` ou `Toaster` **também puxa o ThemeProvider** — hoje não quebra, mas **a garantia quebra por atualização de
+dependência**, sem review de nenhum app (medido em 2026-10-02: `boot-error.tsx` do motor importa o barrel; o revisor
+conferiu que só puxa React e store _hoje_).
+
+**Regra:** o barrel é só para **`main.tsx`**, onde o `ThemeProvider` é o que você quer mesmo. **Em qualquer outro arquivo,
+importe pelo subpath:**
+
+```tsx
+// ✅ tem subpath próprio:
+import { TopBar, topBarModelSchema } from '@nomad/ui/topbar'
+import { useQueryClient, parseEnv } from '@nomad/ui/data'
+
+// ❌ o kit não tem subpath — Button, Toaster, Modal… só saem pelo barrel,
+//    que arrasta ThemeProvider junto:
+import { Button, Toaster } from '@nomad/ui'
+```
+
+**Subpaths disponíveis hoje:** `@nomad/ui/topbar`, `@nomad/ui/data`, `@nomad/ui/markdown`, `@nomad/ui/theme-boot`.
+**O kit (`components/ui`) não tem subpath** — é o furo aberto: enquanto não tiver, `Button`/`Toaster`/`Modal` chegam
+pelo barrel, e a garantia de não puxar contexto **não existe para o kit**. Fechá-lo é um subpath novo (`@nomad/ui/ui`),
+que **muda o que os apps recebem** — decisão de empacotamento, não do padrão. O CSS é `@import` direto
+(`@nomad/ui/theme.css`, `@nomad/ui/topbar.css`).
+
+⚠️ **Quando a garantia quebrar:** um dia o barrel puxa o store inteiro, e um componente que só queria um `Button` passa
+a exigir contexto no boot — com o build verde e o teste verde, porque **dependência faltando só aparece em runtime**.
+É o mesmo mecanismo do `sonner` fora do lock e do `npm ci` que sai 0 sem instalar: **empacotamento que ninguém confere.**
 
 ### Fronteira de import (ESLint, erro)
 

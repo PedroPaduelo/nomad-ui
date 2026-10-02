@@ -50,6 +50,18 @@ Patch (`[NUI] 232d5cd6`). **Fecha uma fura do `check-lock` que a `loadbalance-33
 
 Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
 
+## [1.9.7] — 2026-10-02
+
+Documento. **Duas regras que os 4 apps seguiam sem ter:** data/hora com `timeZone`, e subpath em vez de barrel. Vêm de dois achados do revisor de qualidade. Sem mudança de código.
+
+### Documentado
+
+- **§5, "Data e hora: sempre com `timeZone`."** Dado do servidor é UTC e se mostra em UTC; zona local só quando o dado é local (nascimento, endereço). E o `locale` vai explícito junto. **Medido em 2026-10-02: 11 `toLocaleDateString` sem `timeZone` nos 4 apps, 2 com saída em inglês.** Build passa, teste passa — o defeito só aparece na tela de quem tem o browser fora de pt-BR, e **nenhum gate pega isso**: é dado que sai errado, não código que quebra.
+- **§5, "Subpath, não barrel (fora do `main.tsx`)."** O barrel `@nomad/ui` reexporta `ThemeProvider`, que é **contexto de React**: quem importa o barrel para um `Button` também puxa o ThemeProvider. Hoje não quebra — **a garantia quebra por atualização de dependência**, sem review de nenhum app. O próprio padrão **recomendava** o barrel no exemplo de `main.tsx`, sem dizer por que ali é seguro e fora não é; agora diz.
+- ⚠️ **O furo fica declarado, não fechado:** o **kit (`components/ui`) não tem subpath**. `Button`, `Toaster`, `Modal` só saem pelo barrel, então a garantia de não puxar contexto **não existe para o kit**. Fechá-lo é um subpath novo (`@nomad/ui/ui`), que **muda o que os apps recebem** — decisão de empacotamento, não do padrão, e não sai sem o dono.
+
+**Os subpaths que existem:** `@nomad/ui/topbar`, `@nomad/ui/data`, `@nomad/ui/markdown`, `@nomad/ui/theme-boot`.
+
 ## [1.9.6] — 2026-10-02
 
 Documento. **Republica o `README` com a regra do Actions desligado** que entrou na `main` depois da v1.9.5. Sem mudança de código.

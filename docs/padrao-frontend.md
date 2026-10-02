@@ -591,8 +591,27 @@ Scripts com estes nomes em todo app (o preset do `@nomad/ui` traz as configs):
 | `npm audit --audit-level=high`  | vulnerabilidade high/critical                                                                                                                                             |
 | `format:check`                  | arquivo fora do Prettier (entra no CI quando o app estiver todo formatado; até lá, lint-staged no pre-commit)                                                             |
 
-CI (GitHub Actions) em todo push na `main` e PR, na ordem: `npm ci` → `api:check` → `typecheck` → `lint` → `cycles` →
-`test` (com cobertura) → `test:a11y` → `build` → `audit`. Node pela `.nvmrc`.
+**Gate sem CI: roda na mão, e isso é decisão do dono (2026-10-02).** O GitHub Actions está **desligado nos 5
+repositórios**. A sequência abaixo é a do gate manual, na ordem, e é a mesma que a task `91de99cf` mediu em **92 s**
+(do zero: `npm ci` 24 s · `api:check` · `typecheck` 14 s · `lint` 9 s · `cycles` · `doc:check` 1 s · `test` 20 s ·
+`test:a11y` 17 s · `build` 7 s). Node pela `.nvmrc`.
+
+```bash
+rm -rf node_modules && npm ci   # a instalação limpa é o passo que o resto não substitui
+npm run typecheck && npm run lint && npm run cycles && npm run doc:check \
+  && npm test && npm run test:a11y && npm run build
+```
+
+⚠️ **Por que `npm ci` do zero é o passo que não se negocia:** o `@nomad/ui` ficou ~20 versões com `sonner` no
+`package.json` e **fora** do lock, e o gate ficava verde — porque `npm install` "conserta" o lock sem reclamar. Só
+instalar do zero acusou. E num app, `npm install` sozinho **é** o que produz o lock que o build vai usar.
+
+⚠️ **O custo de não ter CI automático, e é o que se paga:** um commit quebrando o `dist` só aparece quando **um
+consumidor quebra**, e a correção depende de alguém reparar por acaso. **Pior:** com dependência por git, o `npm ci` do app
+**sai 0 e não instala a transitiva, em silêncio** (medido: `added 136 packages` onde o lock íntegro instala 941, e o
+`@nomad/ui` inteiro ausente). **O build passa e a feature não funciona.** Por isso o `check-lock` (§2b) é a verificação
+que pega, e por isso ele precisa **chegar ao app** — hoje por cópia manual, porque `scripts` não está no `files` do
+pacote (decisão pendente na `91de99cf`).
 
 ## 12. Gate que não existe é gate que não pega
 

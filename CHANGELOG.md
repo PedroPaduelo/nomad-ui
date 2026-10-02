@@ -50,6 +50,20 @@ Patch (`[NUI] 232d5cd6`). **Fecha uma fura do `check-lock` que a `loadbalance-33
 
 Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
 
+## [1.9.5] — 2026-10-02
+
+Documento (`[NUI] 91de99cf`). **O padrão ainda mandava CI, e o CI foi desligado.** Sem mudança de código.
+
+### Corrigido
+
+- **§11 do padrão não manda mais GitHub Actions.** O Actions está **desligado nos 5 repositórios, por decisão do dono**. Agora a seção dá **a sequência do gate manual**, na ordem, com o tempo medido (**92 s** do zero, na task `91de99cf`), e o comando pronto.
+- **O `npm ci` do zero ficou explícito como o passo que não se negocia**, com o motivo: o `sonner` ficou ~20 versões fora do lock e o gate ficou verde, porque `npm install` "conserta" o lock sem reclamar.
+- **O custo de não ter CI automático está escrito**, em vez de a seção fingir que há verificação: commit quebrando o `dist` só aparece quando um consumidor quebra, e **com dependência por git o `npm ci` do app sai 0 e não instala a transitiva** (medido: `added 136 packages` onde o lock íntegro instala 941, `@nomad/ui` inteiro ausente) — o build passa e a feature não funciona. Por isso o `check-lock` é a verificação que pega, e por isso ele precisa chegar ao app.
+
+### A decisão que sobra para o dono (`91de99cf`)
+
+Incluir `"scripts"` no `files`. Hoje o `check-lock.mjs` **não viaja no pacote** (verificado instalando a v1.9.2 como consumidor), então a cópia manual é o **único** jeito de um app ter o gate — e a `conta_nommand` não tem gate nenhum. **Pin: `#v1.9.4`** (sha256 do gate `03b5624c…`; `6095fec2…` nas v1.9.1/v1.9.2 também serve).
+
 ## [1.9.4] — 2026-10-01
 
 Documento (`[NUI] 87bb4bd7`). **A regra de publicação que eu quebrai, escrita no repo.** Sem mudança de código.

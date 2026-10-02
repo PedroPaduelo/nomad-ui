@@ -50,6 +50,27 @@ Patch (`[NUI] 232d5cd6`). **Fecha uma fura do `check-lock` que a `loadbalance-33
 
 Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
 
+## [1.9.9] — 2026-10-02
+
+Documento. **O padrão carregava um número que eu mesmo medi errado.** Sem mudança de código.
+
+### Corrigido
+
+- **§5 dizia "11 `toLocaleDateString` sem `timeZone` nos 4 apps". São 73.** Auditei os 4 (clonei da `origin/main`) e o número real, **contando a chamada inteira** e não a linha, é **73** — agent-package 25, load-balance 30, motor 11, Conta 7. **Os "11" são só do motor**, que é o menor dos quatro.
+- **"2 com saída em inglês" são 8** — são `toLocaleDateString()` **sem argumento nenhum** (6 no LB, 2 no motor): sem `locale` nem `timeZone`, o formato sai no do navegador.
+- **A regra de contagem entrou no padrão**, porque foi o que produziu o erro: _contar por chamada, não por linha_ — `timeZone` pode estar na linha seguinte (`{ day, month, year }` em multi-linha) e o grep de linha dá falso positivo.
+
+### E a assimetria que a auditoria mostrou
+
+| app               | barrel fora de `main`/`providers` |
+| ----------------- | --------------------------------- |
+| load-balance      | **216**                           |
+| agent-package     | **200**                           |
+| motor             | 19                                |
+| **conta_nommand** | **0** ✅                          |
+
+**A regra do barrel não é higiene — é a forma dominante**, e a Conta prova que é hábito, não impossibilidade (0 barrel e já adota `timeZone`).
+
 ## [1.9.8] — 2026-10-02
 
 Documento. **Corrige uma afirmação minha que o padrão fazia parecer verdade.** Sem mudança de código.

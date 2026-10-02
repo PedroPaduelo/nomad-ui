@@ -414,9 +414,14 @@ new Date(createdAt).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
 **Regra:** dado que vem do servidor é **UTC** e se mostra em UTC. Só se usa zona local quando o próprio dado é local
 (nascimento, endereço). **E o `locale` vai explícito junto** — `'pt-BR'` não é o default em navegador en-US.
 
-⚠️ **Por que isso é padrão e não preferência:** medido em 2026-10-02, são 11 `toLocaleDateString` sem `timeZone` nos
-4 apps, **2 deles com saída em inglês** — o build passa, o teste passa, e o defeito só aparece na tela de alguém cujo
-browser não está em pt-BR. **Nenhum gate pega isso**: é dado que sai errado, não código que quebra.
+⚠️ **Por que isso é padrão e não preferência:** medido em 2026-10-02 **por chamada inteira** (não por linha), são
+**73 chamadas** `toLocale*`/`Intl.*` sem `timeZone` nos 4 apps — agent-package 25, load-balance 30, motor 11, Conta 7 —
+das quais **8 sem argumento nenhum** (`toLocaleDateString()` puro), que é a saída no formato do navegador. O build
+passa, o teste passa, e o defeito só aparece na tela de quem tem o browser fora de pt-BR. **Nenhum gate pega isso:** é
+dado que sai errado, não código que quebra.
+
+⚠️ **Contar por chamada, não por linha.** `timeZone` pode estar na linha seguinte (`{ day, month, year }` em
+multi-linha) e o grep de linha dá falso positivo. Foi assim que os "11" saíram errados: **11 é só do motor.**
 
 ### Subpath, não barrel (fora do `main.tsx`)
 

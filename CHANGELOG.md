@@ -3,6 +3,39 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.10.0] — 2026-10-02
+
+Minor (`[NUI] dba667f0` + `[NUI] 91de99cf`). **O `scripts/` passa a viajar no pacote, e o pacote declara a versão recomendada.** Fecho o "entrega tudo" do dono sem ambiguidade sobre qual tag adotar.
+
+### Adicionado
+
+- **`scripts/` no `files` do `package.json`** — `check-lock.mjs`, `check-doc.mjs`, `knowledge-page.mjs` e `knowledge-summary.test.mjs` agora SAIEM no `npm install`. Antes, 3 dos 4 apps mantinham cópia divergente: a do load-balance era da `v1.9.4` (38 linhas a menos do bloco de transitiva), a do motor não tinha a regra de `ssh` e o cabeçalho dela prometia uma proteção que o código não fazia. **"Adotou a tag" ≠ "tem o gate"** — não havia nada no repo que denunciasse isso, porque o próprio verificador era o arquivo que não viajava.
+- **`"./scripts/*": "./scripts/*"` no `exports`** — sem isso, o Node bloqueia o subpath com `ERR_PACKAGE_PATH_NOT_EXPORTED` mesmo com o arquivo presente (medido em `scripts/publish.test.mjs`).
+- **`bin.check-lock-nomad`** — o app roda o verificador sem precisar saber o caminho interno: `"check-lock": "check-lock-nomad"` no `package.json` dele.
+- **`scripts/publish.test.mjs`** — gate que prova: o tarball tem `scripts/check-lock.mjs`, o subpath resolve, o bin e o caminho literal rodam no cwd de um app limpo, **e a contraprova de um lock com `git+ssh` mais transitiva sem entrada tem que cair** (regra da §12 do padrão: mutação mostra que pega, contraprova mostra que é usável, publicar só com a primeira é metade do gate). Mutação (remover `scripts/` de `files`) faz o teste cair — `EXIT 1`. Está no `doc:check`, e o `doc:check` está no `gates`.
+- **Seção `Versão recomendada` no `README.md`** — `npm outdated` não lista dependência por git, e o `HEAD` do repo aponta para a `main` (que por coincidência é a `v1.9.9` agora, mas não por decisão). A forma confiável é `git tag --sort=-creatordate | head -1` e a forma sem clone é `git ls-remote --tags … | grep -oE 'v1\.[0-9]+\.[0-9]+$' | sort -V | tail -1` — **com a ressalva de que ordenar por número MENTE** neste projeto (ver abaixo).
+
+### Corrigido
+
+- **O `§1` do `check-lock.mjs` se contradizia com o `§2b`**: o §1 só isentava prefixos git do `satisfies()`, o §2b isentava git + `file:` + `link:` + `workspace:`. Resultado: o `npm install` do tarball local de um app reescrevia o `package.json` com `"@nomad/ui": "file:…tgz"` e o verificador acusava o spec contra a versão instalada — caso legítimo. Achado durante a escrita do `publish.test.mjs`. A lista do §1 é a mesma do §2b agora (medido: app limpo com `@nomad/ui` instalado por tarball roda o verificador sem acusar).
+- **A semver deste projeto está invertida**: `git merge-base --is-ancestor v1.9.0 v1.8.10` é `True` (a v1.9.0 foi commitada antes da v1.8.10). Por isso a v1.9.0 — que é REGRESSÃO (perdeu 38 linhas do bloco de transitiva) — fica acima da v1.8.10 no `sort -V` para sempre. **A v1.10.0 escapa do problema por ser a maior em número e a mais recente em data**, mas a regra geral continua valendo: **não ordene por número**.
+
+### Fora de escopo
+
+- Migrar as cópias já existentes nos apps (cada sessão apaga a sua quando bump a tag).
+- A 4ª resposta da `91de99cf` (regra de `resolved` que varre o lock da raiz quando o cwd é workspace) — `9ac18ad1` cobre o caso mais comum (`pkg['fe'].dependencies`), mas a regra que varre o lock da raiz num monorepo real ainda está aberta.
+
+### Verificação (gate que prova o que diz)
+
+```
+✓ docs/padrao-frontend.md — ok (742 linhas, 22 versões, 14 seções)
+✓ knowledge.knowledge.md — 35 afirmações conferidas em docs/padrao-frontend.md
+✓ scripts/ publicado e funcional num app limpo — tarball, caminho, bin e contraprova
+✓ package-lock.json — ok (8 deps, 32 devDeps, 594 no lock) · @nomad/ui 1.10.0 check-lock
+```
+
+Mutação de `files` (sem `scripts/`): o teste cai em `files` não inclui `scripts` e em o tarball não tem `scripts/check-lock.mjs`. Mutação de `exports` (sem `./scripts/*`): o teste cai em exports não tem `./scripts/*` — **a parte que o "1 linha no package.json" deixava passar**.
+
 ## [1.8.11] — 2026-10-01
 
 Patch (`[NUI] 232d5cd6`). **A regra do falso-positivo vai para o padrão**, e o `check-lock` passa a dizer de que versão ele é.

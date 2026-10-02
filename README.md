@@ -6,6 +6,43 @@ kit do AgentPack.
 
 > Em construção. Instalação, entradas e exemplos entram aqui até a `v1.0.0`.
 
+## Versão recomendada
+
+**Não use `npm outdated`** — dependência por git não tem coluna "Latest" e o
+verificador não enxerga bump. Não use `npm view @nomad/ui version` — o pacote
+não está publicado no npm. Não use `latest`/HEAD — o `HEAD` deste repo aponta
+para a `main`, que **por coincidência** é uma tag, não por decisão de canal.
+
+A forma confiável, na **data** de criação da tag (a data não mente):
+
+```bash
+git tag --sort=-creatordate | head -1
+```
+
+A forma sem clone, ordenando por número — **com ressalva**:
+
+```bash
+git ls-remote --tags https://github.com/PedroPaduelo/nomad-ui.git \
+  | grep -oE 'v1\.[0-9]+\.[0-9]+$' | sort -V | tail -1
+```
+
+⚠️ **A semver deste projeto está invertida na linha `1.9.0`/`1.8.10`** — a `v1.9.0`
+foi commitada **antes** da `v1.8.10` (medido: `git merge-base --is-ancestor v1.9.0 v1.8.10`
+→ True). Por isso a `v1.9.0`, que é REGRESSÃO (perdeu 38 linhas do bloco de transitiva
+no `check-lock.mjs`), fica acima da `v1.8.10` no `sort -V` para sempre. **A `v1.10.0`
+escapa** por ser a maior em número e a mais recente em data ao mesmo tempo, mas a
+regra geral continua valendo: **não ordene por número.**
+
+Antes de bump, confirme que a versão tem a cobertura que o gate promete:
+
+```bash
+git show vX.Y.Z:scripts/check-lock.mjs | head -1
+```
+
+O cabeçalho do arquivo diz de que versão ele é — a cobertura muda entre tags
+(entre `v1.8.9` e `v1.9.9` o `check-lock.mjs` foi de 193 para 287 linhas). Copiar
+o verificador de uma tag antiga e ver "gate passa" não prova nada.
+
 ## Instalação e consumo por tag
 
 O app instala por dependência git numa tag fixa (sem publicar no npm). **Use a URL

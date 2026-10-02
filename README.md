@@ -266,6 +266,34 @@ custou 20 versões. Por isso o `npm ci` fica no gate, e não só a conferência.
 **Antes de dar uma entrega por boa, rode `npm run gates:ci`.** `gates` sozinho
 não prova que o pacote instala.
 
+### Publicar uma versão: regras que não se negociam
+
+Este pacote é consumido **por git** pelos 4 apps. Cada tag é um contrato: quem
+faz `npm install @nomad/ui@git+https://…#vX.Y.Z` recebe **exatamente** aquele
+estado. Por isso:
+
+1. **A `main` não se reescreve.** Nunca `git push --force` na `main`, nunca
+   `git commit --amend` em commit já pushado, nunca `git rebase` do que já saiu.
+   **Quem consome por tag tem o sha na mão** — reescrever o histórico quebra o
+   que já foi consumido, sem ganho proporcional.
+2. **Tag publicada é imutável.** Nunca mova nem apague uma tag. Um erro em
+   versão publicada sai **em versão nova**, nunca mexendo na tag antiga.
+3. **Erro de digitação em mensagem de commit não se corrige com `--amend`.**
+   Escreve-se melhor no commit seguinte. Validade só para commit **ainda não
+   pushado**.
+4. **A numeração segue a linhagem, não o relógio.** A tag N nasce do N-ésimo
+   commit a partir da tag anterior. Numeração por ordem cronológica produz tag
+   **mais nova com conteúdo mais velho** — e é assim que a `v1.9.0` ficou sem o
+   bloco de transitiva e reprovou lock legítimo. (O conserto foi `v1.9.1`.)
+5. **Confirme a tag antes de avisar.** `git rev-list -n1 vX.Y.Z` e
+   `git show vX.Y.Z:package.json | grep version` têm que concordar, e a tag tem
+   que ser **descendente** da anterior.
+6. **Antes de bump num app, confira qual é a versão boa.** `git show v1.9.0:scripts/check-lock.mjs | head -1`
+   — o número da versão não diz se a cópia é completa (a `v1.8.x` pegava o
+   atalho `github:` mas **não** a transitiva).
+
+**Se algo quebrar, a correção é uma tag nova.**
+
 ## Dados (`@nomad/ui/data`)
 
 Um cliente HTTP e um QueryClient para o app inteiro, com o mesmo formato de erro, o mesmo

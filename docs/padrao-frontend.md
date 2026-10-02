@@ -139,6 +139,11 @@ Dep de registry vem **descrita pelo lock**, então falta de entrada é `EUSAGE`.
 pacote**, que o npm lê e **confia** — e a entrada que o lock descreve não é validada. **O `npm ci` sai 0 e não
 instalou.** Quem reproduz pelo `npm ci` não vê nada.
 
+⚠️ **O caso que mais custa, medido duas vezes: `npm ci` em árvore limpa, dependência por git, transitiva sem entrada
+no lock → exit 0, `added 136 packages` (o lock íntegro instala 941) e `node_modules/@nomad/ui` INTEIRO ausente.**
+O build passa, o CI fica verde, e a feature simplesmente não existe no bundle. **É o defeito que o `check-lock` §2b
+existe para pegar** — e é o que nenhum `npm ci` do stack acusa.
+
 **Por isso o `check-lock` é a única verificação que pega esse caso** — e ele concorda com o `npm ci` nos dois: acusa a
 transitiva sem entrada nos dois casos e fica quieto no lock coerente. **Gate que reprova o que o instalador aceita em
 silêncio é o gate funcionando.**
@@ -224,6 +229,20 @@ Tags nunca se movem: conteúdo corrigido sai em **versão nova**.
 3. Confira `node -p "require('@nomad/ui/package.json').version"`.
 4. Rode os gates (seção 11) e a aceitação visual da barra (captura ao lado da Conta).
 5. Um commit só: `chore(deps): @nomad/ui v1.6.3`.
+
+**Confira a versão que você está pegando, não o número dela.** Uma versão pode ser **recente no relógio e antiga no
+conteúdo**: foi o que aconteceu com a `v1.9.0` do `@nomad/ui` (numeração fora da linhagem — ficou **193 linhas**
+contra 231 da `v1.8.10` e **sem** o bloco de checagem de transitiva). Regra prática, para qualquer repositório que
+publica por tag neste stack:
+
+- **`main` não se reescreve.** Nunca `push --force`, nunca `amend` em commit já pushado, nunca rebase do que já saiu.
+  Quem consome por tag tem o sha na mão; reescrever quebra o que já foi consumido, sem ganho proporcional.
+- **Tag publicada é imutável.** Um erro sai **em versão nova**, nunca mexendo na tag antiga.
+- **Erro de digitação em mensagem de commit não se corrige com `--amend`** — escreve-se melhor no commit seguinte
+  (vale para commit **ainda não pushado**).
+- **A numeração segue a linhagem, não o relógio**: a tag N nasce do N-ésimo commit a partir da anterior.
+- **Antes de bumpar, confira o artefato:** `git show <tag>:<arquivo> | head -1`, não só o número da versão. E **conclusão
+  repassada entre sessões vem com o hash do artefato que a produziu** — sem ele, o número não é transferível.
 
 Nunca aponte para `main`, branch ou sha solto. Não edite nada dentro de `node_modules/@nomad/ui`: mudança vai por PR
 no `nomad-ui` e sai numa versão nova. Componente que falta no kit: peça no `nomad-ui`; até sair, ele mora em

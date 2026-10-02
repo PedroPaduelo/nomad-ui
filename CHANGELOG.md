@@ -50,6 +50,20 @@ Patch (`[NUI] 232d5cd6`). **Fecha uma fura do `check-lock` que a `loadbalance-33
 
 Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
 
+## [1.9.4] — 2026-10-01
+
+Documento (`[NUI] 87bb4bd7`). **A regra de publicação que eu quebrai, escrita no repo.** Sem mudança de código.
+
+### Documentado
+
+- **README § Desenvolvimento, seção nova "Publicar uma versão: regras que não se negociam"** — seis regras que existem porque este pacote é consumido **por git** pelos 4 apps, e cada tag é um contrato: (1) a `main` não se reescreve (nunca `--force`, nunca `--amend` em commit pushado, nunca rebase do que já saiu); (2) tag publicada é imutável — erro sai **em versão nova**; (3) **erro de digitação em mensagem de commit não se corrige com `--amend`** — escreve-se melhor no commit seguinte, e `--amend` só vale para commit **ainda não pushado**; (4) a numeração segue a **linhagem, não o relógio**; (5) confirme a tag antes de avisar (`rev-list`, `show`, e descendência); (6) **antes de bumpar, confira o artefato** (`git show <tag>:<arquivo>`), não o número da versão.
+- **Padrão dos 4 apps, §3 "Atualizar"** — as mesmas regras, com o caso que as motivou: a `v1.9.0` ficou **193 linhas** contra 231 da `v1.8.10`, sem o bloco de transitiva, por numeração fora da linhagem. E a regra de transferência: **conclusão repassada entre sessões vem com o hash do artefato que a produziu** — sem ele, o número não é transferível.
+- **O caso que mais custa**, em destaque no padrão: `npm ci` em árvore limpa, dependência por git, transitiva sem entrada → **exit 0, `added 136 packages`** (o lock íntegro instala 941) e `node_modules/@nomad/ui` **inteiro ausente**. O build passa e a feature não funciona; só `ls node_modules/@nomad/ui` num clone limpo pega.
+
+**Por que isso está em papel:** a regra estava na minha cabeça e eu quebrei a minha própria num force-push por uma letra. Regra que não está no repo é regra que o próximo não lê.
+
+Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
+
 ## [1.9.3] — 2026-10-01
 
 Patch (`[NUI] b9b07a86`). **Corrige três afirmações do README que apontam o debug para o lado errado**, e a mensagem do `check-lock`.

@@ -433,3 +433,21 @@ O CSS de tema exportado importa a base Tailwind e declara `@source` para o pacot
 `tailwind.config.js` nem de um `@source` próprio para o kit; adicione `@source` apenas para outros
 pacotes locais cujas classes Tailwind devam ser varridas. O CSS específico da aplicação vem depois
 do tema, sempre usando os tokens Nomad.
+
+## GitHub Actions está DESLIGADO — não espere CI, não o religue
+
+Decisão do dono em 2026-10-02: o Actions foi **desligado nesta conta inteira**
+(`enabled=false` nos 5 repos). Os workflows continuam no repositório; só o
+interruptor está desligado. **Nenhuma entrega é validada por CI aqui.**
+
+**O que isso muda na tua rotina:**
+- **`git push` não dispara nada.** Continua fazendo push — a regra de merge na
+  `main` continua valendo — mas não espere nenhum badge, nenhum check, nenhum log.
+- **Não gaste tempo lendo `gh run list`/`gh run view`.** Não há o que ler: um job
+  que falha sem executar passo é infraestrutura, não código.
+- **Verifica em clone limpo**, que é como os defeitos de 2026-10-02 apareceram:
+  `git clone --depth 1 -b main <url> /tmp/x && cd /tmp/x && npm ci && npm run …`.
+
+**Se algum dia precisar de CI**, é o dono que religa (botão em cada repo, ou
+`gh api -X PUT repos/:r/actions/permissions --input '{"enabled": true}'`). **Não
+religue por conta própria.**

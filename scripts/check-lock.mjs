@@ -106,13 +106,20 @@ for (const section of ['dependencies', 'devDependencies']) {
         `${section}: "${name}" é "${range}" no package.json e "${locked[name]}" na raiz do lock — divergência que o \`npm ci\` não acusa`,
       )
     }
-    // Dependência de git não tem range de semver: o "version" no lock é o
-    // commit (`0.0.0` ou um número derivado) e comparar com `satisfies()`
-    // acusaria uma dependência legítima. O shorthand da seção 3b é o que
-    // precisa ser pego nesses casos.
-    const ehGit = /^(git\+|github:|gitlab:|bitbucket:|https?:\/\/|git:\/\/)/.test(range)
+    // Dependência sem range de semver: o "version" no lock é o commit
+    // (`0.0.0` ou um número derivado) ou o protocolo de origem, e comparar com
+    // `satisfies()` acusaria uma dependência legítima. O shorthand da seção 3b
+    // é o que precisa ser pego nesses casos.
+    //
+    // ⚠️ A lista tem que ser a MESMA da §2b (`file:`, `link:`, `workspace:`
+    // incluidos). Sem isso o script se contradizia: instalando `@nomad/ui` de
+    // um tarball local, o §1 acusava "1.9.9" contra o spec `file:…tgz` — e o
+    // `npm ci` a instala sem reclamar (medido em scripts/publish.test.mjs).
+    const semRange = /^(git\+|github:|gitlab:|bitbucket:|https?:\/\/|git:\/\/|file:|link:|workspace:)/.test(
+      range,
+    )
     const version = packages[key].version
-    if (version && !ehGit && !satisfies(version, range)) {
+    if (version && !semRange && !satisfies(version, range)) {
       problems.push(
         `${section}: "${name}" pede "${range}" mas o lock instala ${version} — \`npm ci\` não instala o que foi pedido`,
       )

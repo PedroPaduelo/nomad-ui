@@ -437,8 +437,9 @@ do tema, sempre usando os tokens Nomad.
 ## GitHub Actions está DESLIGADO — não espere CI, não o religue
 
 Decisão do dono em 2026-10-02: o Actions foi **desligado nesta conta inteira**
-(`enabled=false` nos 5 repos). Os workflows continuam no repositório; só o
-interruptor está desligado. **Nenhuma entrega é validada por CI aqui.**
+(`enabled=false` nos 5 repos). E mais: **na `main` não existe workflow nenhum** — a
+pasta `.github/` não está lá. O `gates.yml` existe só na branch `ci/gates-workflow`
+(`e1abd0e1`), **que não foi mergeada**. **Nenhuma entrega é validada por CI aqui.**
 
 **O que isso muda na tua rotina:**
 - **`git push` não dispara nada.** Continua fazendo push — a regra de merge na

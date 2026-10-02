@@ -271,6 +271,73 @@ try {
       problems.push(`o bin check-lock-nomad não roda no app (exit ${viaBin.code}): ${viaBin.out.slice(0, 300)}`)
     }
 
+    // 3b) O MESMO pelo instalador que os apps usam: **git**, não tarball.
+    //
+    // ⚠️ Sem isto o gate validava um caminho que ninguém usa. Medido 2026-10-02:
+    // por tarball o `.bin` aparece e roda; e três sessions reportaram, por git,
+    // que o `.bin` "não era linkado". Medindo por git, o `.bin` aparece e roda
+    // também — mas `npm install` escreve `resolved` em `git+ssh` mesmo com
+    // `git+https://` no `package.json`, que é defeito de lock do app, não do
+    // pacote. **Um gate que só mede o tarball não separa essas duas coisas.**
+    //
+    // Só roda com `PUBLISH_TEST_GIT=1` porque precisa de rede e de ~40 s; sem a
+    // variável o gate não mede por git, e o README diz que a medição existe.
+    if (process.env.PUBLISH_TEST_GIT === '1' && existsSync(join(raizDoPacote, '.git'))) {
+      const remote = execFileSync('git', ['remote', 'get-url', 'origin'], {
+        cwd: raizDoPacote,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }).trim()
+      const tag = execFileSync('git', ['tag', '--sort=-creatordate'], {
+        cwd: raizDoPacote,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+        .split('\n')
+        .filter(Boolean)[0]
+      if (!tag) {
+        problems.push('PUBLISH_TEST_GIT=1 mas o repo não tem tag — não há o que instalar por git')
+      } else {
+        const appGit = join(raiz, 'app-git')
+        mkdirSync(appGit)
+        const gitUrl = remote.replace(/^git@github\.com:/, 'https://github.com/')
+        const pkgGit = {
+          name: 'fixture-app-git',
+          version: '1.0.0',
+          private: true,
+          dependencies: { '@nomad/ui': `git+${gitUrl}#${tag}` },
+        }
+        writeFileSync(join(appGit, 'package.json'), JSON.stringify(pkgGit, null, 2) + '\n')
+        writeFileSync(
+          join(appGit, 'package-lock.json'),
+          JSON.stringify(
+            { name: pkgGit.name, version: pkgGit.version, lockfileVersion: 3, requires: true, packages: {} },
+            null,
+            2,
+          ) + '\n',
+        )
+        const r = rodar(['npm', 'install', '--no-audit', '--no-fund'], appGit)
+        if (r.code !== 0) {
+          problems.push(`npm install por git (#${tag}) falhou (exit ${r.code}): ${r.out.slice(-300)}`)
+        } else {
+          const link = join(appGit, 'node_modules', '.bin', 'check-lock-nomad')
+          if (!existsSync(link)) {
+            problems.push(
+              `instalado por git (#${tag}) e o node_modules/.bin/check-lock-nomad NÃO foi criado — ` +
+                'o `npx` vai ao registry e responde E404, que parece "o pacote não existe"',
+            )
+          } else {
+            const viaGit = rodar([link], appGit)
+            if (viaGit.code > 1) {
+              problems.push(`o bin instalado por git não roda (exit ${viaGit.code}): ${viaGit.out.slice(0, 300)}`)
+            } else {
+              nota(`· por git (#${tag}): .bin criado e rodando (exit ${viaGit.code}; 1 = lock do app com defeito)`)
+            }
+          }
+        }
+      }
+    }
+
     // 4) Contraprova: lock íntegro tem que PASSAR, e lock com defeito tem que
     //    CAIR. Gate que só tem mutação é metade do gate (regra da §12 do padrão):
     //    se o verificador acusasse qualquer coisa, ele seria desligado — e aí não

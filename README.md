@@ -125,22 +125,34 @@ e **cada app usa o do pacote, na versão que ele pediu**:
 }
 ```
 
-**Caminho completo, se o `bin` não estiver linkado** (é o que roda quando o
-`node_modules` foi **copiado à mão** em vez de instalado — `cp -a`, restore de
-cache, volume montado):
+**Medido por git numa tag** (o caminho que os 4 apps usam): o `npm install`
+cria e linka `node_modules/.bin/check-lock-nomad`, o arquivo vem com bit de
+execução, e `npx check-lock-nomad` roda. O `bin` também **vai para o
+`package-lock.json`** — pode conferir.
+
+⚠️ **Se `npx check-lock-nomad` responder `E404`, o `node_modules` foi copiado à
+mão** (`cp -a`, restore de cache, volume montado) — **é o npm que cria o
+`node_modules/.bin/` na instalação**, e cópia não cria. O `E404` não diz "o
+pacote não existe": o `npx`, sem o link local, **vai ao registry procurar**.
+Nunca copie o `node_modules`; instale.
+
+**Caminho completo, que não depende de `.bin` nenhum:**
 
 ```bash
 node node_modules/@nomad/ui/scripts/check-lock.mjs
 ```
 
-⚠️ **`cp -a` do `node_modules` NÃO cria o `node_modules/.bin/`** — é o npm que
-linka o bin na instalação. Sem o link, o `npx check-lock-nomad` não falha com
-"comando não encontrado": ele **vai ao registry** e responde `E404`, que parece
-"o pacote não existe" (medido). **Sempre instale; nunca copie o `node_modules`.**
-
 ⚠️ **O `npm outdated` não avisa de bump** (dependência por git não tem coluna
 "Latest"), e o `npm install` **diz que atualizou sem atualizar**. Confira sempre
 `node -p "require('@nomad/ui/package.json').version"` depois do bump.
+
+⚠️ **E o `npm install` depois do bump costuma escrever `resolved` em `git+ssh`
+mesmo com `git+https://` no `package.json`** (medido 2026-10-02 na v1.11.0: o
+`package.json` fica em `git+https://…#v1.11.0` e a entrada instalada sai
+`git+ssh://…#<sha>`). **Não é o shorthand do §3b** — esse já estava certo. O
+conserto é o de cima: `rm -f package-lock.json && npm install`, ou o
+`insteadOf` no Dockerfile. O `check-lock` acusa (§3), e é para isso que ele
+existe.
 
 O verificador lê o `package-lock.json` **do `cwd`**, então roda em qualquer
 subdiretório do app — mas a raiz do lock é a que ele varre inteiro.

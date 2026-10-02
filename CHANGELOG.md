@@ -50,6 +50,18 @@ Patch (`[NUI] 232d5cd6`). **Fecha uma fura do `check-lock` que a `loadbalance-33
 
 Gates: 185/185 + 242/242 + `doc:check` + build, exit 0.
 
+## [1.9.6] — 2026-10-02
+
+Documento. **Republica o `README` com a regra do Actions desligado** que entrou na `main` depois da v1.9.5. Sem mudança de código.
+
+## Por que uma versão nova em vez de mover a v1.9.5
+
+A v1.9.5 foi tagueada no commit `6345ad8`, **antes** do merge do `916c9f4` (a regra "GitHub Actions está DESLIGADO" no README, escrita pelo orquestrador e já na `origin/main`). O conteúdo do pacote é o mesmo (`package.json` 1.9.5); o que falta é o README.
+
+**A regra que eu mesmo escrevi na v1.9.4: tag publicada é imutável, e a correção sai em versão nova.** Então a v1.9.5 fica como está — quem pinnou nela recebe o pacote correto, só sem aquele trecho de README — e esta versão entrega a `main` completa.
+
+**Consequência medida para quem consome:** a diferença entre as duas é **só o `README`** (`docs/` não entra no pacote, `files` não tem `scripts`). O `dist` é idêntico.
+
 ## [1.9.5] — 2026-10-02
 
 Documento (`[NUI] 91de99cf`). **O padrão ainda mandava CI, e o CI foi desligado.** Sem mudança de código.

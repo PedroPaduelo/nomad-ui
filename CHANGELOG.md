@@ -3,6 +3,56 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.13.5] — 2026-10-03
+
+Patch (`[NUI] baa6e686`, com o gate de `0abc7931`). **O `PageHeader` espremia o `<h1>` para 207px de 390 em tela estreita — e ele é um componente dos 4 apps.**
+
+Decisão do dono (`9bd0bd01`): corrigir no `@nomad/ui`, que é a fonte. Corrigir em cada app só teria
+duas saídas, ambas remendo (puxar `shrink-0` por seletor, ou tirar o `action` e perder os botões).
+
+### Corrigido
+
+- **`PageHeader` em viewport estreito** (reportado pelo load-balance, task `e5f92e3c`). O `action`
+  vinha com `shrink-0` e o container **sem** `flex-wrap`: o título encolhia para dar espaço aos
+  botões, e a instrução `flex-wrap` que os apps escrevem no próprio `action` ficava **inerte** —
+  nunca chegava o momento de quebrar linha. Medido em A/B no mesmo harness e no mesmo Chromium:
+
+  | | coluna do título | container | altura do `<h1>` |
+  |---|---|---|---|
+  | antes | **207px** de 390 | `nowrap` | 62.4px (**duas linhas**) |
+  | depois | **390px** de 390 | `wrap` | 31.2px (uma linha) |
+
+  ⚠️ **`flex-wrap` sozinho não resolvia** (medido: a coluna ficava em 251px, porque `min-w-0` a
+  deixa encolher em vez de quebrar). O que fecha é a **`flex-1 basis-72`** na coluna do título:
+  ela declara o mínimo para a linha inteira, e com um `action` maior que isso ele desce para
+  baixo. `gap-4` virou `gap-x-4 gap-y-2` — com wrap, o gap precisa ser por eixo.
+- **O `test:a11y` saía 0 sem rodar um teste.** O `vitest.a11y.config.ts` tinha
+  `passWithNoTests: true`, e o `include` é **relativo ao cwd**: rodar o gate de outra pasta fazia o
+  `src/**` não achar nada e o gate passar em silêncio. Três modos medidos, os três agora recusam:
+  include que não casa (antes **exit 0**), `-t` que casa 0 teste (antes **exit 0** com 242
+  `skipped`) e Chromium ausente (antes já saía 1, agora sai 1 **com o comando**).
+  ⚠️ **A ausência do Chromium não era o que fazia o gate sair 0** — ele já saía 1. O que saía 0
+  **em silêncio** era o filtro que não casa, e isso é pior: não é navegador faltando, é rodar o
+  gate de outra pasta e ele não medir nada.
+- **`scripts/a11y-preflight.mjs`** entra no `test:a11y` e **não instala nada** — recusa com exit 1
+  e o comando. Gate que baixa 150 MB para medir contraste deixa de medir o que instala. O comando
+  que ele nomeia é `npx playwright install --with-deps chromium`, e o **`--with-deps` não é
+  opcional**: sem ele o browser baixa mas falta a biblioteca do sistema, e o erro seguinte é sobre
+  `libglib-2.0.so.0` (medido nesta sandbox, foi assim que falhou).
+
+### Por que isto é patch, e não minor
+
+O `PageHeader` é **código de runtime**, não doc: a classe chega ao bundle do consumidor (medido — o
+`dist/components/ui/PageHeader.js` muda de 1863 para 1899 bytes entre a `v1.13.4` e esta). Mas é
+**correção de componente existente**, sem API nova, sem export novo e sem dependência — que é
+exatamente o precedente da `v1.4.1` ("Patch visual do `Progress`") e da `v1.6.1`. Minor neste
+repositório é superfície nova: componente novo (`v1.1.0`), export novo (`v1.5.0`), `scripts/`
+entrando no `files` (`v1.10.0`).
+
+⚠️ **Para quem bumpara:** esta tag muda layout em tela estreita. Se algum app fez override de
+classe no `PageHeader` ou no slot `action` esperando o comportamento antigo, o override continua
+valendo e pode mascarar o conserto.
+
 ## [1.13.4] — 2026-10-03
 
 Patch. **Republica o conteúdo da `v1.13.3` e fecha um furo de tag que o próprio gate do pacote não pegava.**

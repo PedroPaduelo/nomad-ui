@@ -33,7 +33,27 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.browser.test.{ts,tsx}'],
-    passWithNoTests: true,
+    // ⚠️ `passWithNoTests: false` é OBRIGATÓRIO aqui, e o motivo é medido
+    // (2026-10-03). Com `true`, esta configuração devolve **exit 0 sem rodar
+    // um único teste** quando o `include` não casa nada — que é o pior
+    // desfecho de um gate: verde que não mediu nada.
+    //
+    // Os três modos, medidos um a um:
+    //   · Chromium ausente ......... exit 1 (o unhandled error acusa) — o
+    //     menos perigoso, porque o erro do Playwright aparece.
+    //   · `-t` que casa 0 teste ...... exit 0 com **242 skipped**.
+    //   · `--dir`/cwd que casa 0 .... exit 0 com "No test files found".
+    //
+    // ⚠️ **Não é a ausência do Chromium que faz o gate sair 0** — é o filtro
+    // que não casa. E `include` é relativo ao cwd: rodar o gate de outra
+    // pasta faz o `src/**` não achar nada e o gate passar em silêncio.
+    // Foi assim que o `gates` de 4 apps "rodou" a11y sem nunca medir
+    // layout mobile em nenhuma sandbox.
+    //
+    // ⚠️ O Chromium continua sendo pré-requisito, e a ausência dele é um
+    // problema real: `npx playwright install --with-deps chromium` (≈150 MB,
+    // fora do `gates` de propósito — o gate não instala o que ele mede).
+    passWithNoTests: false,
     browser: {
       enabled: true,
       headless: true,

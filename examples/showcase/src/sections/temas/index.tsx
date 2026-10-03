@@ -79,7 +79,8 @@ function PalettesContent() {
 
 const section: ShowcaseSection = {
   id: 'temas',
-  title: 'Temas: as 10 paletas × claro/escuro',
+  // O número vem do código: acrescentar uma paleta em `PALETTES` atualiza o título.
+  title: `Temas: as ${PALETTES.length} paletas × claro/escuro`,
   group: 'Tema',
   order: 5,
   description:

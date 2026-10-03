@@ -533,6 +533,34 @@ O CSS de tema exportado importa a base Tailwind e declara `@source` para o pacot
 pacotes locais cujas classes Tailwind devam ser varridas. O CSS específico da aplicação vem depois
 do tema, sempre usando os tokens Nomad.
 
+## Default com nome de container é dívida silenciosa
+
+> **Default com nome de container é acoplamento ao nome do serviço. Se o nome puder mudar, o default é dívida — e o
+> custo aparece em silêncio.**
+
+Os containers do painel têm nome **global** (`minipanel-<nome-do-serviço>`), não por projeto: dois projetos com
+serviço de mesmo nome colidem e nada no código denuncia. No deploy da Conta (2026-10-03) o serviço teve de se chamar
+`conta-backend-ws` porque `producao` já ocupava `minipanel-conta-backend` — e
+`conta_nommand/frontend/Dockerfile:36` continuava com `ENV BACKEND_UPSTREAM=minipanel-conta-backend:4100`.
+
+**Nada quebrou: a env var do painel sobrescreve, o build passa e o `/api` responde 200.** E é por isso que é defeito
+— o default só entra quando ninguém olha (`docker build` fora do painel, recreate sem a env var, imagem de teste), e
+aí o `/api` responde pelo backend errado **com status 200**. Default que aponta para o lugar errado não falha: ele
+**funciona errado**.
+
+**A regra, em 4 linhas:**
+
+1. **Nome de container é acoplamento, não configuração** — renomear, duplicar ou mover de projeto quebra o default.
+2. **Fail-fast vence default** — sem a variável, o boot **erra alto**; não serve bundle com a rota quebrada. É o
+   mesmo gênero da variável de segurança sem default (§5 do padrão).
+3. **Provar para onde o proxy aponta é por LOG** — a env var mostra a *intenção*, o log mostra o *destino*.
+4. **Trocar nome varre o repo inteiro** — `Dockerfile`, `compose*.yml`, `.env.example`, `*.template.conf`.
+
+⚠️ **Não é "todo default é ruim":** `VITE_API_BASE: "/"` (motor, load-balance) é estável por construção — é o mesmo
+host. A regra é sobre default que **depende de um nome que o painel pode prefixar, colidir ou renomear**.
+
+Regra completa, com o caso e a tabela por app: **§13 do padrão** (`docs/padrao-frontend.md`).
+
 ## GitHub Actions NÃO EXISTE aqui — não crie, não sugira, não religue
 
 Decisão do dono em 2026-10-02, por **custo**: ele não paga GitHub Actions. Não é

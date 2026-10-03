@@ -737,7 +737,70 @@ _O mesmo erro pelo outro lado, no mesmo dia:_ `SIZE_EXCEPTIONS` subiu 3 vezes no
 
 **Os casos concretos** ficam em `docs/auditoria-apps.md`, por app, porque envelhecem com cada app.
 
-## 13. Checklist de migração de um app
+## 13. Produção: nome de container em default é dívida silenciosa
+
+> **Default com nome de container é acoplamento ao nome do serviço. Se o nome puder mudar, o default é dívida — e
+> o custo aparece em silêncio.**
+
+### O caso que produziu a regra (medido, não ilustrativo)
+
+No deploy da Conta para `workspace_nommand` (2026-10-03) o serviço novo precisou se chamar `conta-backend-ws`,
+porque **os containers do painel têm nome global** (`minipanel-<nome-do-serviço>`), não por projeto — o projeto
+`producao` já ocupava `minipanel-conta-backend`. Dois projetos com serviço de mesmo nome **colidem**, e isso não
+aparece em lugar nenhum do código.
+
+E `conta_nommand/frontend/Dockerfile:36` continua com:
+
+```dockerfile
+ENV BACKEND_UPSTREAM=minipanel-conta-backend:4100
+```
+
+⚠️ **Nada quebrou.** A env var do serviço no painel sobrescreve o default, o build passa, o `/api` responde 200 e o
+tráfego real chega ao backend certo. **E é exatamente por isso que é defeito:** o default só entra quando **ninguém
+olha** — `docker build` fora do painel, recreate sem a env var, imagem de teste — e aí o `/api` responde pelo backend
+errado **com status 200**. Um default que aponta para o lugar errado não falha: ele **funciona errado**, que é a
+forma mais cara de defeito, porque o sintoma aparece como "a API responde" e não como "a API está errada".
+
+### Os 4 pontos
+
+1. **Nome de container é acoplamento, não configuração.** Se o serviço puder ser renomeado, duplicado ou movido de
+   projeto, o default tem que acompanhar — ou não existir. **Nome global (`minipanel-<serviço>`) torna a colisão
+   invisível**: dois projetos com o mesmo nome de serviço parecem corretos, e um deles aponta para o outro.
+2. **Fail-fast vence default.** Ausência da variável tem que **errar alto** no boot, não servir o bundle com a rota
+   quebrada. É o mesmo gênero da **A3** (§5) — variável de segurança com default permissivo, que já apareceu 4× nos
+   backends. Sem a variável, o proxy tem que recusar a imagem, não servir `/api` para o destino errado.
+3. **Provar para onde o proxy aponta é por LOG, não por env var.** A env var mostra a *intenção*; o log do backend
+   mostra o *destino*. **Env var que ninguém mediu é intenção, não prova.**
+4. **Toda troca de nama varre os defaults do repo inteiro** — `Dockerfile`, `compose*.yml`, `.env.example`,
+   `*.template.conf`. **O acoplamento mora onde ninguém procura** — foi um `Dockerfile:36` numa linha que ninguém lê
+   desde que o serviço foi criado.
+
+### Onde o mesmo desenho existe (medido na `origin/main`, 2026-10-03)
+
+| repo            | arquivo                  | default                            | estado                                          |
+| --------------- | ------------------------ | ---------------------------------- | ----------------------------------------------- |
+| `conta_nommand` | `frontend/Dockerfile:36` | `minipanel-conta-backend:4100`     | task `38d885a1` (sessão da Conta)               |
+| `agent-package` | `frontend/Dockerfile:104`| `minipanel-agentpack-backend:4000` | **não tratado**                                 |
+| `load-balance`  | `frontend/Dockerfile`    | **sem `BACKEND_UPSTREAM`**         | desenho diferente: `builderConfig` com `VITE_*`  |
+| `motor`         | `compose.prod.yml`       | **sem `BACKEND_UPSTREAM`**         | desenho diferente: `VITE_API_BASE: "/"` (mesma origem) |
+
+⚠️ **Load-balance e motor não têm o problema** porque **não usam nome de container no bundle**: resolvem por mesma
+origem (`/`). **Não estender a regra para eles** — a regra é sobre *default com nome de container*, não sobre "todo
+default". Um default de `VITE_API_BASE: "/"` é estável por construção (é o mesmo host); um default com
+`minipanel-<serviço>` depende de um nome que o painel pode prefixar, colidir ou renomear.
+
+**Na prática:**
+
+```dockerfile
+# ❌ default que aponta para o nome do container: quebra em silêncio
+ENV BACKEND_UPSTREAM=minipanel-conta-backend:4100
+
+# ✅ sem default: sem a env var, o build/boot falha alto
+ENV BACKEND_UPSTREAM
+# e o proxy recusa a rota /api quando BACKEND_UPSTREAM não vem — não serve 200 para o lugar errado
+```
+
+## 14. Checklist de migração de um app
 
 1. Instalar `@nomad/ui` (v1.6.3 ou acima) e os peers; trocar o tema (`@import '@nomad/ui/theme.css'`, providers e boot do pacote).
 2. Trocar a barra pelo `@nomad/ui/topbar` com `model={…}` (validado com `topBarModelSchema`); apagar `src/shared/nomad-topbar/` e `scripts/sync-nomad-topbar.sh`.
@@ -746,5 +809,6 @@ _O mesmo erro pelo outro lado, no mesmo dia:_ `SIZE_EXCEPTIONS` subiu 3 vezes no
 5. Presets de tsconfig, ESLint e Prettier; subir Vite/TS/Node para as versões da seção 2.
 6. Reorganizar pastas (seção 4) e aplicar as regras de dados (seção 5).
 7. Gates e CI (seção 11).
+8. Default de produção que aponte para nome de container (seção 14).
 
 A lista por app, com tamanho, está em [auditoria-apps.md](./auditoria-apps.md).

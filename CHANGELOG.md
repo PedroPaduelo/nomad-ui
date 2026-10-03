@@ -3,6 +3,38 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.13.0] — 2026-10-03
+
+Minor (`[NUI] cb4a2350`). **Regra no padrão: default com nome de container é dívida que só quebra em silêncio.**
+
+### Documentado
+
+- **§13 novo no `docs/padrao-frontend.md` — Produção: nome de container em default é dívida silenciosa.** Saiu do
+  deploy de produção da Conta (2026-10-03), medido: os containers do painel têm nome **global**
+  (`minipanel-<nome-do-serviço>`), não por projeto, então dois projetos com serviço de mesmo nome **colidem sem
+  nada no código denunciar** — o serviço novo teve de se chamar `conta-backend-ws` porque `producao` já ocupava
+  `minipanel-conta-backend`. E `conta_nommand/frontend/Dockerfile:36` continuava com
+  `ENV BACKEND_UPSTREAM=minipanel-conta-backend:4100`.
+- **⚠️ O detalhe que faz a regra valer, e é o que a torna diferente das outras:** **nada quebrou.** A env var do
+  serviço sobrescreve o default, o build passa, o `/api` responde 200 e o tráfego chega ao backend certo. O default
+  só entra quando **ninguém olha** — `docker build` fora do painel, recreate sem a env var, imagem de teste — e aí o
+  `/api` responde pelo backend errado **com status 200**. Default que aponta para o lugar errado não falha: ele
+  **funciona errado**, que é a forma mais cara de defeito.
+- **Os 4 pontos da regra:** (1) nome de container é acoplamento, não configuração; (2) **fail-fast vence default**,
+  ausente tem que errar alto no boot — o mesmo gênero da **A3** (variável de segurança sem default, que já apareceu
+  4× nos backends); (3) **provar para onde o proxy aponta é por LOG** — env var mostra a *intenção*, o log mostra o
+  *destino*; (4) toda troca de nome varre `Dockerfile`, `compose*.yml`, `.env.example` e `*.template.conf`.
+- **A tabela de onde o mesmo desenho existe, medida na `origin/main`:** `conta_nommand/frontend/Dockerfile:36` e
+  `agent-package/frontend/Dockerfile:104` têm o default com nome de container; **load-balance e motor não têm**,
+  porque resolvem por mesma origem. ⚠️ **A regra não é "todo default é ruim"** — `VITE_API_BASE: "/"` é estável por
+  construção; a regra é sobre default que depende de um nome que o painel pode prefixar, colidir ou renomear. Por
+  isso o §13 manda **não estender a regra para LB e motor**.
+- **O §14 (checklist de migração) ganhou o item** correspondente, porque um app que migra precisa auditar os
+  defaults de produção.
+
+**Fora de escopo:** correção nos repos dos outros apps (a do AP está em aberto, a da Conta é a task `38d885a1`), e
+publicação pela API do AgentPack — o caminho sem transcrição é o gerador no repo.
+
 ## [1.12.0] — 2026-10-02
 
 Minor (`[NUI] 91de99cf`). **GitHub Actions não existe mais neste repositório — decisão do dono por CUSTO.**

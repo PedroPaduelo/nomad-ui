@@ -75,7 +75,7 @@ _(exemplo e teste que pega, em `link:repo:docs/padrao-frontend.md`)_
    comentário), nunca `wc -l`. _O `@nomad/ui` ainda não impõe `max-lines` no preset: vale a regra para o pacote no dia
    em que passar a impor, com o baseline dele no mesmo release._
 6. **`test/` entra no typecheck** — `include: ["src/**/*"]` faz o `tsc` não ver o teste; ele roda (o transpilador não
-   checa tipo) e nunca é typecheckado. O typecheck do CI roda o mesmo `tsc --noEmit` que o dev roda. Teste que pega:
+   checa tipo) e nunca é typecheckado. O typecheck do gate roda o mesmo `tsc --noEmit` que o dev roda. Teste que pega:
    `tsc --noEmit --listFilesOnly` e **falhar se a contagem de arquivos de teste for zero**.
 7. **Helper de teste não engole status; asserção frouxa não mede** — helper que devolve `{status, body}` sem lançar
    esconde o erro de quem chama, e o resultado descartado vira silêncio; lance em status >= 400 por padrão, com
@@ -89,9 +89,15 @@ _(exemplo e teste que pega, em `link:repo:docs/padrao-frontend.md`)_
 
 ## 4. Gates
 
-`typecheck`, `lint`, `format:check`, `cycles`, `test`, `test:a11y`, `build`, `api:check` (se usa openapi-ts),
-`npm audit --audit-level=high`. CI em todo push: `npm ci` → `api:check` → `typecheck` → `lint` → `cycles` → `test` →
-`test:a11y` → `build` → `audit`. A tabela de falha de cada gate está no documento.
+**Do pacote** (`npm run gates` na raiz do `@nomad/ui`, medido): `typecheck`, `lint`, `doc:check`, `test`,
+`test:a11y`, `build`.
+
+**De cada app, por decisão dele:** `cycles` (se adotar `madge`), `api:check` (se usa openapi-ts),
+`test:coverage` (se adotar piso), `format:check`, `npm audit --audit-level=high`.
+
+Gate sem CI: roda na mão, por decisão do dono (2026-10-02). A sequência, do zero: `npm ci` →
+`typecheck` → `lint` → `doc:check` → `test` → `test:a11y` → `build` (medida em 92 s). A tabela de falha
+de cada gate, e de quem é cada um, estão no documento.
 
 ## 5. a11y, teste e revisão
 

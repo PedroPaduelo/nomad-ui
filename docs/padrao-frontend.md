@@ -42,7 +42,11 @@ Duas regras sobre o próprio documento, porque é ele que os quatro apps copiam:
 | Rotas             | `react-router-dom` 7.18                                                                                                                                                                             | data router (`createBrowserRouter`)                                     |
 | Dados             | `@tanstack/react-query` 5, `axios` 1, `zod` 4.6, `zustand` 5                                                                                                                                        | cliente gerado com `@hey-api/openapi-ts` onde o backend publica OpenAPI |
 | Testes            | `vitest` 5, Testing Library (react 16, user-event 14, jest-dom 7), `jsdom`, `msw` 2, `axe-core` 4, `@vitest/browser-playwright` 5                                                                   |                                                                         |
-| Qualidade         | ESLint 9 (flat) + `typescript-eslint` 8 type-aware, `eslint-plugin-react-hooks` 7, `eslint-plugin-jsx-a11y` 6, `@tanstack/eslint-plugin-query` 5, `eslint-config-prettier`, Prettier 3.9, `madge` 8 | presets do `@nomad/ui`                                                  |
+| Qualidade         | ESLint 9 (flat) + `typescript-eslint` 8 type-aware, `eslint-plugin-react-hooks` 7, `eslint-plugin-jsx-a11y` 6, `@tanstack/eslint-plugin-query` 5, `eslint-config-prettier`, Prettier 3.9 | presets do `@nomad/ui`                                                  |
+
+⚠️ **`madge` 8 não é peça do pacote:** é escolha de cada app, que é quem tem o grafo de import
+para medir (o `cycles` está em §11, na coluna "de cada app"). O pacote não tem a dependência nem o
+script.
 
 Fora do padrão (sair ao migrar): Astryx (`@astryxdesign/*`), StyleX, shadcn/Radix, `sonner`, `react-query-devtools` em produção,
 cliente HTTP escrito à mão com `fetch` quando o `createHttpClient` resolve.
@@ -394,7 +398,8 @@ Regras:
 - Toda mutation invalida (ou atualiza com `setQueryData`) as keys que mudaram. Nada de `refetch()` manual depois de salvar.
 - Lista que troca de filtro usa `placeholderData: keepPreviousData`.
 - Onde o backend publica OpenAPI, o `@hey-api/openapi-ts` gera tipos, SDK e `queryOptions` em `src/api/generated/`
-  (sobre o `api` acima); não se escreve à mão interface que o gerado já tem, e o CI roda `api:check`.
+  (sobre o `api` acima); não se escreve à mão interface que o gerado já tem, e o `api:check` do app
+  roda no `gates` dele (gate de app, §11 — o pacote não tem como medir isto).
 - Tempo real (WebSocket, SSE): o cliente mora em `src/api/` (ex. `ws.ts`); o hook que assina aplica cada evento no
   cache (`setQueryData` ou `invalidateQueries`). Nada de store paralelo com cópia dos dados.
 
@@ -555,7 +560,7 @@ impor, com o baseline dele no mesmo release. Enquanto isso o teto é prosa, e pr
 
 **Regra.** `tsconfig.json` com `include: ["src/**/*"]` faz o `tsc` não enxergar nada de `test/`. O teste roda (esbuild transpila sem checar tipo) e nunca é typecheckado.
 
-`include` cobre `src`, `test`/`tests` e os configs. E o typecheck do CI roda **o mesmo `tsc --noEmit` que o dev roda**, senão o gate local e o gate do CI medem coisas diferentes.
+`include` cobre `src`, `test`/`tests` e os configs. E o typecheck do gate roda **o mesmo `tsc --noEmit` que o dev roda**, senão o gate local e o gate que roda sozinho medem coisas diferentes.
 
 **Por que.** Cast em arquivo que o `tsc` não vê é tipo mentiroso sem fiscal: documenta uma mentira que nada pode contestar. Cast em teste é o lugar onde mais se esconde, porque "é só teste".
 
@@ -629,35 +634,67 @@ link no clique normal; o `preventDefault()` só acontece quando o app passou `on
 - HTTP falso com `msw` (não mockar o axios à mão).
 - O que testar: hooks de dados (keys, invalidação), formulários (validação, erro do servidor), telas (carregando, vazio,
   erro, sucesso), segurança (CSP do `index.html`, HTML sanitizado) e a11y.
-- Cobertura com piso por diretório no `vitest.config.ts`: o piso só sobe.
+- Cobertura com piso por diretório é **de cada app**, no `vitest.config.ts` dele: o piso só sobe.
+  ⚠️ **O `@nomad/ui` não tem piso** — o `vitest.config.ts` do pacote não tem bloco `coverage` nem
+  `thresholds`, e não há `test:coverage` no `package.json`. Quem seguir esta linha cria o seu
+  próprio piso no app; ela não está descrevendo uma configuração que o pacote já tem.
 
 ## 11. Gates obrigatórios
 
-Scripts com estes nomes em todo app (o preset do `@nomad/ui` traz as configs):
+**A pergunta que decide é de QUEM é o gate** — não "quem paga". Um gate citado aqui que não
+existe no lugar de rodagem é **verde falso** (§12), que é pior que número errado: o número faz
+a pessoa procurar, o gate faz a pessoa **achar que achou**.
+
+| De quem é      | Gates                                                                                                                                                                       | Onde roda                    |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| **do pacote**  | `typecheck`, `lint`, `doc:check`, `test`, `test:a11y`, `build`                                                                                                              | `npm run gates` na raiz do `@nomad/ui` |
+| **de cada app** | `cycles` (se adotar `madge`), `api:check` (se usa openapi-ts), `test:coverage` (se adotar piso de cobertura)                                                              | no app — e o app diz em qual pasta |
+
+⚠️ **`api:check` não pode ser gate do pacote, por desenho:** o `@nomad/ui` entrega o **cliente**
+(`createQueryClient`, `createHttpClient`, helpers de Zod); o **código gerado é de cada app**, que tem
+o seu OpenAPI (`src/data/README.md:41`). O pacote não tem `src/api/generated` nem backend contra o
+qual comparar — um `api:check` aqui sairia 0 sem ter medido nada. O `api:check` do **agent-package**
+continua valendo: lá o app tem backend.
+
+⚠️ **A §2 lista `madge` como peça da stack, mas o pacote não tem a dependência** — o `madge` é
+escolha de cada app. Medido no pacote (2026-10-03): `madge --circular` em 132 arquivos acha **0
+ciclos** em ~11 s, ou seja, **o código já cumpre e o que falta é o script, não a política** — mas
+registrar isso aqui não cria o script. Adotar `cycles` é decisão do app.
+
+Nomes dos scripts que o app usa (o preset do `@nomad/ui` traz as configs):
 
 ```json
 "typecheck": "tsc --noEmit",
 "lint": "eslint .",
 "format:check": "prettier --check .",
-"cycles": "madge --circular --extensions ts,tsx --ts-config tsconfig.json src",
 "test": "vitest run",
-"test:coverage": "vitest run --coverage",
 "test:a11y": "vitest run -c vitest.a11y.config.ts",
-"build": "tsc -p tsconfig.build.json && vite build",
-"gates": "npm run typecheck && npm run lint && npm run cycles && npm test && npm run build"
+"build": "tsc -p tsconfig.build.json && vite build"
 ```
 
-| Gate                            | Falha quando                                                                                                                                                              |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `typecheck`                     | qualquer erro de tipo (app, testes e configs do Vite/Vitest)                                                                                                              |
-| `lint`                          | erro: segurança (`no-eval`, `no-implied-eval`, `no-new-func`, `no-script-url`), fronteira de dados, `max-lines`. Presets entram como aviso e sobem para erro quando zeram |
-| `cycles`                        | qualquer ciclo de import                                                                                                                                                  |
-| `test` + cobertura              | teste vermelho ou cobertura abaixo do piso                                                                                                                                |
-| `test:a11y`                     | violação do axe (contraste) no Chromium                                                                                                                                   |
-| `build`                         | `tsc` do build ou `vite build` falha                                                                                                                                      |
-| `api:check` (se usa openapi-ts) | `src/api/generated` diferente do backend                                                                                                                                  |
-| `npm audit --audit-level=high`  | vulnerabilidade high/critical                                                                                                                                             |
-| `format:check`                  | arquivo fora do Prettier (entra no CI quando o app estiver todo formatado; até lá, lint-staged no pre-commit)                                                             |
+O `gates` do **pacote** é o que existe de fato, e inclui `doc:check` (§0), que esta seção não
+citava:
+
+```json
+"gates": "npm run typecheck && npm run lint && npm run doc:check && npm test && npm run test:a11y && npm run build"
+```
+
+O app monta o `gates` dele com o que **ele** adotar. `cycles`, `api:check` e `test:coverage` **não
+existem no pacote** — são do app, e por isso não vêm aqui.
+
+| Gate                            | De quem | Falha quando                                                                                                                                                              |
+| ------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `typecheck`                     | pacote  | qualquer erro de tipo (app, testes e configs do Vite/Vitest)                                                                                                              |
+| `lint`                          | pacote  | erro: segurança (`no-eval`, `no-implied-eval`, `no-new-func`, `no-script-url`), fronteira de dados, `max-lines`. Presets entram como aviso e sobem para erro quando zeram |
+| `doc:check`                     | pacote  | o verificador de documento (§0) acha palavra estrangeira, backtick ímpar, tabela desalinhada, tag citada fora da tabela de versões ou seção fora de ordem |
+| `test`                          | pacote  | teste vermelho                                                                                                                                                             |
+| `test:a11y`                     | pacote  | violação do axe (contraste) no Chromium                                                                                                                                   |
+| `build`                         | pacote  | `tsc` do build ou `vite build` falha                                                                                                                                      |
+| `cycles`                        | app     | qualquer ciclo de import (só se o app tiver `madge`)                                                                                                                      |
+| `api:check` (se usa openapi-ts) | app     | `src/api/generated` diferente do backend                                                                                                                                  |
+| `test:coverage` (se adotar piso) | app     | cobertura abaixo do piso que o **app** declarar                                                                                                                           |
+| `npm audit --audit-level=high`  | app     | vulnerabilidade high/critical                                                                                                                                             |
+| `format:check`                  | app     | arquivo fora do Prettier (entra quando o app estiver todo formatado; até lá, lint-staged no pre-commit)                                                                  |
 
 **Gate sem CI: roda na mão, e isso é decisão do dono (2026-10-02) — por CUSTO.** Ele não paga GitHub Actions.
 
@@ -667,14 +704,18 @@ Scripts com estes nomes em todo app (o preset do `@nomad/ui` traz as configs):
 ⚠️ **"Desligado" é frase de quem planeja religar. Não existe workflow em nenhuma branch** — a pasta `.github/` não
 está lá, e a branch que tinha um `gates.yml` foi apagada para não deixar possibilidade. **Não criar, não sugerir, não
 religar.** A sequência abaixo é a do gate manual, na ordem, e é a mesma que a task `91de99cf` mediu em **92 s**
-(do zero: `npm ci` 24 s · `api:check` · `typecheck` 14 s · `lint` 9 s · `cycles` · `doc:check` 1 s · `test` 20 s ·
-`test:a11y` 17 s · `build` 7 s). Node pela `.nvmrc`.
+(do zero: `npm ci` 24 s · `typecheck` 14 s · `lint` 9 s · `doc:check` 1 s · `test` 20 s · `test:a11y` 17 s ·
+`build` 7 s). Node pela `.nvmrc`.
 
 ```bash
 rm -rf node_modules && npm ci   # a instalação limpa é o passo que o resto não substitui
-npm run typecheck && npm run lint && npm run cycles && npm run doc:check \
+npm run typecheck && npm run lint && npm run doc:check \
   && npm test && npm run test:a11y && npm run build
 ```
+
+⚠️ **Os passos `cycles`, `api:check` e `test:coverage` não estão nesta sequência de propósito:** são
+do app, e o app os soma ao `gates` dele se adotar (§11, tabela acima). Copiá-los para cá os faz
+rodar no lugar onde o script não existe — que sai 0 e parece verde.
 
 ⚠️ **A publicação automática NÃO depende do GitHub:** o painel clona e constrói no servidor dele. Por isso apagar os
 workflows não quebra deploy — quem confunde "sem CI" com "sem deploy" para por um motivo que não existe.

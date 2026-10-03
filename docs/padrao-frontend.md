@@ -4,8 +4,8 @@
 > Base: o frontend do agent-package (`frontend/`, commit `95df4f2`), escolhido como referência.
 > Decisão de produto (2026-09-29): mesmo tema, mesmas bibliotecas, mesma organização de pastas, mesmo jeito de
 > consumir dados e a mesma barra superior da Conta Nommand em todos os apps.
-> Onde o documento diz **(revisar na v1.0.0)**, o nome exato da API do `@nomad/ui` ainda está sendo fechado
-> pelas outras fases do projeto NUI-00.
+> A fase que fechava os nomes de API já terminou: os avisos **(revisar na v1.0.0)** que existiam aqui foram
+> removidos depois de conferir cada export no `dist` construído — quem reintroduzir um, confirma o export antes.
 
 ## 0. Como este padrão se mantém
 
@@ -53,10 +53,16 @@ cliente HTTP escrito à mão com `fetch` quando o `createHttpClient` resolve.
 
 ```jsonc
 // package.json do app — URL git+https COMPLETA, nunca o atalho github:
+// <tag> = a tag mais recente. Descubra qual é (o número escrito aqui envelhece
+// e mente — ver "Versão recomendada" no README):
+//   git ls-remote --tags https://github.com/PedroPaduelo/nomad-ui.git \
+//     | grep -oE 'v1\.[0-9]+\.[0-9]+$' | sort -V | tail -1
 "dependencies": {
-  "@nomad/ui": "git+https://github.com/PedroPaduelo/nomad-ui.git#v1.6.3"
+  "@nomad/ui": "git+https://github.com/PedroPaduelo/nomad-ui.git#<tag>"
 }
 ```
+
+⚠️ **A tag mais recente pelo `sort -V` mente neste repositório**: a semver está invertida por ordem de commit (a `v1.9.0` foi commitada antes da `v1.8.10`, e o CHANGELOG proíbe adotar a `v1.9.0`). O número acima é o exemplo do formato da URL, **não** a versão a adotar — o README traz a forma confiável, que ordena **por data**.
 
 `npm install` clona a tag e o `prepare` do pacote gera o `dist`. O app também declara os peers:
 `react`, `react-dom` (19), `@tanstack/react-query` (5), `zod` (4) e `tailwindcss` (4).
@@ -164,7 +170,7 @@ contradição, confirme que é o mesmo lock**: o `name` e a raiz do `package-loc
 | `@nomad/ui/theme.css`                                          | o `globals.css` do agent-package: tokens, `@theme inline`, 10 paletas × claro/escuro, e o `@source` do pacote                                                                                                                                                                                                                                   | `src/styles/globals.css` e `palettes.css`                                           |
 | `@nomad/ui/topbar`                                             | `TopBar`, `TopBarModel` + `topBarModelSchema`, `TopBarModelBar`, `NotificationsButton`, `TopBarBrand`, `TopBarModelBrand`, `NommandMark`, `OrgSwitcher`, `AppSwitcher`, `AccountMenu` (Padrão SSO Nomad v1, §10)                                                                                                                                | `src/shared/nomad-topbar/` + `scripts/sync-nomad-topbar.sh`                         |
 | `@nomad/ui/data`                                               | `createQueryClient`, `createHttpClient({ baseURL, onUnauthorized, isSessionExpired })`, `ApiError` (`errorCode`, `body`), `parseEnv`/`parseResponse`/`responseParser`/`fieldErrors` (tipos **estruturais**, sem zod no `.d.ts`), helpers de Zod e fábrica de query keys                                                                         | `lib/queryClient.ts`, o miolo de `api/client.ts`                                    |
-| `@nomad/ui/markdown`                                           | leitor de markdown do kit **(revisar na v1.0.0)**                                                                                                                                                                                                                                                                                               | `components/ui/Markdown.tsx`                                                        |
+| `@nomad/ui/markdown`                                           | leitor de markdown do kit (`Markdown`)                                                                                                                                                                                                                                                                                               | `components/ui/Markdown.tsx`                                                        |
 | `@nomad/ui/tsconfig`, `@nomad/ui/eslint`, `@nomad/ui/prettier` | presets                                                                                                                                                                                                                                                                                                                                         | configs copiadas                                                                    |
 
 ```css
@@ -197,14 +203,16 @@ createRoot(root).render(
 ```
 
 O script de boot sem flash (aplica `data-theme` e `data-palette` antes do CSS) vai inline no `index.html` e vem do
-pacote; o hash dele entra no `script-src` da CSP **(revisar na v1.0.0: nome do export do script)**.
+pacote; o hash dele entra no `script-src` da CSP. São `themeBootScript` (o script), `themeBootCspHash` (o hash) e
+`themeBootPlugin` (o plugin de Vite), do subpath `@nomad/ui/theme-boot` — os três exportados e construídos desde a
+`v1.0.0`.
 
 ### Versões publicadas (o que cada uma trouxe)
 
 | Tag      | Traz                                                                                                                                                                                                                                                                                                 | Apps devem                                                                                                       |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `v1.0.0` | tema (11 paletas × claro/escuro/sistema), kit do agent-package, barra Nomad (`TopBar`, `OrgSwitcher`, `AppSwitcher`, `AccountMenu`), dados (`QueryClient`, `createHttpClient`, Zod, keys), presets                                                                                                   | base da migração                                                                                                 |
-| `v1.0.1` | correção de release                                                                                                                                                                                                                                                                                  | —                                                                                                                |
+| `v1.0.0` | tema (10 paletas × claro/escuro/sistema), kit do agent-package, barra Nomad (`TopBar`, `OrgSwitcher`, `AppSwitcher`, `AccountMenu`), dados (`QueryClient`, `createHttpClient`, Zod, keys), presets                                                                                                   | base da migração                                                                                                 |
+| `v1.0.1` | + a **11ª paleta, `nommand`** (design v2 da Conta) — a v1.0.0 trouxe 10                                                                                                                                                                                                                              | medido: `v1.0.0` tem 10 paletas, `v1.0.1` tem 11                                                                 |
 | `v1.1.0` | + `Switch`, `Table`, `Pagination`, `Banner`, `MultiSelect`, `CodeBlock`, `StatusDot` (7 peças do loadbalance)                                                                                                                                                                                        | trocar o local pelo do pacote                                                                                    |
 | `v1.1.1` | `withCredentials` só na mesma origem; `onUnauthorized` não dispara em 401 de credencial própria                                                                                                                                                                                                      | cliente novo, sem `withCredentials: true` global                                                                 |
 | `v1.1.2` | `Menu disabled` propaga ao gatilho (não usar CSS `pointer-events-none`)                                                                                                                                                                                                                              | —                                                                                                                |
@@ -225,6 +233,29 @@ pacote; o hash dele entra no `script-src` da CSP **(revisar na v1.0.0: nome do e
 | `v1.8.2` | **`npm ci` do pacote passou a funcionar** (`sonner` estava no `package.json` desde a v1.3.0 e nunca no lock); `check-lock.mjs` entra no `doc:check` e confere lock × `package.json`, versão instalada × range, e `resolved` em `git+ssh`                                                             | nada a mudar no código; **regenerar o lock próprio do app depois do bump**                                       |
 | `v1.8.3` | `gates:ci` novo (`npm ci` do zero antes dos gates) e **`test:a11y` entra no `gates`** (242 testes que rodavam só a mão)                                                                                                                                                                              | nada a mudar no código; **`gates` não prova que o pacote instala** — use `gates:ci`                              |
 | `v1.8.4` | `check-lock` pega o atalho `github:`/`gitlab:`/`bitbucket:` (o `npm install` reescreve para `git+ssh` no lock — 7ª ocorrência no LB)                                                                                                                                                                 | **dependência de git por `git+https://`, nunca `github:`**                                                       |
+| `v1.8.5` |o `npm ci` de um app é **cego para o lock do `@nomad/ui`** (medido: a v1.8.1, com `sonner` faltando, instala com exit 0) e a assimetria: **é o único projeto do stack em que o lock do fornecedor é gate de produção dos outros**                                                                     |regra: _o `npm ci` do consumidor não prova o do fornecedor_ — por isso o `check-lock` vive no pacote              |
+| `v1.8.6` | specs medidos dos 4 apps (motor usa o atalho `github:` — o caso mais grave, porque é ele que **produz** o `git+ssh` no lock) e o que corrigir no bump                                                                                                                                                | bumpar: trocar spec e tag **no mesmo commit**                                                                    |
+| `v1.8.7` | o lock do consumidor faz **duas** coisas separadas: fixa a versão do pacote **e não valida a árvore dele** — e as duas juntas são o que engana (motor instalava a v1.6.2, cujo lock próprio estava quebrado)                                                                                         | refina a v1.8.5 sem mudá-la                                                                                      |
+| `v1.8.8` | `check-lock` passa a ler **workspaces**: o atalho `github:` declarado só dentro de um workspace deixou de passar (o §3b comparava só a raiz do lock)                                                                                                                                                 | mutação: atalho em workspace **acusa**; lock legítimo em `git+https://` **não**                                  |
+| `v1.8.9` | correção de **diagnóstico** da v1.8.8: o motor não era o caso que motivou aquela mudança (`fe/package-lock.json` **existe**, com o `@nomad/ui` em `packages[""]`; o `resolved` dele é `null`, não `git+ssh://`)                                                                                      | o motor é pego desde a v1.8.4                                                                                    |
+| `v1.9.0` | §5/CSP: a pergunta do gate de `connect-src` não é "tem origem absoluta?", é **"a API é same-origin?"**; `connect-src 'self'` está certo e é o mais restritivo possível                                                                                                                               | ⚠️ **REGRESSÃO — não adote** (ver v1.9.1)                                                                        |
+| `v1.8.10` | `check-lock` fecha a fureira da transitiva: o check só enxergava dependência **direta**, e o `sonner` (transitiva do `@nomad/ui`) escapava — medido na LB: lock sem `node_modules/sonner` **passava** com exit 0                                                                                     | 2 falsos resolvidos (binário de outra plataforma, `peerDependencies`); matriz de 5 casos                         |
+| `v1.8.11` | **§12 no padrão: gate que acusa caso legítimo é pior que gate que não pega** — falso-positivo é **desligado**; nenhum gate novo entra sem contraprova do caso legítimo. A saída do `check-lock` passa a dizer de que versão ele é                                                                    | contraprova: os 3 casos que **não** acusam são parte da regra                                                    |
+| `v1.9.1` | corrige **34 falsos** do `check-lock` em lock real (não resolvia aninhamento nem pacote com escopo) e a mensagem honesta: sem mutação, o script **não afirma** que o defeito acontece                                                                                                                | ⚠️ declara a v1.9.0 regressão: nenhum app deve adotar                                                            |
+| `v1.9.2` | §3: **por git e por registry não dá no mesmo** — a mesma mutação dá registry → `EUSAGE` e git → **exit 0**, com o pacote instalado e a dependência ausente                                                                                                                                           | `check-lock` é o único que pega; dois avisos de medição (exit code com pipe; confirmar que é o mesmo lock)       |
+| `v1.9.3` | o README não dizia que o `npm ci` **sai 0 e não instala a transitiva** (medido: 136 de 941 pacotes, `@nomad/ui` inteiro ausente, sem erro) e a ordem do que pega fica explícita: (1) atalho `github:` (2) transitiva sem entrada (3) `resolved` em `git+ssh`                                         | a mensagem do `check-lock` deixa de apontar o `npm ci` como teste                                                |
+| `v1.9.4` | README § Desenvolvimento: **"Publicar uma versão: regras que não se negociam"** (6 regras: a `main` não se reescreve, tag publicada é imutável, ordem de commit decide o número); as mesmas regras no §3 do padrão                                                                                   | regra escrita porque esta sessão quebrou a sua num force-push                                                    |
+| `v1.9.5` | §11 **deixa de mandar GitHub Actions** (desligado nos 5 repos por decisão do dono) e passa a dar a sequência do gate manual, com o tempo medido (92 s do zero)                                                                                                                                       | o `npm ci` do zero fica explícito como o passo que não se negocia                                                |
+| `v1.9.6` | republica o `README` com a regra do Actions desligado, que entrou na `main` **depois** da tag v1.9.5                                                                                                                                                                                                 | republicação: o `dist` é idêntico, a diferença é só o `README`                                                   |
+| `v1.9.7` | §5: duas regras que os 4 apps seguiam sem ter — **data/hora sempre com `timeZone`** e **subpath em vez de barrel** (o barrel reexporta `ThemeProvider`, que é contexto de React)                                                                                                                     | ⚠️ o furo fica **declarado**: o kit não tem subpath, então a garantia não existe para ele                        |
+| `v1.9.8` | corrige afirmação do §5 que fazia parecer verdade: **`@nomad/ui/ui` NÃO EXISTE** (não está no `exports`); e documenta que `docs/` **não viaja no pacote** — o padrão chega aos apps só por clone do repo                                                                                             | ⚠️ as regras da v1.9.7 são **decorativas**: nenhum gate as mede                                                  |
+| `v1.9.9` | §5: **"11 `toLocaleDateString` sem `timeZone` nos 4 apps" são 73** (contando a chamada, não a linha); "2 com saída em inglês" são 8                                                                                                                                                                  | a regra de contagem entrou no padrão: era ela que produzia o erro                                                |
+| `v1.10.0` | **`scripts/` no `files`** — `check-lock.mjs`, `check-doc.mjs`, `knowledge-page.mjs` e `knowledge-summary.test.mjs` passam a sair no `npm install`; `./scripts/*` no `exports`; `bin.check-lock-nomad`; `publish.test.mjs`; seção **Versão recomendada** no README                                    | 3 dos 4 apps tinham cópia divergente do `check-lock` (a do LB era da v1.9.4, 38 linhas a menos)                  |
+| `v1.10.1` | a linha concreta da versão recomendada (com a data) só entrou na `main` **depois** da tag v1.10.0 — quem instalou pela tag não recebeu a resposta do dono                                                                                                                                            | patch e não `amend`: a v1.10.0 já estava publicada                                                               |
+| `v1.11.0` |dois furos que nenhum verificador pegava: `publish.test.mjs` acusava o pacote de estar errado **rodado de um app que o instalou** (5 falsos num pacote correto), e nova **§3c** do `check-lock`: `version` de workspace ≠ `spec` de outro                                                             |a §3c **acusou o caso legítimo** na 1ª versão — corrigida comparando versão a versão, sem silenciar               |
+| `v1.11.1` | o `.bin` **funciona por git** (medido na tag v1.11.0) — 3 sessões reportaram que não; o `E404` é `cp -a` do `node_modules`, que não cria `.bin`, e o `npx` sem o link local vai ao registry e se lê como "pacote inexistente"                                                                        | `publish.test.mjs` ganha §3b, que instala **por git a tag de verdade**                                           |
+| `v1.12.0` | **GitHub Actions não existe mais neste repo** — a branch `ci/gates-workflow` foi apagada (41 linhas, nunca mergeada); a `main` nunca teve `.github/`                                                                                                                                                 | a publicação automática **NÃO** depende do GitHub: o painel clona e constrói no servidor dele                    |
+| `v1.13.1` |**§13 novo: nome de container em default é dívida silenciosa.** O nome do container no painel é **global**, então dois projetos com serviço homônimo **colidem sem o código denunciar**                                                                                                               |⚠️ **nada quebrou** — o default só entra quando ninguém olha, e aí o `/api` responde pelo backend errado          |
 
 Tags nunca se movem: conteúdo corrigido sai em **versão nova**.
 
@@ -234,7 +265,7 @@ Tags nunca se movem: conteúdo corrigido sai em **versão nova**.
 2. Troque a tag no `package.json` e rode `npm install @nomad/ui@git+https://github.com/PedroPaduelo/nomad-ui.git#<tag>` (força a resolução; ver "Consumo por tag" acima).
 3. Confira `node -p "require('@nomad/ui/package.json').version"`.
 4. Rode os gates (seção 11) e a aceitação visual da barra (captura ao lado da Conta).
-5. Um commit só: `chore(deps): @nomad/ui v1.6.3`.
+5. Um commit só: `chore(deps): @nomad/ui <tag>`.
 
 **Confira a versão que você está pegando, não o número dela.** Uma versão pode ser **recente no relógio e antiga no
 conteúdo**: foi o que aconteceu com a `v1.9.0` do `@nomad/ui` (numeração fora da linhagem — ficou **193 linhas**
@@ -475,7 +506,8 @@ Import só de tipo e `ApiError`/predicados `is*Error` estão liberados. Também:
 | Ambiente        | `src/config/endpoints.ts`             | `z.object({ VITE_API_URL: z.url().optional(), … }).parse(import.meta.env)` no boot |
 
 Mensagens em pt-BR no próprio schema. Os helpers de Zod do `@nomad/ui/data` padronizam o erro de parse como `ApiError`
-**(revisar na v1.0.0: nomes)**. A resposta do topbar se valida com o `topBarModelSchema` do pacote (ver §8).
+(`parseEnv`, `parseResponse`, `responseParser`, `fieldErrors`). A resposta do topbar se valida com o
+`topBarModelSchema` do pacote (ver §8).
 
 **Zod 3 + zod 4 no mesmo workspace (`v1.6.2`):** os tipos públicos de `parseEnv`/`parseResponse`/`responseParser`/
 `fieldErrors` são **estruturais** (`SafeParseSchema<Out>`, `Issue`) e o `.d.ts` do pacote **não importa zod** — então
@@ -827,7 +859,7 @@ ENV BACKEND_UPSTREAM
 
 ## 14. Checklist de migração de um app
 
-1. Instalar `@nomad/ui` (v1.6.3 ou acima) e os peers; trocar o tema (`@import '@nomad/ui/theme.css'`, providers e boot do pacote).
+1. Instalar `@nomad/ui` na tag mais recente (veja §3, "Instalar" — **não** um número fixo: a semver deste repositório está invertida) e os peers; trocar o tema (`@import '@nomad/ui/theme.css'`, providers e boot do pacote).
 2. Trocar a barra pelo `@nomad/ui/topbar` com `model={…}` (validado com `topBarModelSchema`); apagar `src/shared/nomad-topbar/` e `scripts/sync-nomad-topbar.sh`.
 3. Trocar o kit local pelo do pacote e apagar `src/components/ui/` (e Astryx/StyleX, se houver).
 4. Trocar cliente HTTP e QueryClient pelas fábricas do `@nomad/ui/data`.

@@ -545,7 +545,7 @@ serviço de mesmo nome colidem e nada no código denuncia. No deploy da Conta (2
 
 **Nada quebrou: a env var do painel sobrescreve, o build passa e o `/api` responde 200.** E é por isso que é defeito
 — o default só entra quando ninguém olha (`docker build` fora do painel, recreate sem a env var, imagem de teste), e
-aí o `/api` responde pelo backend errado **com status 200**. Default que aponta para o lugar errado não falha: ele
+aí o `/api` responde pelo backend errado, **que está no ar**. Default que aponta para o lugar errado não falha: ele
 **funciona errado**.
 
 **A regra, em 4 linhas:**
@@ -556,8 +556,10 @@ aí o `/api` responde pelo backend errado **com status 200**. Default que aponta
 3. **Provar para onde o proxy aponta é por LOG** — a env var mostra a *intenção*, o log mostra o *destino*.
 4. **Trocar nome varre o repo inteiro** — `Dockerfile`, `compose*.yml`, `.env.example`, `*.template.conf`.
 
-⚠️ **Não é "todo default é ruim":** `VITE_API_BASE: "/"` (motor, load-balance) é estável por construção — é o mesmo
-host. A regra é sobre default que **depende de um nome que o painel pode prefixar, colidir ou renomear**.
+⚠️ **Não é "todo default é ruim", nem "todo nome de container":** `VITE_API_BASE: "/"` (motor) e `VITE_API_URL`
+(load-balance) são estáveis por construção. O motor até tem nome de container — `fe/nginx.conf` faz
+`proxy_pass http://be:4000` — mas `be` é serviço do **próprio compose**, não nome global do painel, então não colide.
+A regra é sobre default que **depende de um nome global que o painel pode prefixar, colidir ou renomear**.
 
 Regra completa, com o caso e a tabela por app: **§13 do padrão** (`docs/padrao-frontend.md`).
 

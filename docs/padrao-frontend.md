@@ -758,7 +758,12 @@ ENV BACKEND_UPSTREAM=minipanel-conta-backend:4100
 ⚠️ **Nada quebrou.** A env var do serviço no painel sobrescreve o default, o build passa, o `/api` responde 200 e o
 tráfego real chega ao backend certo. **E é exatamente por isso que é defeito:** o default só entra quando **ninguém
 olha** — `docker build` fora do painel, recreate sem a env var, imagem de teste — e aí o `/api` responde pelo backend
-errado **com status 200**. Um default que aponta para o lugar errado não falha: ele **funciona errado**, que é a
+errado. ⚠️ **O status que sai é o do backend errado, e é o que torna isso caro: se o destino errado estiver no ar, a
+resposta é `200` e o front não tem como saber que falou com o serviço errado.** **Não medimos qual status sairia** — o
+que está medido é que **nada quebrou** enquanto o destino certo estava na env var. O ponto da regra — *default não
+falha alto* — sobrevive a qualquer status: o defeito é o serviço errado atender, não o código de saída.
+
+Um default que aponta para o lugar errado não falha: ele **funciona errado**, que é a
 forma mais cara de defeito, porque o sintoma aparece como "a API responde" e não como "a API está errada".
 
 ### Os 4 pontos
@@ -775,19 +780,39 @@ forma mais cara de defeito, porque o sintoma aparece como "a API responde" e nã
    `*.template.conf`. **O acoplamento mora onde ninguém procura** — foi um `Dockerfile:36` numa linha que ninguém lê
    desde que o serviço foi criado.
 
-### Onde o mesmo desenho existe (medido na `origin/main`, 2026-10-03)
+### Onde o mesmo desenho existe
+
+⚠️ **Esta tabela é RELATADA, não medida pelo `@nomad/ui`** — esta sessão só tem acesso ao próprio repositório, e os
+quatro apps vivem em outras sandboxes. A fonte é a task `[NUI] cb4a2350` (2026-10-03), que traz a medição de cada
+sessão com o caminho e a linha. **Se uma linha divergir do seu repo, o seu repo ganha** — e a task é o registro a
+corrigir, não este documento.
 
 | repo            | arquivo                  | default                            | estado                                          |
 | --------------- | ------------------------ | ---------------------------------- | ----------------------------------------------- |
 | `conta_nommand` | `frontend/Dockerfile:36` | `minipanel-conta-backend:4100`     | task `38d885a1` (sessão da Conta)               |
 | `agent-package` | `frontend/Dockerfile:104`| `minipanel-agentpack-backend:4000` | **não tratado**                                 |
-| `load-balance`  | `frontend/Dockerfile`    | **sem `BACKEND_UPSTREAM`**         | desenho diferente: `builderConfig` com `VITE_*`  |
-| `motor`         | `compose.prod.yml`       | **sem `BACKEND_UPSTREAM`**         | desenho diferente: `VITE_API_BASE: "/"` (mesma origem) |
+| `load-balance`  | `frontend/Dockerfile`    | **sem nome de container**           | desenho diferente: `VITE_API_URL` (ARG), resolvido pelo painel |
+| `motor`         | `fe/nginx.conf:24,33`    | **`proxy_pass http://be:4000`**     | ⚠️ tem nome de container, mas `be` é do **próprio compose** — não colide |
 
-⚠️ **Load-balance e motor não têm o problema** porque **não usam nome de container no bundle**: resolvem por mesma
-origem (`/`). **Não estender a regra para eles** — a regra é sobre *default com nome de container*, não sobre "todo
-default". Um default de `VITE_API_BASE: "/"` é estável por construção (é o mesmo host); um default com
-`minipanel-<serviço>` depende de um nome que o painel pode prefixar, colidir ou renomear.
+⚠️ **O caminho e a linha valem para quem mediu; o padrão é o que vale.** Se um app renomear o arquivo, a linha muda e a
+tabela fica desatualizada — por isso ela é relatada, e por isso a regra se escreve com `arquivo:linha` **para quem
+for auditar**, não como afirmação permanente sobre os outros.
+
+⚠️ **Load-balance e motor não têm o defeito de colisão — e o motivo é específico, não "não usam nome de container".**
+
+O defeito que a regra persegue é o **nome global do painel** (`minipanel-<serviço>`), que **colide entre projetos**. LB e
+motor não têm isso:
+
+- **`load-balance`** — o front usa `VITE_API_URL` (ARG no `Dockerfile`), resolvido pelo painel; não há nome de
+  container no bundle nem no proxy.
+- **`motor`** — o front usa `VITE_API_BASE: "/"` (mesma origem, via proxy). ⚠️ **O motor _tem_ nome de container** —
+  `motor/fe/nginx.conf:24` e `:33` fazem `proxy_pass http://be:4000` — **mas `be` é serviço do próprio `compose.yml`,
+  não nome global do painel**: não colide com nada e é estável enquanto o compose não mudar. É acoplamento do mesmo
+  gênero do ponto (1), sem o risco do ponto (4), porque o nome é local ao projeto.
+
+⚠️ **Não estender a regra para eles** — ela é sobre *default com nome global de container*, não sobre "todo default" e
+nem sobre "todo nome de container". Um default de `VITE_API_BASE: "/"` ou `VITE_API_URL` é estável por construção; um
+default com `minipanel-<serviço>` depende de um nome que o painel pode prefixar, colidir ou renomear.
 
 **Na prática:**
 
@@ -809,6 +834,6 @@ ENV BACKEND_UPSTREAM
 5. Presets de tsconfig, ESLint e Prettier; subir Vite/TS/Node para as versões da seção 2.
 6. Reorganizar pastas (seção 4) e aplicar as regras de dados (seção 5).
 7. Gates e CI (seção 11).
-8. Default de produção que aponte para nome de container (seção 14).
+8. Default de produção que aponte para nome de container (seção 13).
 
 A lista por app, com tamanho, está em [auditoria-apps.md](./auditoria-apps.md).

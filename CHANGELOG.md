@@ -3,9 +3,31 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
-## [1.13.0] — 2026-10-03
+## [1.13.1] — 2026-10-03
 
 Minor (`[NUI] cb4a2350`). **Regra no padrão: default com nome de container é dívida que só quebra em silêncio.**
+
+⚠️ **Publicada direto como esta versão, sem a `v1.13.0`.** A primeira redação foi feita, commitada e tagueada, mas o
+revisor independente encontrou quatro defeitos e a tag **ainda não tinha sido publicada** no remoto — então corrigiu-se
+antes de sair, e a versão foi para `v1.13.1` para não haver duas tags do mesmo conteúdo. Regra do repo: tag publicada é
+imutável; tag **não** publicada ainda pode ser refeita.
+
+### Corrigido (achados do revisor independente, todos verificados antes de corrigir)
+
+1. **O item novo do checklist apontava para si mesmo** (`seção 14`, que é o próprio checklist, em vez do §13). **O
+   `check-doc.mjs` não pega isso**: ele valida a numeração dos cabeçalhos, não as remissões de texto. Um gate que
+   valida o cabeçalho e não a referência é cobertura parcial — e foi assim que passou.
+2. **A ressalva sobre LB e motor estava escrita errada, e a errada era a que faria um app correto se acusar.** O texto
+   dizia que os dois "não usam nome de container". **O motor usa**: `fe/nginx.conf:24` e `:33` fazem
+   `proxy_pass http://be:4000`. E o LB não usa `VITE_API_BASE` — usa `VITE_API_URL`. Reescrito: o defeito é o **nome
+   global** do painel, que colide entre projetos; `be` é serviço do **próprio compose** do motor, então não colide.
+   **Regra não é "todo default" nem "todo nome de container".**
+3. **A tabela se apresentava como medição deste repo.** Não é: o `@nomad-ui` só tem acesso a si mesmo, e os quatro
+   apps vivem em outras sandboxes. Agora ela é **relatada**, com a fonte nomeada (`[NUI] cb4a2350`) e a regra de que
+   **se uma linha divergir do repo de quem lê, o repo ganha**.
+4. **`status 200` era afirmado, não medido.** O que está medido é que **nada quebrou** enquanto o destino certo
+   estava na env var. O texto agora diz isso e explica por que o ponto da regra sobrevive a qualquer status: o defeito
+   é o serviço errado **atender**, não o código de saída.
 
 ### Documentado
 
@@ -18,17 +40,19 @@ Minor (`[NUI] cb4a2350`). **Regra no padrão: default com nome de container é d
 - **⚠️ O detalhe que faz a regra valer, e é o que a torna diferente das outras:** **nada quebrou.** A env var do
   serviço sobrescreve o default, o build passa, o `/api` responde 200 e o tráfego chega ao backend certo. O default
   só entra quando **ninguém olha** — `docker build` fora do painel, recreate sem a env var, imagem de teste — e aí o
-  `/api` responde pelo backend errado **com status 200**. Default que aponta para o lugar errado não falha: ele
+  `/api` responde pelo backend errado, **que está no ar**. Default que aponta para o lugar errado não falha: ele
   **funciona errado**, que é a forma mais cara de defeito.
 - **Os 4 pontos da regra:** (1) nome de container é acoplamento, não configuração; (2) **fail-fast vence default**,
   ausente tem que errar alto no boot — o mesmo gênero da **A3** (variável de segurança sem default, que já apareceu
   4× nos backends); (3) **provar para onde o proxy aponta é por LOG** — env var mostra a *intenção*, o log mostra o
   *destino*; (4) toda troca de nome varre `Dockerfile`, `compose*.yml`, `.env.example` e `*.template.conf`.
-- **A tabela de onde o mesmo desenho existe, medida na `origin/main`:** `conta_nommand/frontend/Dockerfile:36` e
-  `agent-package/frontend/Dockerfile:104` têm o default com nome de container; **load-balance e motor não têm**,
-  porque resolvem por mesma origem. ⚠️ **A regra não é "todo default é ruim"** — `VITE_API_BASE: "/"` é estável por
-  construção; a regra é sobre default que depende de um nome que o painel pode prefixar, colidir ou renomear. Por
-  isso o §13 manda **não estender a regra para LB e motor**.
+- **A tabela de onde o mesmo desenho existe** — **é RELATADA, não medida pelo `@nomad/ui`**, que só tem acesso ao
+  próprio repo; a fonte é a task `[NUI] cb4a2350`. `conta_nommand/frontend/Dockerfile:36` e
+  `agent-package/frontend/Dockerfile:104` têm o default com nome de container. ⚠️ **Load-balance e motor não têm o
+  defeito de colisão, e o motivo é específico:** o LB usa `VITE_API_URL` (ARG), e o motor usa `VITE_API_BASE: "/"`
+  — **embora o motor tenha nome de container** (`fe/nginx.conf` → `proxy_pass http://be:4000`), `be` é serviço do
+  **próprio compose**, não nome global do painel. Por isso o §13 manda **não estender a regra para eles**: ela é
+  sobre default que depende de um **nome global**, não sobre todo default nem todo nome de container.
 - **O §14 (checklist de migração) ganhou o item** correspondente, porque um app que migra precisa auditar os
   defaults de produção.
 

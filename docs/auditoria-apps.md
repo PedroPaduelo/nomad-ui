@@ -114,7 +114,7 @@ A camada de dados já é boa (fábricas de keys, hooks por entidade). O peso é 
 
 ## Decisões pendentes (para as sessões donas de cada app)
 
-1. **Paleta `nommand` da Conta:** o pacote tem as 10 do agent-package; a Conta usa uma 11ª como padrão. Entra no pacote (vira 11) ou a Conta adota uma das 10?
+1. ~~**Paleta `nommand` da Conta:**~~ **RESOLVIDA (2026-09-30): entrou no pacote.** A 11ª paleta, `nommand`, foi commitada em `acdae91` e entrou na tag `v1.0.1`; a `v1.0.0` saiu com as 10 do agent-package. A Conta não precisa adotar uma das 10 — o pacote já entrega `nommand`, e a escolha sai da paleta padrão do app, não de migração.
 2. **Ganchos do `createHttpClient`:** a Conta precisa de `Authorization` com token em memória e refresh em 401; o agent-package precisa de `x-request-id`, monitor de conexão e `skipSessionExpiry`; o loadbalance, de CSRF. Sem esses ganchos, esses apps não trocam o cliente.
 3. **Extras do kit no pacote:** Switch, Table, Pagination, Banner, MultiSelect, CodeBlock, StatusDot (loadbalance e motor) e PropertyPicker/Select `ghost` (agent-package) precisam estar na `v1.0.0`, senão a troca do kit perde componentes.
 4. **Chaves de preferência de tema:** cada app grava num `localStorage` próprio (`agentpack:ui-preferences`, `nommand-theme`…). O pacote deve aceitar o prefixo por app, ou migrar a chave antiga, para ninguém perder a paleta escolhida.

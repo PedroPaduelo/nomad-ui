@@ -3,6 +3,36 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.13.4] — 2026-10-03
+
+Patch. **Republica o conteúdo da `v1.13.3` e fecha um furo de tag que o próprio gate do pacote não pegava.**
+
+A tag `v1.13.3` foi publicada apontando para um commit cujo `package.json` dizia `1.13.2`: quem
+instalava `#v1.13.3` recebia um pacote que **se declara `1.13.2`**. O conteúdo nunca esteve errado;
+a tag carregava um manifesto de outra versão. Tags publicadas não se movem (regra 2 do README),
+então a correção sai em versão nova: **use `#v1.13.4`**.
+
+⚠️ **Por que isso não era só "um número velho".** O `npm` grava no lock o `version` do manifesto,
+então o app que pedia `#v1.13.3` recebia um lock com `version: 1.13.2`, e o `check-lock` do
+**consumidor** acusava o app e mandava *regenerar o lock* — **conserto que não funciona**, porque
+regenerar dá o mesmo lock (medido duas vezes). Quem obedecesse desligaria o gate.
+
+### Corrigido
+
+- **O `publish.test.mjs` passou a conferir o que a regra 5 já mandava** (seção 1c): a `version` do
+  manifesto na última tag tem que ser o **número** da tag. As asserções 1a e 1b são sobre o
+  **commit** (ancestralidade, contagem), então uma tag com manifesto trocado passava por elas.
+  ⚠️ **A regra 5 sempre pediu `git show vX.Y.Z:package.json`; o que faltava era o instrumento.**
+- **A asserção é a segunda a achar um furo real:** nas 46 tags do repo ela acusa a `v1.13.3` (esta)
+  e a **`v1.5.0`** — que o CHANGELOG já contava em 2026-09-30 ("a tag `v1.5.0` foi criada no commit
+  errado, `114e667`, que é o da `v1.4.1`"). Três meses da primeira, um dia da segunda, o mesmo
+  defeito porque o instrumento não existia nas duas.
+
+### Sem mudança de código
+
+`package.json` muda **só** a linha da versão. O `dist`, os `exports`, o `bin` e as dependências são
+os mesmos da `v1.13.2` e da `v1.13.3`.
+
 ## [1.13.2] — 2026-10-03
 
 Patch (`[NUI] d0f536f7`). **Padrão §11 passa a nomear o dono de cada gate; `api:check` e `cycles` são do app, não do pacote.** Sem mudança de código.

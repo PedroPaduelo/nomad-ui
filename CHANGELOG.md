@@ -3,6 +3,54 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.13.2] — 2026-10-03
+
+Patch (`[NUI] d0f536f7`). **Padrão §11 passa a nomear o dono de cada gate; `api:check` e `cycles` são do app, não do pacote.** Sem mudança de código.
+
+### Documentado
+
+- **A §11 tem duas colunas agora: de quem é o gate** (decisão do dono, Opção C). **Do pacote**,
+  o `gates` real e medido: `typecheck`, `lint`, `doc:check`, `test`, `test:a11y`, `build`. **De cada
+  app, por decisão dele:** `cycles` (se adotar `madge`), `api:check` (se usa openapi-ts),
+  `test:coverage` (se adotar piso). Gate citado no doc que não existe onde roda **sai 0 e parece
+  verde** — a §12 já dizia isso; agora a §11 para de ser a origem do defeito.
+- **`api:check` está justificado por desenho, não por omissão:** o `@nomad/ui` entrega o **cliente**;
+  o **código gerado é de cada app**, que tem o seu OpenAPI (`src/data/README.md:41`). O pacote não
+  tem `src/api/generated` nem backend contra o qual comparar. O `api:check` do **agent-package**
+  continua valendo — lá o app tem backend.
+- **A §2 saiu `madge` 8 da lista de peça do pacote** (medido: não está em `devDependencies`), e a
+  sequência do gate manual parou de citar `cycles`, que nunca existiu aqui. A §10 marca que o
+  **piso de cobertura é do app** — o `vitest.config.ts` do pacote não tem `coverage` nem
+  `thresholds`, e não há `test:coverage` no `package.json`.
+- **"CI em todo push" saiu** do resumo da knowledge e de `src/data/README.md`: não há CI, por
+  decisão do dono de 2026-10-02 (memória `06bad458`).
+
+### Corrigido
+
+- **A tabela §3 do padrão cobria 22 das 45 tags** (parava na `v1.8.4` com o repo na `v1.13.1`).
+  Agora tem as 45, na **ordem real de publicação** (`creatordate`) — que não é a ordem do número, a
+  `v1.9.0` foi commitada antes da `v1.8.10`. Registrou-se também **qual tag trouxe a 11ª paleta**:
+  a `v1.0.0` saiu com 10, a `v1.0.1` trouxe a `nommand` (medido no conteúdo de cada tag, não no
+  arquivo atual).
+- **As versões congeladas (`v1.6.3` em 3 lugares) viraram `<tag>` + o comando que descobre a tag.**
+  Trocar por `v1.13.2` só faria a mentira voltar em 2 releases — o número escrito envelhece, e o
+  próprio README já ensina isso.
+- **Os 3 avisos "(revisar na v1.0.0)" saíram**, cada um conferido no `dist` construído: `markdown`
+  exporta `Markdown`; `theme-boot` exporta `themeBootScript`/`themeBootCspHash`/`themeBootPlugin`; os
+  4 helpers de Zod existem. A legenda que os explicava virou nota de que a fase fechou.
+- **"10 paletas" saiu de todo doc vivo** (README, §4 do padrão, §9, comentário do
+  `vitest.a11y.config.ts`) e a vitrine passou a contar `PALETTES.length` em vez de dizer 10. A
+  decisão de paleta `nommand` em `docs/auditoria-apps.md` está marcada como **resolvida** (entrou
+  na `v1.0.1`). O comando publicado é `import()` dinâmico, e não `require` — o pacote é ESM.
+- **`src/theme/palettes.ts`:** o comentário afirmava que `src/test/components/palette-contrast.test.ts`
+  travava o contraste. **Esse arquivo não existe**; a trava está nos 6 `src/__tests__/*.browser.test.tsx`.
+
+### Segurança
+
+- **`.env` deixa de ser versionável neste repo** (`.gitignore:5`). Havia um `.env` untracked
+  visível em `git status` como `?? .env`; nenhum `.env` estava trackado, então a regra nova não
+  afeta nada versionado. `.env.example` continua versionável (`.gitignore:7`).
+
 ## [1.13.1] — 2026-10-03
 
 Minor (`[NUI] cb4a2350`). **Regra no padrão: default com nome de container é dívida que só quebra em silêncio.**

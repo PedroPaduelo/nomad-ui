@@ -11,8 +11,9 @@
 // do modo, e onAccent/onAmber sobre o preenchimento. `accent.main` e
 // `amber.main` são PREENCHIMENTO (botão, barra, borda): como cor de texto use
 // `text-accent`/`text-amber` (o Tailwind mapeia para text.accent/text.amber)
-// ou `var(--color-text-accent)`. src/test/components/palette-contrast.test.ts
-// trava isso para as 10 paletas nos dois modos.
+// ou `var(--color-text-accent)`. Os testes de contraste do axe
+// (`src/__tests__/*.browser.test.tsx`, `npm run test:a11y`) travam isso em
+// todas as paletas, nos dois modos — o número acompanha `PALETTES`.
 //
 // Adding a new palette: just add an entry to PALETTES.
 // The ThemeSwitcher component reads this array and renders a picker.

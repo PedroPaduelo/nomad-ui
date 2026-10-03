@@ -1,8 +1,19 @@
 # @nomad/ui
 
-Kit de componentes, tema (10 paletas, claro/escuro/sistema), barra Nomad, camada de dados e presets
-compartilhados pelos apps da Nomad (agent-package, Conta Nommand, loadbalance e motor). A base é o
-kit do AgentPack.
+Kit de componentes, tema (todas as paletas em claro/escuro/sistema), barra Nomad, camada de dados e
+presets compartilhados pelos apps da Nomad (agent-package, Conta Nommand, loadbalance e motor). A base
+é o kit do AgentPack.
+
+> **O número de paletas não é escrito aqui de propósito: número escrito à mão envelhece.** A seção
+> "Versão recomendada" abaixo é a mesma regra aplicada às versões, e a contagem se deriva do pacote
+> instalado:
+>
+> ```bash
+> node -e "import('@nomad/ui').then(m=>console.log(m.PALETTES.length))"
+> ```
+>
+> (`import()` dinâmico, e não `require`: o pacote é ESM — `require('@nomad/ui')` sai com
+> `ERR_PACKAGE_PATH_NOT_EXPORTED`.)
 
 > Em construção. Instalação, entradas e exemplos entram aqui até a `v1.0.0`.
 

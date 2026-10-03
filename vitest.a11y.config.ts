@@ -5,8 +5,10 @@ import { playwright } from '@vitest/browser-playwright'
 
 /**
  * Testes que precisam de navegador de verdade (`*.browser.test.tsx`): contraste
- * com o axe nas 10 paletas × claro/escuro. `npm run test:a11y`; precisa do
- * Chromium do Playwright (`npx playwright install --with-deps chromium`).
+ * com o axe em todas as paletas × claro/escuro. O número não é escrito aqui
+ * porque os testes iteram `PALETTES` — a cobertura acompanha o código.
+ * `npm run test:a11y`; precisa do Chromium do Playwright
+ * (`npx playwright install --with-deps chromium`).
  */
 export default defineConfig({
   plugins: [react(), tailwindcss()],

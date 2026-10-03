@@ -155,6 +155,55 @@ try {
         `não consegui comparar a main com a última tag (${ultima || 'sem tag'}): ${e?.message ?? e}`,
       )
     }
+
+    // 1c) A `version` do manifesto na tag tem que ser o NÚMERO da tag.
+    //
+    //     Existe porque a `v1.13.3` foi publicada com o `package.json` em
+    //     `1.13.2`, e nenhuma das asserções acima pega: elas são todas sobre
+    //     o COMMIT (ancestralidade, contagem), e o commit estava certo. A
+    //     incoerência é entre a tag e o manifesto, e só aparece aqui — a
+    //     regra 5 do README já pedia `git show vX.Y.Z:package.json`, mas
+    //     ela é manual, e o que a pessoa não executa não é gate.
+    //
+    //     ⚠️ O efeito no consumidor é pior que "número velho": o `npm`
+    //     grava no lock o `version` do manifesto, então o app pede
+    //     `#v1.13.3`, o lock diz `1.13.2`, e o `check-lock.mjs` do app
+    //     (§3c) acusa e manda **regenerar o lock** — conserto que não
+    //     funciona, porque regenerar dá o mesmo lock. Medido: instalar por
+    //     `#v1.13.3` produz 2 problemas no `check-lock` em vez de 1, e o
+    //     segundo não tem conserto do lado do app.
+    //
+    //     ⚠️ **Só no repo do pacote.** Este arquivo roda também dentro de um
+    //     app que instalou o pacote, e lá não existe histórico de tag do
+    //     `@nomad/ui` para comparar — medir ali seria acusar o app de um
+    //     defeito que é do fornecedor. É o mesmo cuidado do `cwd` do
+    //     `npm pack` acima, pelo mesmo motivo: o arquivo tem dois ambientes,
+    //     e a asserção vale em um só.
+    if (ultima) {
+      let declarado = ''
+      try {
+        declarado = execFileSync('git', ['show', `${ultima}:package.json`], {
+          cwd: raizDoPacote,
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'pipe'],
+        })
+      } catch {
+        // Tag sem `package.json` (ou objeto ilegível): não é o caso que esta
+        // asserção existe para pegar, e inventar problema aqui é o pior
+        // desfecho de um gate (§12).
+        declarado = ''
+      }
+      const versaoDaTag = /^v(\d+\.\d+\.\d+)$/.exec(ultima)?.[1] ?? ''
+      const versaoDoManifesto = /"version"\s*:\s*"([^"]+)"/.exec(declarado)?.[1] ?? ''
+      if (versaoDaTag && versaoDoManifesto && versaoDaTag !== versaoDoManifesto) {
+        problems.push(
+          `a tag ${ultima} resolve para um \`package.json\` que se diz "${versaoDoManifesto}" — ` +
+            `quem instalar por ela recebe um pacote que se declara outra versão, e o ` +
+            `\`check-lock\` do consumidor acusa o APP (não ele) com um conserto que não funciona. ` +
+            `Correção sai em versão nova: suba a \`version\` e publique outra tag. Regra 5 do README.`,
+        )
+      }
+    }
   }
 
   // 2) O pacote tem que CONTER o script. `files` sozinho não basta: com

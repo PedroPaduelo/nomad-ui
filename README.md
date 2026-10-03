@@ -80,9 +80,14 @@ O app instala por dependência git numa tag fixa (sem publicar no npm). **Use a 
 
 ```json
 "dependencies": {
-  "@nomad/ui": "git+https://github.com/PedroPaduelo/nomad-ui.git#v1.5.2"
+  "@nomad/ui": "git+https://github.com/PedroPaduelo/nomad-ui.git#<tag>"
 }
 ```
+
+⚠️ **O `<tag>` não é um número solto: pegue o que o comando der.** A versão atual é
+`git tag --sort=-creatordate | head -1` (veja "Versão recomendada" acima) — escrever a tag
+aqui envelhece, e foi assim que a `v1.10.0` perdeu a linha da versão. O que **não** muda é a
+forma: `git+https://` completa, com a tag no fim.
 
 Por que a URL completa: **o atalho `github:PedroPaduelo/nomad-ui#vX.Y.Z` é o que produz o ssh.** O `npm install`
 reescreve o atalho para `git+ssh://git@github.com/…` no `resolved` (medido 2026-09-30 e reproduzido), e é esse

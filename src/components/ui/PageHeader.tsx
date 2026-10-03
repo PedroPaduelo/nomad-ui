@@ -24,8 +24,8 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, eyebrow, action, breadcrumb }: PageHeaderProps) {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex items-start gap-3 min-w-0">
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+      <div className="flex flex-1 basis-72 items-start gap-3 min-w-0">
         {breadcrumb ? <div className="mt-1 text-body text-text-tertiary">{breadcrumb}</div> : null}
         <div className="min-w-0">
           {eyebrow ? (

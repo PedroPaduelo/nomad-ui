@@ -819,26 +819,27 @@ _O mesmo erro pelo outro lado, no mesmo dia:_ `SIZE_EXCEPTIONS` subiu 3 vezes no
 > **Default com nome de container é acoplamento ao nome do serviço. Se o nome puder mudar, o default é dívida — e
 > o custo aparece em silêncio.**
 
-### O caso que produziu a regra (medido, não ilustrativo)
+### O caso que produziu a regra (relato de 2026-10-03)
 
-No deploy da Conta para `workspace_nommand` (2026-10-03) o serviço novo precisou se chamar `conta-backend-ws`,
-porque **os containers do painel têm nome global** (`minipanel-<nome-do-serviço>`), não por projeto — o projeto
-`producao` já ocupava `minipanel-conta-backend`. Dois projetos com serviço de mesmo nome **colidem**, e isso não
-aparece em lugar nenhum do código.
+A task `[NUI] cb4a2350` relata a medição do orquestrador no deploy da Conta para `workspace_nommand`
+(2026-10-03): o serviço novo precisou se chamar `conta-backend-ws`, porque **os containers do painel têm nome
+global** (`minipanel-<nome-do-serviço>`), não por projeto — o projeto `producao` já ocupava
+`minipanel-conta-backend`. Dois projetos com serviço de mesmo nome **colidem**, e isso não aparece no código.
+Este é o caso histórico que motivou a regra, não uma medição feita pelo `@nomad/ui` nem o inventário atual.
 
-E `conta_nommand/frontend/Dockerfile:36` continua com:
+No relato daquela data, `conta_nommand/frontend/Dockerfile:36` continha:
 
 ```dockerfile
 ENV BACKEND_UPSTREAM=minipanel-conta-backend:4100
 ```
 
-⚠️ **Nada quebrou.** A env var do serviço no painel sobrescreve o default, o build passa, o `/api` responde 200 e o
-tráfego real chega ao backend certo. **E é exatamente por isso que é defeito:** o default só entra quando **ninguém
-olha** — `docker build` fora do painel, recreate sem a env var, imagem de teste — e aí o `/api` responde pelo backend
-errado. ⚠️ **O status que sai é o do backend errado, e é o que torna isso caro: se o destino errado estiver no ar, a
-resposta é `200` e o front não tem como saber que falou com o serviço errado.** **Não medimos qual status sairia** — o
-que está medido é que **nada quebrou** enquanto o destino certo estava na env var. O ponto da regra — *default não
-falha alto* — sobrevive a qualquer status: o defeito é o serviço errado atender, não o código de saída.
+⚠️ **O relato registra que nada quebrou:** a env var no painel sobrescrevia o default, o build passava, o `/api`
+respondia 200 e o tráfego chegava ao backend certo. **E é exatamente por isso que é defeito:** o default pode
+entrar quando **ninguém olha** — `docker build` fora do painel, recreate sem a env var, imagem de teste — e
+encaminhar `/api` ao backend errado. **Se esse destino estiver no ar, pode responder 200 sem que o front saiba
+que falou com o serviço errado.** Esse status sem a variável correta **não foi medido no relato**; não é
+resultado de teste desta sessão. O ponto da regra — *default não falha alto* — independe desse status: o
+defeito é servir pelo destino errado, não um código de saída específico.
 
 Um default que aponta para o lugar errado não falha: ele **funciona errado**, que é a
 forma mais cara de defeito, porque o sintoma aparece como "a API responde" e não como "a API está errada".
@@ -853,16 +854,16 @@ forma mais cara de defeito, porque o sintoma aparece como "a API responde" e nã
    backends. Sem a variável, o proxy tem que recusar a imagem, não servir `/api` para o destino errado.
 3. **Provar para onde o proxy aponta é por LOG, não por env var.** A env var mostra a *intenção*; o log do backend
    mostra o *destino*. **Env var que ninguém mediu é intenção, não prova.**
-4. **Toda troca de nama varre os defaults do repo inteiro** — `Dockerfile`, `compose*.yml`, `.env.example`,
+4. **Toda troca de nome varre os defaults do repo inteiro** — `Dockerfile`, `compose*.yml`, `.env.example`,
    `*.template.conf`. **O acoplamento mora onde ninguém procura** — foi um `Dockerfile:36` numa linha que ninguém lê
    desde que o serviço foi criado.
 
-### Onde o mesmo desenho existe
+### Retrato histórico relatado em 2026-10-03
 
-⚠️ **Esta tabela é RELATADA, não medida pelo `@nomad/ui`** — esta sessão só tem acesso ao próprio repositório, e os
-quatro apps vivem em outras sandboxes. A fonte é a task `[NUI] cb4a2350` (2026-10-03), que traz a medição de cada
-sessão com o caminho e a linha. **Se uma linha divergir do seu repo, o seu repo ganha** — e a task é o registro a
-corrigir, não este documento.
+⚠️ **Esta tabela é RELATADA, não medida pelo `@nomad/ui`, e não é inventário atual de produção.** A fonte é a
+task `[NUI] cb4a2350` (2026-10-03). Os caminhos e estados abaixo preservam o relato daquela data, não provam o
+que um container executa hoje. **O repo de cada app manda sobre seu código; o orquestrador informa o arranjo.**
+Antes de usar uma linha como exemplo atual, confira a fonte com a sessão dona e o serviço com o orquestrador.
 
 | repo            | arquivo                  | default                            | estado                                          |
 | --------------- | ------------------------ | ---------------------------------- | ----------------------------------------------- |
@@ -875,21 +876,15 @@ corrigir, não este documento.
 tabela fica desatualizada — por isso ela é relatada, e por isso a regra se escreve com `arquivo:linha` **para quem
 for auditar**, não como afirmação permanente sobre os outros.
 
-⚠️ **Load-balance e motor não têm o defeito de colisão — e o motivo é específico, não "não usam nome de container".**
+**A distinção do relato continua útil, mas não dispensa conferir o serviço atual:** `be` como nome local de um
+compose não tem a mesma colisão global de `minipanel-<serviço>`. Um caminho relativo como `/` no bundle também
+não contém nome de container — mas depende do proxy para chegar à API. Nenhuma dessas propriedades, sozinha,
+prova que o proxy está usando o destino correto nem que recusa uma variável ausente.
 
-O defeito que a regra persegue é o **nome global do painel** (`minipanel-<serviço>`), que **colide entre projetos**. LB e
-motor não têm isso:
-
-- **`load-balance`** — o front usa `VITE_API_URL` (ARG no `Dockerfile`), resolvido pelo painel; não há nome de
-  container no bundle nem no proxy.
-- **`motor`** — o front usa `VITE_API_BASE: "/"` (mesma origem, via proxy). ⚠️ **O motor _tem_ nome de container** —
-  `motor/fe/nginx.conf:24` e `:33` fazem `proxy_pass http://be:4000` — **mas `be` é serviço do próprio `compose.yml`,
-  não nome global do painel**: não colide com nada e é estável enquanto o compose não mudar. É acoplamento do mesmo
-  gênero do ponto (1), sem o risco do ponto (4), porque o nome é local ao projeto.
-
-⚠️ **Não estender a regra para eles** — ela é sobre *default com nome global de container*, não sobre "todo default" e
-nem sobre "todo nome de container". Um default de `VITE_API_BASE: "/"` ou `VITE_API_URL` é estável por construção; um
-default com `minipanel-<serviço>` depende de um nome que o painel pode prefixar, colidir ou renomear.
+**Fail-fast é comportamento, não ausência de default.** Um `ARG` sem default ainda pode chegar vazio ao build;
+retirar um `ENV` com default não cria validação no boot. Para citar um app como contraprova do ponto 2, registre
+o caso negativo executado (variável ausente/vazia), a revisão da fonte e o resultado do build ou do container.
+Não promova leitura de `Dockerfile`, relato de outra sessão ou teste de um conf diferente a medição do serviço.
 
 **Na prática:**
 
@@ -897,9 +892,14 @@ default com `minipanel-<serviço>` depende de um nome que o painel pode prefixar
 # ❌ default que aponta para o nome do container: quebra em silêncio
 ENV BACKEND_UPSTREAM=minipanel-conta-backend:4100
 
-# ✅ sem default: sem a env var, o build/boot falha alto
-ENV BACKEND_UPSTREAM
-# e o proxy recusa a rota /api quando BACKEND_UPSTREAM não vem — não serve 200 para o lugar errado
+# ✅ não declare um ENV com destino padrão;
+# a validação obrigatória vem no entrypoint, antes de gerar o conf do proxy
+```
+
+```sh
+# Exemplo de validação no entrypoint: ausente ou vazia encerra o boot com erro.
+: "${BACKEND_UPSTREAM:?Defina BACKEND_UPSTREAM}"
+# Só depois gere o conf e inicie o proxy; valide também o formato aceito pelo app.
 ```
 
 ## 14. Checklist de migração de um app

@@ -3,6 +3,14 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.13.7] — 2026-10-04
+
+Patch (`[NUI] THEMESWITCHER-A11Y-01`, `a1a036e`). **Documento: o handover da recriação de sandbox.**
+
+- **`docs/HANDOVER-SANDBOX.md`** — o que já está na `main`, a medição que sustenta o fix do
+  `ThemeSwitcher` e o WIP antigo que foi reescrito em vez de publicado. Nenhuma mudança de código:
+  os três commits anteriores (`92efee7`, `15a6c8b`, `8474532`) são os da `v1.13.6`.
+
 ## [1.13.6] — 2026-10-04
 
 Patch (`[NUI] THEMESWITCHER-A11Y-01`, `92efee7`; `cb4a2350`, `bd3451f`). **O seletor de paletas perdia o foco ao

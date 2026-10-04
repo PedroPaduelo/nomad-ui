@@ -3,6 +3,46 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.13.6] — 2026-10-04
+
+Patch (`[NUI] THEMESWITCHER-A11Y-01`, `92efee7`; `cb4a2350`, `bd3451f`). **O seletor de paletas perdia o foco ao
+selecionar ou fechar, e as setas não navigavam — nos 4 apps, num componente do pacote.**
+
+### Corrigido (código)
+
+- **`ThemeSwitcher`: teclado e retorno de foco.** Na `v1.13.5` o popover era um `listbox` artesanal que fechava
+  por clique externo e por `Escape` **desmontando a opção focada sem devolver o foco**, e sem handlers de
+  setas/`Home`/`End`. Reproduzido no Chromium nativo antes de alterar linha alguma: `Enter` e `Escape` deixavam o
+  foco no `BODY` (4/4 cada, em claro/escuro × 1440px/390px) e as quatro teclas de navegação não moviam nada
+  (16/16). A abertura, a aplicação da paleta, a persistência e o clique externo já funcionavam.
+- **A correção reusa o que o pacote já tinha:** menu de rádio do Base UI sobre o `MenuLayer` que o `Menu` do
+  próprio pacote exporta. Teclado, seleção, posicionamento e retorno de foco passam a vir da mesma primitiva dos
+  outros overlays — sem implementação paralela e sem store novo. O painel continua visualmente igual.
+- **Teste novo** `src/__tests__/themeswitcher.browser.test.tsx`: `ThemeProvider` + `PaletteProvider` +
+  `ThemeSwitcher` reais, teclado nativo do Vitest Browser, claro/escuro × 1440px/390px. Exige o contrato
+  anunciado (`listbox/option` **ou** `menu/menuitemradio`), não a forma antiga. **Falha na `v1.13.5` (24 de 36
+  casos, exit 1) e passa na `v1.13.6` (36/36).**
+
+⚠️ **O que continua não sendo afirmação:** os testes medem o pacote, não nenhum app em produção. O que cada
+consumidor tem a depois do bump é integração a medir na sessão dele.
+
+### Documentado
+
+- **§13 do padrão reconciliada com o que se sabe.** A regra (default com nome de container é dívida silenciosa)
+  já estava na `main` desde `545a1f2`; o que mudou foi a **atribuição**, não a regra:
+  - o caso do deploy da Conta passa a ser **o relato de 2026-10-03 atribuído ao orquestrador**, com o Dockerfile
+    no passado e o "200 do destino errado" marcado como **não medido**;
+  - a **dispensa generalizada para load-balance e motor sai**: ser local ao compose ou resolver por `/` é
+    propriedade do desenho, não prova de que o proxy erre para onde se espera nem de que recusa variável ausente;
+  - `ENV` sem valor **não é fail-fast** — o exemplo virou guard de entrypoint, e a frase "fail-fast é
+    comportamento, não ausência de default" entrou no texto.
+
+### Gates
+
+`npm run gates` **0** (typecheck, lint, `doc:check`, testes, `test:a11y`, build) em worktree de instalação fria:
+**185** testes unitários em 26 arquivos e **280** de navegador em 8 (244 anteriores + 36 novos). O
+`test:a11y` foi conferido **depois** do `gates`, porque "verde" e "rodou" são afirmações diferentes.
+
 ## [1.13.5] — 2026-10-03
 
 Patch (`[NUI] baa6e686`, com o gate de `0abc7931`). **O `PageHeader` espremia o `<h1>` para 207px de 390 em tela estreita — e ele é um componente dos 4 apps.**

@@ -5,9 +5,11 @@
 //   2. Toggle light/dark mode
 //
 // Visual: two buttons — palette picker (colored dots) + sun/moon toggle.
-// Palette picker opens a popover with preview swatches.
+// Palette picker opens a radio menu with preview swatches.
 
-import { useState, useRef, useEffect, useCallback, type CSSProperties } from 'react'
+import { useRef, useCallback, type CSSProperties } from 'react'
+import { Menu as BaseMenu } from '@base-ui/react/menu'
+import { MenuLayer } from './Menu'
 import { Sun, Moon, Palette, Check, ChevronDown } from 'lucide-react'
 import { useThemeStore } from '../../theme/store'
 import { useResolvedTheme } from '../../hooks/useResolvedTheme'
@@ -29,8 +31,8 @@ function ghostBtnVars(bg: string, bgHover = 'var(--surface-overlay)'): CSSProper
 
 export function ThemeSwitcher() {
   const { palette, setTheme, setPalette } = useThemeStore()
-  const [paletteOpen, setPaletteOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
 
   // Tema efetivo pelo hook único — o ícone (sol/lua) nunca diverge do que
   // o app está de fato mostrando.
@@ -40,90 +42,54 @@ export function ThemeSwitcher() {
     setTheme(isDark ? 'light' : 'dark')
   }, [isDark, setTheme])
 
-  // Click outside to close
-  useEffect(() => {
-    if (!paletteOpen) return
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setPaletteOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [paletteOpen])
-
-  // ESC to close
-  useEffect(() => {
-    if (!paletteOpen) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setPaletteOpen(false)
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [paletteOpen])
-
+  // Base UI cuida do teclado, seleção e fechamento; MenuLayer compartilha
+  // posicionamento e retorno de foco sem roubar o foco de cliques externos.
   const activePalette = PALETTES.find((p) => p.id === palette)
 
   return (
     <div ref={containerRef} className="relative flex items-center gap-1">
       {/* Palette picker */}
-      <button
-        type="button"
-        onClick={() => setPaletteOpen(!paletteOpen)}
-        aria-expanded={paletteOpen}
-        aria-haspopup="listbox"
-        aria-label="Escolher paleta de cores"
-        title="Paleta de cores"
-        className="ui-btn inline-flex items-center gap-1.5 rounded-md border-0 px-2 py-1.5 text-caption font-medium transition-colors duration-150"
-        style={ghostBtnVars(paletteOpen ? 'var(--surface-raised)' : 'transparent')}
-      >
-        {/* Color dots preview */}
-        <div className="flex -space-x-1">
-          <span
-            className="inline-block h-3 w-3 rounded-full ring-1"
-            // ring-1 usa a custom property --tw-ring-color do Tailwind;
-            // ringColor não é uma CSSProperty valida, entao setamos a var.
-            style={
-              {
-                backgroundColor: activePalette?.preview.accent ?? '#60a5fa',
-                ['--tw-ring-color' as string]: 'var(--surface-body)',
-              } as React.CSSProperties
-            }
-          />
-          <span
-            className="inline-block h-3 w-3 rounded-full ring-1"
-            // ring-1 usa a custom property --tw-ring-color do Tailwind;
-            // ringColor não é uma CSSProperty valida, entao setamos a var.
-            style={
-              {
-                backgroundColor: activePalette?.preview.amber ?? '#f59e0b',
-                ['--tw-ring-color' as string]: 'var(--surface-body)',
-              } as React.CSSProperties
-            }
-          />
-        </div>
-        <span className="hidden sm:inline">{activePalette?.name.split('+')[0].trim()}</span>
-        <ChevronDown className="h-3 w-3" aria-hidden />
-      </button>
+      <BaseMenu.Root modal={false}>
+        <BaseMenu.Trigger
+          aria-label="Escolher paleta de cores"
+          title="Paleta de cores"
+          className="ui-btn inline-flex items-center gap-1.5 rounded-md border-0 px-2 py-1.5 text-caption font-medium transition-colors duration-150"
+          style={({ open }) => ghostBtnVars(open ? 'var(--surface-raised)' : 'transparent')}
+        >
+          {/* Color dots preview */}
+          <div className="flex -space-x-1">
+            <span
+              className="inline-block h-3 w-3 rounded-full ring-1"
+              // ring-1 usa a custom property --tw-ring-color do Tailwind;
+              // ringColor não é uma CSSProperty valida, entao setamos a var.
+              style={
+                {
+                  backgroundColor: activePalette?.preview.accent ?? '#60a5fa',
+                  ['--tw-ring-color' as string]: 'var(--surface-body)',
+                } as React.CSSProperties
+              }
+            />
+            <span
+              className="inline-block h-3 w-3 rounded-full ring-1"
+              // ring-1 usa a custom property --tw-ring-color do Tailwind;
+              // ringColor não é uma CSSProperty valida, entao setamos a var.
+              style={
+                {
+                  backgroundColor: activePalette?.preview.amber ?? '#f59e0b',
+                  ['--tw-ring-color' as string]: 'var(--surface-body)',
+                } as React.CSSProperties
+              }
+            />
+          </div>
+          <span className="hidden sm:inline">{activePalette?.name.split('+')[0].trim()}</span>
+          <ChevronDown className="h-3 w-3" aria-hidden />
+        </BaseMenu.Trigger>
 
-      {/* Dark/Light toggle */}
-      <button
-        type="button"
-        onClick={toggleDarkLight}
-        aria-label={isDark ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
-        title={isDark ? 'Modo claro' : 'Modo escuro'}
-        className="ui-btn inline-flex h-8 w-8 items-center justify-center rounded-md border-0 transition-colors duration-150"
-        style={ghostBtnVars('transparent')}
-      >
-        {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-      </button>
-
-      {/* Palette popover */}
-      {paletteOpen && (
-        <div
-          role="listbox"
-          aria-label="Paletas disponíveis"
-          className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-lg border border-border bg-surface-raised shadow-lg"
+        <MenuLayer
+          popupRef={popupRef}
+          ariaLabel="Paletas disponíveis"
+          className="w-72 overflow-hidden rounded-lg p-0"
+          positioner={{ anchor: containerRef, side: 'bottom', align: 'end', sideOffset: 8 }}
         >
           <div className="border-b border-border px-3 py-2">
             <div className="flex items-center gap-1.5">
@@ -132,24 +98,26 @@ export function ThemeSwitcher() {
             </div>
           </div>
 
-          <div className="max-h-80 overflow-y-auto p-1.5">
+          <BaseMenu.RadioGroup
+            value={palette}
+            onValueChange={setPalette}
+            className="max-h-80 overflow-y-auto p-1.5"
+          >
             {PALETTES.map((p) => {
               const isActive = p.id === palette
               return (
-                <button
+                <BaseMenu.RadioItem
                   key={p.id}
-                  type="button"
-                  role="option"
-                  aria-selected={isActive}
-                  onClick={() => {
-                    setPalette(p.id)
-                    setPaletteOpen(false)
-                  }}
+                  value={p.id}
+                  label={p.name}
+                  closeOnClick
+                  nativeButton
+                  render={<button type="button" />}
                   className="ui-btn flex w-full items-start gap-3 rounded-md border-0 px-3 py-2.5 text-left transition-colors duration-150"
-                  style={
+                  style={({ highlighted }) =>
                     isActive
                       ? ghostBtnVars('var(--color-accent-muted)', 'var(--color-accent-muted)')
-                      : ghostBtnVars('transparent')
+                      : ghostBtnVars(highlighted ? 'var(--surface-overlay)' : 'transparent')
                   }
                 >
                   {/* Color swatch */}
@@ -191,12 +159,24 @@ export function ThemeSwitcher() {
                       {p.description}
                     </span>
                   </div>
-                </button>
+                </BaseMenu.RadioItem>
               )
             })}
-          </div>
-        </div>
-      )}
+          </BaseMenu.RadioGroup>
+        </MenuLayer>
+      </BaseMenu.Root>
+
+      {/* Dark/Light toggle */}
+      <button
+        type="button"
+        onClick={toggleDarkLight}
+        aria-label={isDark ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
+        title={isDark ? 'Modo claro' : 'Modo escuro'}
+        className="ui-btn inline-flex h-8 w-8 items-center justify-center rounded-md border-0 transition-colors duration-150"
+        style={ghostBtnVars('transparent')}
+      >
+        {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+      </button>
     </div>
   )
 }

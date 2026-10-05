@@ -1,8 +1,0 @@
-{
-  "extends": "@nomad/ui/tsconfig",
-  "compilerOptions": {
-    "noEmit": true,
-    "types": ["node", "vitest/globals", "@testing-library/jest-dom"]
-  },
-  "include": ["src", "vite.config.ts", "vitest.config.ts", "eslint.config.js"]
-}

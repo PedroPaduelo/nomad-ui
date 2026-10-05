@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "agentpack": {
+      "type": "http",
+      "url": "https://agentpack-api.mp.serendiped.com/mcp",
+      "headers": {
+        "Authorization": "Bearer apk_05fc1eabc7ee_UTookHjdPXb7dGDEG-atU1WJGV4C6tpm2QLrCQ9Ei2s",
+        "X-AgentPack-Project": "d8e72faa-74db-417b-abcf-61bd532313dc",
+        "X-AgentPack-Toolsets": "core,tasks,knowledge,skills,proxied"
+      }
+    },
+    "sb-load-balance": {
+      "type": "http",
+      "url": "https://sb-load-balance.mp.serendiped.com/mcp",
+      "headers": {
+        "Authorization": "Bearer fa2e109b6758637cba8e791794b4523e2b025c2817ec0548"
+      }
+    },
+    "browsers": {
+      "type": "http",
+      "url": "https://mco-browsers-browser-new.cloud.serendiped.com/mcp"
+    }
+  }
+}

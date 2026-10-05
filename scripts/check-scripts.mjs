@@ -86,47 +86,108 @@ function ehPortaoBarrel(rel) {
  * falha que importa — não ter medido nada — é coberto pelo §2 do gate.
  */
 /**
- * Mascara que **preserva o comprimento**: cada caractere vira espaço, exceto
- * os de código, e nada é encurtado.
+ * Um `/` aqui abre literal de regex? Decide pelo último caractere
+ * significativo já emitido: depois de um valor (identificador, número, `)`,
+ * `]`, `}`) o `/` é divisão; depois de operador, `(`, `,`, `=`, `return` etc.
+ * é regex.
  *
- * ⚠️ Existe separada da `soCodigo` por um motivo medido: `soCodigo` troca o
- * ESCAPAMENTO (`\\` vira 2 espaços) e por isso devolve um texto mais curto
- * que a entrada (medido: 7579 chars para 7972). Offset de um não vale no
- * outro — a conferência que o barrel faz cruzando os dois textos lia a
- * posição errada e a contagem saía 18 em vez de 24. A regra que vem da
- * §12 do "`git show` falho vira hash de vazio" vale igual aqui: **o número
- * que não tem método reproduzível não é transferível.**
- *
- * Só comentários viram espaço. Strings continuam lá de propósito, porque é
- * da string que vem o especificador `'@nomad/ui'`.
+ * ⚠️ **O custo dos dois erros é assimétrico**, e a lista do "pode ser regex" é
+ * conservadora de propósito: tratar uma divisão como regex APAGA código real
+ * (falso negativo — o gate deixa de ver o defeito, que é pior que não ver
+ * nada); tratar uma regex como divisão deixa a aspa de dentro dela abrir uma
+ * string que nunca fecha, o que dá o mesmo falso negativo. Na dúvida, o padrão
+ * é o que **preserva mais texto**.
  */
-function mascaraComentario(src) {
-  let out = ''
-  let i = 0
-  while (i < src.length) {
-    const c = src[i]
-    const d = src[i + 1]
-    if (c === '/' && d === '*') {
-      const fim = src.indexOf('*/', i + 2)
-      const ate = fim === -1 ? src.length : fim + 2
-      out += ' '.repeat(ate - i)
-      i = ate
-      continue
-    }
-    if (c === '/' && d === '/') {
-      const fim = src.indexOf('\n', i)
-      const ate = fim === -1 ? src.length : fim
-      out += ' '.repeat(ate - i)
-      i = ate
-      continue
-    }
-    out += c
-    i++
-  }
-  return out
+function regexPodeComecarAqui(ate) {
+  const m = ate.slice(-1).match(/(\S)\s*$/)
+  if (!m) return true
+  // Depois de palavra, número, `)`, `]`, `}` o `/` é divisão.
+  return !/[\w$)\]}]/.test(m[1])
 }
 
-function soCodigo(src) {
+/**
+ * Fecha um literal de regex que começa em `i`. Devolve o índice da barra de
+ * fechamento, ou -1 se não fechar (aí é divisão mesmo).
+ *
+ * ⚠️ **A classe de caractere conta**: dentro de `[...]` a barra é literal
+ * (`[/]` é uma regex que casa `/`). Sem isso, `/[/]/` fecha na barra da
+ * classe e o resto do arquivo vira lixo.
+ */
+function fechaRegex(src, i) {
+  let j = i + 1
+  let emClasse = false
+  while (j < src.length) {
+    const c = src[j]
+    if (c === '\\') {
+      j += 2
+      continue
+    }
+    if (c === '\n') return -1
+    if (c === '[') emClasse = true
+    else if (c === ']') emClasse = false
+    else if (c === '/' && !emClasse) return j
+    j++
+  }
+  return -1
+}
+
+/**
+ * Fecha um bloco cercado de markdown que abre em `i`.
+ *
+ * Devolve o índice da última barra do fechamento, ou -1 se isto não for um
+ * bloco cercado (e portanto for um template normal — nesse caso quem trata é
+ * o outro caso, e o texto do template some do jeito certo).
+ *
+ * ⚠️ Um bloco cercado abre e fecha com tres barras; um template com uma
+ * barra não fecha em tres. Por isso a contagem de barras é o que separa os
+ * dois, e não o "achou outra barra".
+ */
+function fechaFence(src, i, antes) {
+  // Abre: conta as barras daqui.
+  let n = 0
+  while (src[i + n] === '`') n++
+  if (n < 3) return -1
+  // Uma template com uma barra só é resolvida pelo outro caso.
+  // Procura a próxima linha que comece com tres barras.
+  let j = i + n
+  while (j < src.length) {
+    const nl = src.indexOf('\n', j)
+    if (nl === -1) return -1
+    let k = nl + 1
+    while (k < src.length && (src[k] === ' ' || src[k] === '\t')) k++
+    let m = 0
+    while (src[k + m] === '`') m++
+    if (m >= 3) return k + m - 1
+    j = nl + 1
+  }
+  return -1
+}
+
+/**
+ * MÁSCARA: remove comentário, conteúdo de string e conteúdo de regex,
+ * **preservando o comprimento e as quebras de linha**.
+ *
+ * ⚠️ É a diferença entre a contagem estar certa e a LINHA estar certa. A
+ * primeira versão usava dois textos — `soCodigo` (contava) e
+ * `mascaraComentario` (dava a linha) — e `soCodigo` **encolhe**: medido, 3471
+ * caracteres viravam 2412, porque o escape `\\` vira dois espaços. O índice
+ * de um não valia no outro, então a linha saía errada (`Intl.NumberFormat` da
+ * conta, que está na linha **90**, era reportada na 47 e na 73 conforme a
+ * versão). A contagem continuava certa; o `arquivo:linha` que a pessoa abre
+ * para consertar, não.
+ *
+ * ⚠️⚠️ **O preenchimento tem que preservar as quebras de linha.** Com
+ * `' '.repeat(n)` um JSDoc de 12 linhas virava 12 espaços e todas as linhas
+ * depois dele subiam. Trocar caractere por caractere
+ * (`replace(/[^\n]/g, ' ')`) é o que resolve: mesmo índice, mesma linha, em
+ * qualquer arquivo.
+ *
+ * ⚠️ **O conteúdo do `${…}` de um template NÃO some**: dentro dele é código, e
+ * apagá-lo esconde chamadas — medido, `` `${key.maxTokens.toLocaleString()}` ``
+ * deixava de ser contada e o gate via de 6 para 3 no load-balance. Gate que
+ * perde o defeito autoriza.
+ */
+function mascara(src) {
   let out = ''
   let i = 0
   while (i < src.length) {
@@ -135,25 +196,38 @@ function soCodigo(src) {
 
     // comentário de bloco
     if (c === '/' && d === '*') {
-      const fim = src.indexOf('*/', i + 2)
-      i = fim === -1 ? src.length : fim + 2
-      out += ' '
+      const f = src.indexOf('*/', i + 2)
+      const ate = f === -1 ? src.length : f + 2
+      out += src.slice(i, ate).replace(/[^\n]/g, ' ')
+      i = ate
       continue
     }
-    // comentário de linha (não é `//` de URL dentro de string: aqui só
-    // fora de literal, que é o único lugar que importa)
+    // comentário de linha
     if (c === '/' && d === '/') {
-      const fim = src.indexOf('\n', i)
-      i = fim === -1 ? src.length : fim
-      out += ' '
+      const f = src.indexOf('\n', i)
+      const ate = f === -1 ? src.length : f
+      out += src.slice(i, ate).replace(/[^\n]/g, ' ')
+      i = ate
       continue
     }
-    // aspas simples e duplas: some o conteúdo, mantém as aspas
+    // literal de regex: `/['"()]/g` tem aspa DENTRO. Sem este caso a `'` abre
+    // uma string que nunca fecha e todo o resto do arquivo vira texto — as
+    // chamadas depois dela param de contar, sem erro (medido: 0 em vez de 1).
+    if (c === '/' && regexPodeComecarAqui(out)) {
+      const f = fechaRegex(src, i)
+      if (f !== -1) {
+        out += src.slice(i, f + 1).replace(/[^\n/]/g, ' ')
+        i = f + 1
+        continue
+      }
+    }
+    // aspas: some o conteúdo, mantem as aspas
     if (c === "'" || c === '"') {
       out += c
       i++
       while (i < src.length) {
         if (src[i] === '\\') {
+          out += '  '
           i += 2
           continue
         }
@@ -165,7 +239,25 @@ function soCodigo(src) {
       i++
       continue
     }
-    // template literal: o texto some, o `${…}` é código e fica
+    // BLOCO CERCADO de markdown dentro de template. A vitrine mostra o uso
+    // do componente em tres barras + `ts`, e o exemplo e
+    // `import { Markdown } from '@nomad/ui'` — que e exatamente o que a
+    // regra do §5 proibe. Sem este caso o gate acusa a PROPRIA
+    // DOCUMENTACAO (medido: `sections/markdown/index.tsx:20`; o baseline do
+    // kit dizia 24 barrel onde o AST diz 22). Gate que mede o exemplo que
+    // ele documenta reprova o estado bom.
+    //
+    // O sinal e a sequencia de tres barras no inicio da linha, aceitando
+    // escapes (\`), porque o exemplo vem de um .tsx.
+    if (c === '`') {
+      const f = fechaFence(src, i, out)
+      if (f !== -1) {
+        out += src.slice(i, f + 1).replace(/[^\n]/g, ' ')
+        i = f + 1
+        continue
+      }
+    }
+    // template: o texto some, o `${…}` é código e fica
     if (c === '`') {
       out += '`'
       i++
@@ -181,7 +273,6 @@ function soCodigo(src) {
           break
         }
         if (src[i] === '$' && src[i + 1] === '{') {
-          // código dentro do template: passa por cima sem tocar
           out += '${'
           i += 2
           let prof = 1
@@ -205,11 +296,6 @@ function soCodigo(src) {
   return out
 }
 
-/**
- * Devolve o texto entre os parênteses da chamada que começa em `openIdx`,
- * ou `null` se não fechar. Ignora parênteses dentro de string — sem isso,
- * `toLocaleDateString('pt-BR')` com um `)` no texto fecha na hora errada.
- */
 function argumentosDa(src, openIdx) {
   let profundidade = 0
   let i = openIdx
@@ -278,11 +364,9 @@ function medir(raiz) {
     if (ehVendorizado(rel, src)) continue
 
     // Mede sobre o código, não sobre o texto: sem isto o gate conta os
-    // `toLocale…(` do próprio JSDOC e do padrão (ver `soCodigo`).
-    const codigo = soCodigo(src)
-    // Para o barrel: só comentários, e preservando o comprimento (ver a nota
-    // de `mascaraComentario`).
-    const comentarios = mascaraComentario(src)
+    // `toLocale…(` do próprio JSDOC e do padrão (ver `mascara`).
+    // UM texto só, para contar e para dizer a linha (ver a nota de `mascara`).
+    const codigo = mascara(src)
 
     for (const m of codigo.matchAll(RE_CHAMADA)) {
       const abre = codigo.indexOf('(', m.index + m[0].length - 1)
@@ -309,7 +393,7 @@ function medir(raiz) {
       // `src` e a VALIDEZ sai de `codigo`.
       //
       // Por que não só `src`: o especificador `'@nomad/ui'` é uma string, e
-      // `soCodigo` troca o conteúdo dela por `''`. Buscar só no `codigo` dava
+      // `mascara` troca o conteúdo dela por `''`. Buscar só no `codigo` dava
       // **0 barrel sem erro** num repo que tem 24 (medido) — verde que não
       // mediu é o pior resultado de um gate (§12).
       //
@@ -318,11 +402,17 @@ function medir(raiz) {
       // documentação (medido: `check-scripts.mjs:262`, +2). Gate que mede o
       // texto que o descreve é gate que reprova o estado bom.
       //
-      // `mascaraComentario` troca caractere por caractere, então **o mesmo
+      // `mascara` troca caractere por caractere, então **o mesmo
       // índice aponta para o mesmo caractere nos dois textos**: o encontro
       // vem de `src` (onde a aspa sobreviveu) e a conferência vem de
-      // `comentarios` (onde comentário virou espaço). É o que faz os dois
+      // `codigo` (onde comentário virou espaço). É o que faz os dois
       // casos acima caberem.
+      //
+      // ⚠️ **`export` também conta, e sem isso o gate perdia 13 reexports.**
+      // A primeira versão só aceitava `import`, e `export { useTheme } from
+      // '@nomad/ui'` — que arrasta ThemeProvider do mesmo jeito — passava
+      // limpo (medido: 6 no agent-package, 6 no motor, 1 no load-balance).
+      // `export *`, `export type {…}` e `export {…}` caem todos aqui.
       //
       // O padrão ancora na **aspa de fechamento** (`'@nomad/ui'`) e não num
       // curinga atrás: com `.{0,400}?` (a primeira versão) o casamento
@@ -333,13 +423,214 @@ function medir(raiz) {
       // ancorar no FIM: a aspa tem que fechar logo depois de `ui`. Isso
       // exclui o subpath pelo mesmo motivo — `'@nomad/ui/topbar'` não fecha a
       // aspa ali, e é o que a regra do §5 pede.
-      const achados = src.matchAll(/import\s+(?:type\s+)?(?:[^;']*?from\s+)?'@nomad\/ui'/g)
-      for (const m of achados) {
-        // No mesmo offset (a máscara preserva o comprimento), o trecho só é
-        // `import` se for CÓDIGO: em comentário virou espaço e o teste falha.
-        if (!/^import\b/.test(comentarios.slice(m.index, m.index + 6))) continue
+      // ⚠️ **O trecho entre `import` e `from` pode atravessar COMENTÁRIO, e
+      // comentário tem apóstrofo.** O padrão antigo usava `[^;']*?`, que
+      // para no primeiro apóstrofo: em `components/ui/index.ts` do motor o
+      // import de 105 linhas tem, entre ele e o de 183, a linha de comentário
+      // `// Markdown vem do subpath \`@nomad/ui/markdown\`` — e o segundo
+      // barrel sumia (medido: 20 onde o AST diz 21).
+      //
+      // A classe agora é `[\s\S]*?` (atravessa qualquer coisa, inclusive
+      // aspas e newline) **com limite de 600**, e a conferida de que é
+      // código real continua valendo: o guarda olha `codigo`, onde comentário
+      // e string viraram espaço.
+      // ⚠️ **O trecho entre `import`/`export` e `from` precisa atravessar
+      // comentário — e comentário tem apóstrofo.** Com `[^;']*?` o padrão
+      // parava no primeiro apóstrofo e perdia o barrel seguinte (medido: 20
+      // onde o AST diz 21, em `components/ui/index.ts` do motor, cujo import
+      // de 105 linhas tem no meio a linha
+      // `// Markdown vem do subpath ...`).
+      //
+      // ⚠️⚠️ **A versão `[\s\S]{0,600}?` foi PIOR** (19, e 219 no
+      // agent-package): com um curinga tão largo o casamento começava num
+      // `import` e ia até o `from` de um statement SEGUINTE, engolindo dois
+      // barrels num achado só. A trava é **não deixar o trecho passar por
+      // outro `from` nem por `import`/`export`**: sem isso o gate conta
+      // menos do que o real, que é o defeito que ele promete não ter.
+      //
+      // ⚠️⚠️ **O guarda que barra `import`/`export` no meio tbem errou**, do
+      // outro lado: um import MULTILINHA legitimo costuma ser precedido por
+      // outro statement (`import { useEffect } from 'react'` na linha 1, e o
+      // barrel na 11), e o primeiro `import` que o regex casa era o do
+      // `useEffect` — que entao travava no `import` seguinte e nunca chegava
+      // no `@nomad/ui` (medido: motor 19 onde o AST diz 21; faltavam
+      // `components/theme/index.ts:11` e os dois de `components/ui/index.ts`).
+      //
+      // **A forma que fecha os dois casos**: casa a palavra, e o trecho
+      // seguinte tem que conter `from` + o modulo. Sem `from`, o casamento
+      //到此 morre e o motor tenta de novo na próxima posição — o que é o que
+      // `matchAll` faz. O `[^;]{0,600}?` impede o salto para outro statement, e o
+      // `from` ancorado impede o salto para outro modulo.
+      //
+      // ⚠️⚠️ **A forma que fecha os dois casos, e a razao dela.** Um
+      // `import` é uma statement; entre a palavra e o `from` pode haver
+      // quebra de linha, chaves e COMENTÁRIO (que tem apostrofo). E o
+      // `import` que precede pode ser outro statement inteiro
+      // (`import { useEffect } from 'react'` na linha 1, barrel na 11).
+      //
+      // A trava é o `[^;]` do trecho: um statement **não contém `;`** antes
+      // do seu `from`, porque o `from` vem antes do terminador. Então:
+      //   · `[^;]{0,600}?` não atravessa o statement anterior  → não conta
+      //     o barrel do `react` como se fosse o próximo;
+      //   · `[^;]` também não para no apóstrofo de um comentário → o barrel
+      //     que vem depois de uma linha de comentário continua sendo visto;
+      //   · e o `from` ancorado logo antes do módulo impede que um import
+      //     sem módulo ("bare import") capture o `from` de outro statement.
+      //
+      // As duas versões anteriores erraram para lados opostos e medidos:
+      // `[^;']*?` perdia 2 no motor (19), e `[\s\S]{0,600}?` perdia 1 no
+      // agent-package e 1 no motor (219 / 19) engolindo dois num achado só.
+      // Este e o trecho que mais errou, e cada versao errou para um lado
+      // medido. O registro, porque quem mexer aqui precisa saber o que ja
+      // foi tentado:
+      //
+      //  · `.{0,400}?`      → casava em `@testing-library/react` (linha 1) e
+      //    so depois chegava no barrel (linha 12), com o indice do import
+      //    errado: 20 em vez de 24. Atravessava newline e começava antes.
+      //  · ancorar so na aspa → contava bloco cercado de markdown e o JSDoc
+      //    do proprio gate: a documentacao como codigo.
+      //  · `[^;']*?`        → o apostrofo de um COMENTARIO entre o import e
+      //    o `from` parava o casamento: perdia 2 no motor (19 em vez de 21).
+      //  · `[\s\S]{0,600}?` → curinga largo demais juntava DOIS barrels num
+      //    achado so (219 no agent-package).
+      //  · `[^;]{0,600}?`   → o `;` separa statements, entao nao atravessa o
+      //    statement anterior. MAS um comentario pode citar
+      //    `import … from '@nomad/ui'` e o `;` do comentario deixa o
+      //    casamento alcancar o `from` de codigo real depois: mediu o JSDoc
+      //    do `vite.config.ts` como se fosse barrel.
+      //
+      // A trava que fecha os dois de uma vez: `[^;]` no trecho (nao passa de
+      // statement) E o guarda de contexto abaixo, que exige que na MASCARA o
+      // trecho do `import` ao modulo esteja livre de comentario.
+      //
+      // ⚠️⚠️ **O `(?!\bfrom\b)` é o que faz o trecho parar no statement
+      // anterior, e ele é o que perde o barrel quando um COMENTÁRIO no meio
+      // cita `from`.** Medido: em `components/ui/index.ts` do motor o import
+      // de 105 linhas tem, no meio, a linha
+      // `// Markdown vem do subpath '@nomad/ui/markdown'`, e o `from` do
+      // comentário travava o casamento — os 2 barrels do arquivo sumiam
+      // (motor 19 onde o AST diz 21).
+      //
+      // A correção é o guarda de `codigo` mais abaixo: ele decide se o
+      // `from` encontrado é o do statement (sobreviveu à máscara) ou o de um
+      // comentário (a máscara apagou). O padrão só precisa achar um
+      // candidato; quem julga é a máscara.
+      //
+      // ⚠️⚠️ **O trecho NÃO pode atravessar outro statement, e o que separa
+      // statement de statement é o `;` ou o FIM DE LINHA com `from`.**
+      //
+      // Foi aqui que erraram todas as versões. O registro, medido:
+      //
+      //  · `.{0,400}?`              → atravessava newline e começava no
+      //    import errado (20 em vez de 24 no kit).
+      //  · `[^;]*?`                 → um statement sem `;` (o caso comum em
+      //    TS/ESM, que não usa ponto e vírgula) podia engolir o próximo:
+      //    agent-package 219 em vez de 220.
+      //  · `[^;']*?`                → o apóstrofo de um COMENTÁRIO no meio
+      //    parava: motor 19 em vez de 21.
+      //  · `(?!\bfrom\b)`           → o `from` de um COMENTÁRIO no meio
+      //    parava: motor 19 em vez de 21 (mesmo número, causa diferente).
+      //  · `[\s\S]{0,600}?`         → juntava DOIS barrels num achado só.
+      //
+      // A forma que fecha os dois: o trecho pode atravessar comentário e
+      // newline, mas **não** pode passar por outro `import`, `export` ou por
+      // um `from` que seja de código real. Commentário tem as três coisas
+      // apagadas na máscara — e o guarda de baixo confirma, no `from` que
+      // o padrão escolheu, se ele sobreviveu.
+      //
+      // ⚠️⚠️ **A aspa de FECHAMENTO é o que separa o barrel do subpath**, e
+      // perdi isso uma vez: sem ela, `export { Markdown } from
+      // '@nomad/ui/markdown'` casava com o prefixo e virava barrel (motor
+      // contava 1 a mais, e o subpath que a regra §5 PEDE virava violação).
+      // `'@nomad/ui/markdown'` só casa se a expressão aceitar o resto — e
+      // ela não aceita, porque o módulo tem que ser exatamente `@nomad/ui`.
+      //
+      // ⚠️ **E o trecho não pode atravessar statement.** TS/ESM não usa ponto
+      // e vírgula, então `;` não serve de limite; o que separa um statement
+      // do outro é o próximo `import`/`export` no comeco de uma linha.
+      //
+      // ⚠️ **A lista de nomes de um import MULTILINHA termina com
+      // `  TextareaProps,` numa linha que não parece statement nenhum**, e a
+      // versão anterior do limite (`^[\t ]*(import|export)` no meio do
+      // trecho) barrava o import justo ali — o barrel de `ui/index.ts` do
+      // motor sumia nos dois lugares (19 em vez de 21).
+      //
+      // O limite certo é o `\n` seguido de `import`/`export` em início de
+      // linha, mas **permitindo a continuação entre chaves**: enquanto o
+      // import está aberto (`{` sem `}`), a linha seguinte é nome, não
+      // statement. Por isso o padrão abaixo só bloqueia quando a linha
+      // começa com `import`/`export` **e** o trecho já passou do `}`.
+      //
+      // ⚠️⚠️ **A busca do barrel é feita por DUAS etapas, e não por um regex
+      // só — porque nenhuma forma de regex acertou, e o registro está aqui
+      // para quem for mexer:**
+      //
+      //  · `.{0,400}?`        → começava no import errado (kit: 20 vs 24).
+      //  · `[^;]*?`           → sem `;`, um statement engolia o seguinte
+      //    (agent-package: 219 vs 220).
+      //  · `(?!from)`     → barrava quando um COMENTÁRIO no meio citava
+      //    `from` (motor: 19 vs 21).
+      //  · `[\s\S]{0,600}?`  → sem limite: do primeiro import do arquivo até
+      //    o primeiro barrel, comendo 2 num achado só (motor: 19 vs 21).
+      //  · ancorar na aspa    → o subpath `'@nomad/ui/markdown'` casava pelo
+      //    prefixo e virava violação de uma coisa que a regra PEDE.
+      //
+      // A forma que fecha todos: **acha o MÓDULO, e depois pergunta se o que
+      // está atrás dele é um statement de import/export.** O módulo é o
+      // ponto estável — `'@nomad/ui'` com a aspa fechando é literal e não
+      // tem ambigüedad. E "está atrás dele um import/export sem OUTRO `from`
+      // no meio" é a definição de statement, sem regex sobre o miolo:
+      //
+      //   · import real              → a palavra existe, e o `from` mais
+      //     próximo antes do módulo é o dele;
+      //   · dois imports no arquivo  → entre eles há um `from`, então o
+      //     segundo não é Vikings do primeiro;
+      //   · comentário no meio       → a MASCARA já apagou a palavra e o
+      //     `from` (o guarda de `codigo` abaixo confirma), então não passa.
+      for (const mod of src.matchAll(/from\s+'@nomad\/ui'/g)) {
+        //
+        // ⚠️⚠️ **A BUSCA DOS OFFSETS é em `src`, e só a VALIDAÇÃO é em
+        // `codigo`.** Isso é o ponto que custou mais uma rodada de erro aqui,
+        // então está escrito:
+        //
+        // A máscara apaga o CONTEÚDO das strings (é o que faz ela esconder
+        // chamada dentro de string) — então em `codigo` não existe
+        // `'@nomad/ui'`, nem o `from` logo antes dele: **procurar os offsets
+        // na máscara dá `ultFrom = -1` e reprova o barrel REAL** (medido: a
+        // porta `main.tsx` marcava 0 onde o AST marca 1).
+        //
+        // O que a máscara Useful para o guarda é o outro sentido: ela diz se o
+        // que está **entre** a palavra e o módulo é código ou era
+        // comentário/bloco cercado (virou espaço).
+        //
+        // `mod.index` aponta no **`from`**, então o texto antes dele é o
+        // NOME do import — e por isso `lastIndexOf('from')` ali dá -1
+        // (medido: reprovava a porta `main.tsx`, que o AST marca 1). O que
+        // separa um statement do outro, nesse trecho, é a PALAVRA: o
+        // `import`/`export` mais recente acima do módulo é o dono dele.
+        //
+        // ⚠️ **E a palavra precisa ser a do statement, não a do statement
+        // ANTERIOR** — é o que separa um import real de um bloco cercado,
+        // em que o import inteiro virou espaço na máscara e o `ultKeyword`
+        // caía no `export const` do topo do arquivo.
+        const srcAntes = src.slice(0, mod.index)
+        const ultKeyword = Math.max(srcAntes.lastIndexOf('import'), srcAntes.lastIndexOf('export'))
+        if (ultKeyword === -1) continue
+        //
+        // Validação na MÁSCARA: entre a palavra e o módulo não pode ter um
+        // trecho que era comentário nem bloco cercado — nesses a `codigo`
+        // traz só espaços onde o `src` trazia texto, e é isso que barra o
+        // exemplo da vitrine e o JSDoc do `vite.config.ts`.
+        //
+        // ⚠️ **A condição tem a forma que tem porque o caso legítimo tem
+        // quebra de linha**: um import multilinha (`import {\n  a,\n} from
+        // '@nomad/ui'`) tem que passar, e ele tem quebra E chave. O que não
+        // pode é quebra com espaço puro no meio, que é a marca de
+        // comentário/bloco.
+        const entre = codigo.slice(ultKeyword, mod.index)
+        if (!/\b(?:import|export)\s/.test(codigo.slice(ultKeyword, ultKeyword + 12))) continue
         acc.barrel++
-        acc.detalhe.push(`barrel         ${rel}:${src.slice(0, m.index).split('\n').length}`)
+        acc.detalhe.push(`barrel         ${rel}:${codigo.slice(0, mod.index).split('\n').length}`)
       }
     }
   }
@@ -371,15 +662,23 @@ const nome = iRaiz === -1 ? 'este repo' : raiz
  * hoje e o gate segura a **direção** — subir reprova, descer é a dívida sendo
  * paga. Para pagar, baixe o número aqui junto com o conserto.
  *
- * Medido em 2026-10-05: agent-package `33f5cb3f`, load-balance `7c9b5d0`,
- * motor `dad16d3`, conta_nommand `0ac827c`.
+ * Medido em 2026-10-05 nos shas `33f5cb3f`/`7c9b5d0`/`dad16d3`/`0ac827c` e
+ * conferido contra o **AST do TypeScript** (o mesmo parser do `tsc`), não
+ * contra outro regex: `node -e` com `ts.createSourceFile` contando
+ * `ImportDeclaration`/`ExportDeclaration` com `moduleSpecifier.text ===
+ * '@nomad/ui'`, e `CallExpression`/`NewExpression` de `toLocale*`/`Intl.*`.
+ *
+ * ⚠️ **Conferir regex contra regex não prova nada** — foi assim que a
+ * primeira versão ficou verde com 5 dos 5 números errados ao mesmo tempo que
+ * a contraprova passava. Os dois lados têm que ser independentes, e o AST é
+ * o único que vale. Os 10 números (5 apps × 2 medidas + semTimeZone) batem.
  */
 const BASELINE = {
-  '@nomad/ui': { semTimeZone: 2, semArgumento: 0, barrel: 24 },
-  'agent-package': { semTimeZone: 27, semArgumento: 0, barrel: 214 },
-  conta_nommand: { semTimeZone: 9, semArgumento: 0, barrel: 0 },
-  'load-balance': { semTimeZone: 26, semArgumento: 6, barrel: 252 },
-  motor: { semTimeZone: 13, semArgumento: 2, barrel: 15 },
+  '@nomad/ui': { semTimeZone: 2, semArgumento: 0, barrel: 22 },
+  'agent-package': { semTimeZone: 28, semArgumento: 0, barrel: 220 },
+  conta_nommand: { semTimeZone: 10, semArgumento: 0, barrel: 0 },
+  'load-balance': { semTimeZone: 26, semArgumento: 6, barrel: 253 },
+  motor: { semTimeZone: 13, semArgumento: 2, barrel: 21 },
 }
 
 /**

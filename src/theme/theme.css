@@ -1,0 +1,25 @@
+/* ───────────────────────────────────────────
+   @nomad/ui/theme.css — o tema dos apps Nomad.
+
+   No CSS de entrada do app (Tailwind 4), no lugar do `@import 'tailwindcss'`:
+
+     @import '@nomad/ui/theme.css';
+
+   Traz o `@import 'tailwindcss'` (tailwindcss é peer), o `@theme` e os tokens
+   do agent-package (globals.css INTEIRO, sem alterações) e o `@source` que faz
+   o Tailwind do app gerar as classes usadas pelos componentes do pacote. O
+   app não precisa configurar nada além deste import.
+
+   O layout de casca do agent-package (.app-layout, .sidebar, .toolbar…) é
+   opcional: `@import '@nomad/ui/responsive.css';`.
+   ─────────────────────────────────────────── */
+
+@import './globals.css';
+
+/* Classes usadas pelo pacote. Aponta para o código-fonte publicado junto
+   (`files` inclui `src/`): funciona no app que instala (node_modules/@nomad/ui/src)
+   e na vitrine, que roda do src sem build. Os testes ficam de fora. */
+@source '../';
+@source not '../test';
+@source not '../**/*.test.tsx';
+@source not '../**/*.test.ts';

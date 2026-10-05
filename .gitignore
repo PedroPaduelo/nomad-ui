@@ -1,0 +1,23 @@
+node_modules/
+dist/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+.wt/
+.ref/
+test-results/
+.vitest/
+.vitest-attachments/
+examples/*/node_modules/
+examples/*/dist/
+.caps/
+.*.mjs
+
+# Credenciais: os .mcp.json das pastas de sessao carregam o token Bearer de
+# cada sandbox e o do AgentPack. NUNCA versionar.
+.mcp.json
+*/.mcp.json
+orquestrador/.mcp.json

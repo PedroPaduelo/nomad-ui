@@ -1,0 +1,38 @@
+{
+  // Typecheck de todo o TypeScript do repo (pacote, testes e configs), usado
+  // também pelo ESLint type-aware. O build de tipos usa o tsconfig.build.json.
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true,
+    "types": ["node", "vite/client", "vitest/globals", "@testing-library/jest-dom"],
+    // Os testes em `src/__tests__/*.browser.test.tsx` consomem as sub-entradas
+    // do próprio pacote; o vitest.a11y.config.ts (vite) já tem aliases; aqui só
+    // é preciso para o typecheck rodar. Quem publica o pacote não carrega isso
+    // (tsconfig.build.json exclui testes).
+    "paths": {
+      "@nomad/ui": ["./src/index.ts"],
+      "@nomad/ui/markdown": ["./src/markdown.ts"],
+      "@nomad/ui/theme-boot": ["./src/lib/themeBoot.ts"],
+      "@nomad/ui/topbar": ["./src/topbar/index.ts"],
+      "@nomad/ui/data": ["./src/data/index.ts"]
+    }
+    // Sem alias `@/`: dentro de src/ os imports são relativos, senão os .d.ts
+    // publicados apontariam para caminhos que não existem no app que instala.
+  },
+  "include": ["src", "presets", "vite.config.ts", "vitest.config.ts", "vitest.a11y.config.ts"]
+}

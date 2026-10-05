@@ -1,0 +1,7 @@
+/* A vitrine consome o tema como qualquer app: um import só. */
+@import '@nomad/ui/theme.css';
+@import '@nomad/ui/responsive.css';
+@import '@nomad/ui/topbar.css';
+
+/* Classes usadas só pela vitrine (fora do src/ do pacote). */
+@source './';

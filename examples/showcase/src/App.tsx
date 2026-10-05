@@ -240,7 +240,7 @@ export function App() {
         brand: (
           <div className="flex items-center gap-2 text-sm font-semibold text-text-primary">
             <NommandMark size={20} />
-            Vitrine @nomad/ui
+            Subagente A — Vitrine @nomad/ui
           </div>
         ),
         actions: <AppearanceControls />,

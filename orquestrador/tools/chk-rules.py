@@ -185,6 +185,97 @@ def check_H6_sha_antes_de_reset(cwd: str) -> tuple[bool, str]:
     return True, "principio: anotar SHA antes de `git reset --hard` em repo alheio (ver memoria H6)"
 
 
+def check_H7_mcp_json_nao_rastreado(cwd: str) -> tuple[bool, str]:
+    """NENHUM `.mcp.json` pode estar rastreado pelo git. Eles carregam token Bearer.
+
+    Medido 2026-10-05 (LEAK-01, task d120eeb6): o `tmp/` e' clone do repo publico
+    `PedroPaduelo/nomad-ui` e as 6 pastas de sessao estao dentro dele. O commit
+    `1d93e04` versionou os 6 `.mcp.json` (12 headers Authorization) e DELETOU o
+    `.gitignore` que os ignorava. Anonimo baixava por raw.githubusercontent.com.
+
+    Dois armadilhas que esta regra precisa cobrirt:
+      1. `.gitignore` sozinho nao basta: arquivo JA rastreado nunca e' ignorado.
+         O ignore so vale depois do `git rm --cached` (medido: `git check-ignore`
+         continuava dando "nao ignora").
+      2. A regra tem de reprovar, nao so descrever. Por isso o autoteste cria um
+         repo com `.mcp.json` rastreado e exige que a regra reprove.
+
+    Instrumento: `git ls-files` no repo que contem o cwd.
+    """
+    repo = _git_raiz(cwd)
+    if not repo:
+        return True, f"cwd sem repo git ({cwd}) — nada a conferir"
+    r = subprocess.run(
+        ["git", "-C", repo, "ls-files"],
+        capture_output=True, text=True, timeout=10,
+    )
+    if r.returncode != 0:
+        return True, f"git ls-files falhou em {repo} (pular)"
+    rastreados = [p for p in r.stdout.splitlines() if p.endswith(".mcp.json")]
+    if rastreados:
+        return False, (
+            f"{len(rastreados)} `.mcp.json` RASTREADO(S) em {repo} — carregam token "
+            f"Bearer. Tira do indice com `git rm --cached <arquivo>` (o arquivo fica "
+            f"em disco, a sessao nao quebra): {', '.join(rastreados[:6])}"
+        )
+    return True, f"nenhum .mcp.json rastreado em {repo}"
+
+
+def _git_raiz(cwd: str) -> str:
+    """Raiz do repo git que contem `cwd` ('' se nao houver)."""
+    r = subprocess.run(
+        ["git", "-C", cwd, "rev-parse", "--show-toplevel"],
+        capture_output=True, text=True, timeout=10,
+    )
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def check_H8_tmp_e_casa_nao_repo_de_produto(cwd: str) -> tuple[bool, str]:
+    """`/home/nommand/code/tmp` e' a CASA (MCP, CLAUDE.md, regras), nao um clone de produto.
+
+    Medido 2026-10-05: `tmp/` tem remote `PedroPaduelo/nomad-ui` — o repo da NUI,
+    publico — e as 6 pastas de sessao estao DENTRO dele. Qualquer `git add` numa
+    pasta de sessao versiona dentro do repo do produto, e foi assim que os
+    `.mcp.json` com token foram parar no ar.
+
+    Instrumento: `git -C tmp remote get-url origin` e compara com os 5 repos de
+    produto da casa. Se `tmp` for repo de um deles, a fronteira LOCAL/SANDBOX
+    esta quebrada por construcao.
+    """
+    tmp = "/home/nommand/code/tmp"
+    if not Path(tmp).exists():
+        return True, "tmp/ nao existe (ok)"
+    r = subprocess.run(
+        ["git", "-C", tmp, "remote", "get-url", "origin"],
+        capture_output=True, text=True, timeout=10,
+    )
+    if r.returncode != 0:
+        return True, "tmp/ nao e repo git (ok — casa sem repo)"
+    remote = r.stdout.strip()
+    # normaliza: tira esquema e sufixo .git, compara so owner/repo.
+    # (sem isso a comparacao silenciosamente nunca casa: "…nomad-ui.git" != "…nomad-ui")
+    normal = remote.lower().removeprefix("https://").removeprefix("http://")
+    normal = normal.removeprefix("git@github.com:").removeprefix("github.com/")
+    if normal.endswith(".git"):
+        normal = normal[: -len(".git")]
+    repos_casa = {
+        "nomad-ui": "pedropaduelo/nomad-ui",
+        "conta_nommand": "pedropaduelo/conta_nommand",
+        "agent-package": "pedropaduelo/agent-package",
+        "motor": "pedropaduelo/motor",
+        "load-balance": "pedropaduelo/load-balance",
+    }
+    for nome, esperado in repos_casa.items():
+        if normal == esperado:
+            return False, (
+                f"tmp/ e' a CASA mas tem o remote do repo de PRODUTO `{nome}` "
+                f"({remote}). Qualquer `git add` numa pasta de sessao versiona dentro "
+                f"do repo do produto — foi assim que os .mcp.json vazaram (LEAK-01). "
+                f"A regra e' LOCAL=só gestão, TRABALHO=só sandbox."
+            )
+    return True, f"tmp/ remote={remote} (nao e repo de produto — ok)"
+
+
 # -------------------------------------------------------------------------
 
 RULES.update({
@@ -202,6 +293,8 @@ RULES.update({
     "G3":  ("Porta de dev server livre antes de subir",            check_G3_porta_livre),
     "H1":  ("Instrumento novo tem --autoteste que prova leitura",  check_H1_instrumento_prova_que_le),
     "H6":  ("Anotar SHA antes de `git reset --hard` em repo alheio", check_H6_sha_antes_de_reset),
+    "H7":  ("Nenhum .mcp.json rastreado no git (carrega token Bearer)", check_H7_mcp_json_nao_rastreado),
+    "H8":  ("tmp/ e' a casa, nao um clone de repo de produto",         check_H8_tmp_e_casa_nao_repo_de_produto),
 })
 
 
@@ -227,6 +320,8 @@ def autoteste() -> int:
         ("G3", (cwd_home, 5173)),
         ("H1", ()),
         ("H6", (cwd_home,)),
+        ("H7", (cwd_home,)),
+        ("H8", (cwd_home,)),
     ]
     erros = 0
     for rid, args in casos:
@@ -241,10 +336,68 @@ def autoteste() -> int:
             erros += 1
             continue
         print(f"  {rid}: ok={ok}  msg={msg[:80]}")
+
+    # --- contraprova: as regras novas tem de REPROVAR no caso que existe pra pegar.
+    # Gate que so' passa e' letra morta (ver execfilesync-apaga-o-caso-negativo).
+    erros += _contraprova_H7()
+    erros += _contraprova_H8()
+
     if erros:
         print(f"\nautoteste FALHOU ({erros} erro(s))")
         return 2
     print("\nautoteste: OK — o detector le")
+    return 0
+
+
+def _contraprova_H7() -> int:
+    """H7 tem de reprovar num repo com `.mcp.json` rastreado, e passar sem ele.
+
+    Monta um repo temporario de verdade — `git ls-files` num repo de mentira nao
+    valeria nada, porque o instrumento que a regra usa e' o proprio git.
+    """
+    import shutil
+    import tempfile
+
+    tmp = tempfile.mkdtemp(prefix="chk-h7-")
+    try:
+        subprocess.run(["git", "init", "-q"], cwd=tmp, capture_output=True, timeout=20)
+        subprocess.run(["git", "config", "user.email", "t@t"], cwd=tmp, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "t"], cwd=tmp, capture_output=True)
+
+        # caso BOM: nenhum .mcp.json rastreado -> tem de passar
+        Path(tmp, "package.json").write_text("{}\n")
+        subprocess.run(["git", "add", "package.json"], cwd=tmp, capture_output=True)
+        ok_bom, msg_bom = check_H7_mcp_json_nao_rastreado(tmp)
+        print(f"  H7 contraprova(caso bom): ok={ok_bom}  msg={msg_bom[:70]}")
+        if not ok_bom:
+            print("  H7: FALHA — reprovou no caso bom (falso positivo)")
+            return 1
+
+        # caso RUIM: .mcp.json rastreado -> tem de REPROVAR
+        Path(tmp, "sessao", ).mkdir(exist_ok=True)
+        Path(tmp, "sessao", ".mcp.json").write_text('{"a":1}\n')
+        subprocess.run(["git", "add", "-f", "sessao/.mcp.json"], cwd=tmp, capture_output=True)
+        ok_ruim, msg_ruim = check_H7_mcp_json_nao_rastreado(tmp)
+        print(f"  H7 contraprova(caso ruim): ok={ok_ruim}  msg={msg_ruim[:70]}")
+        if ok_ruim:
+            print("  H7: FALHA — o .mcp.json rastreado NAO foi acusado (gate decorativo)")
+            return 1
+        return 0
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _contraprova_H8() -> int:
+    """H8 tem de reprovar quando tmp/ tem remote de repo de produto (estado atual)."""
+    tmp = "/home/nommand/code/tmp"
+    if not Path(tmp).exists():
+        print("  H8 contraprova: tmp/ nao existe, pulando")
+        return 0
+    ok, msg = check_H8_tmp_e_casa_nao_repo_de_produto(tmp)
+    print(f"  H8 contraprova(estado real): ok={ok}  msg={msg[:100]}")
+    if ok:
+        print("  H8: NAO REPROVOU — se tmp/ tem remote de produto, tem de acusar")
+        return 1
     return 0
 
 
@@ -275,7 +428,7 @@ def main() -> int:
             continue
         desc, fn = RULES[rid]
         # dispatch dos args por id
-        if rid in ("A1", "A2", "E2", "E4", "E5", "F7", "H6"):
+        if rid in ("A1", "A2", "E2", "E4", "E5", "F7", "H6", "H7", "H8"):
             ok, msg = fn(args.cwd)
         elif rid == "B3":
             ok, msg = fn(args.title or "sem titulo")

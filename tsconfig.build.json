@@ -1,0 +1,14 @@
+{
+  // Só os tipos publicados (dist/types). O JS sai do vite build.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist/types",
+    "rootDir": "src",
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "exclude": ["src/test", "src/**/*.test.ts", "src/**/*.test.tsx"]
+}

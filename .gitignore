@@ -18,7 +18,7 @@ examples/*/dist/
 
 # Credenciais: os .mcp.json das pastas de sessao carregam o token Bearer de cada
 # sandbox e o do AgentPack. NUNCA versionar.
-# Estas regras existiam no 0db926a (03/10). O revert 937a249 trouxe de volta um
+# Estas regras existiam no 0db926a (03/10). O checkout do 937a249 trouxe um
 # .gitignore de outra pasta, sem elas, e o a534d9f deletou o arquivo inteiro.
 .mcp.json
 */.mcp.json

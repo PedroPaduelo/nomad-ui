@@ -167,7 +167,7 @@ export function App() {
             Início
           </Label>
           <h2 id="inicio-title" className="text-title text-text-primary">
-            Subagente B — Vitrine @nomad/ui
+            Vitrine @nomad/ui
           </h2>
           <p className="mt-1 max-w-[90ch] text-body text-text-secondary">
             O kit, o tema e a barra Nomad compartilhados por todos os apps. Troque a paleta e o
@@ -240,7 +240,7 @@ export function App() {
         brand: (
           <div className="flex items-center gap-2 text-sm font-semibold text-text-primary">
             <NommandMark size={20} />
-Subagentes A e B — Vitrine @nomad/ui
+            Subagente A — Vitrine @nomad/ui
           </div>
         ),
         actions: <AppearanceControls />,

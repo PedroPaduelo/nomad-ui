@@ -1,0 +1,25 @@
+node_modules/
+dist/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+.wt/
+.ref/
+test-results/
+.vitest/
+.vitest-attachments/
+examples/*/node_modules/
+examples/*/dist/
+.caps/
+.*.mjs
+
+# Credenciais: os .mcp.json das pastas de sessao carregam o token Bearer de cada
+# sandbox e o do AgentPack. NUNCA versionar.
+# Estas regras existiam no 0db926a (03/10). O revert 937a249 trouxe de volta um
+# .gitignore de outra pasta, sem elas, e o a534d9f deletou o arquivo inteiro.
+.mcp.json
+*/.mcp.json
+orquestrador/.mcp.json

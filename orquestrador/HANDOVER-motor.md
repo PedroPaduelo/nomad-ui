@@ -4,18 +4,44 @@
 
 ---
 
-## 1. Estado de produção (2026-10-17)
+## 1. Estado de produção (2026-10-20)
 
 | Serviço | ID | Commit | Estado | Última mudança |
 |---|---|---|---|---|
-| motor-be-ws | XfpK4JQ6dIQ8bVd1T0IBY | fa44a999 | Up 12h (healthy) | deploy 2026-10-16 |
-| motor-worker-ws | kttpPrtp3QiiJz2DZetcB | fa44a999 | Up (recriado 13:40) | env 30 dias, 2026-10-17 |
-| motor-fe-ws | XOXZjJVaX-d7vn-rruoRY | fa44a999 | Up 12h (healthy) | deploy 2026-10-16 |
+| motor-be-ws | XfpK4JQ6dIQ8bVd1T0IBY | 038bcc3c | Up (healthy) | deploy 2026-10-20 (B8ZN51_xR6NMYdTcsQSlJ) |
+| motor-worker-ws | kttpPrtp3QiiJz2DZetcB | 038bcc3c | Up (6 filas ativas) | deploy 2026-10-20 (Y-n66mAGWidybcX18IRA1) |
+| motor-fe-ws | XOXZjJVaX-d7vn-rruoRY | 038bcc3c | Up | deploy 2026-10-20 (ZoiCuYH7Oemch-VmM-4db) |
 
-**Commit de produção: `fa44a999`** (main). Deploy ordem autorizada: be → worker → fe, executada.
+**Commit de produção: `038bcc3c`** (main). Deploy ordem autorizada: be → worker → fe.
+
+### Deployados em 2026-10-20 (bb7024b4 → 038bcc3c, 2 merges)
+4. **`f7a39332` — tool fechada por padrão** (`fix/tool-call-colapsada-1019`): a tool nascia ABERTA e nunca fechava (3 elos: `blocks.tsx` passava `defaultIsOpen` sempre → `tool-calls.tsx` abria só a rodando → `useState` não reinicializa e a `key` do caller é estável → a tool já terminada continuava aberta). Correção: `useState(false)` fixo em `ToolCallBlock.tsx:92` + prop `defaultIsOpen` REMOVIDA do contrato (impede reintroduzir). Preservado: clique abre/fecha, ícone/duração, conteúdo ao expandir, fetch do resultado. Cobre o subagente (mesmo componente; a conversa do subagente JÁ nascia fechada). Prova em prod: bundle `index-1MS4_20X.js` byte a byte idêntico ao build local (sha256 a3441deb…), `useState(!1)` no código servido.
+5. **`038bcc3c` — bug do "não salvou" ao salvar setup** (`fix/setup-secret-save-1019`, 12 commits): o front **adivinhava** o que o servidor gravou; o segredo volta redigido (`•••`) e a URL é canonizada, então o retrato do salvo nunca batia com o rascunho → `isDirty` true para sempre → barra presa em "1 alteração não salva" + botão Descartar + Duplicar desabilitado. **Correção na causa:** o front reconcilia o rascunho com a **RESPOSTA do servidor** (`useReconcile.ts`, `secret-reconcile.ts`) e compara por TEXTO (nenhuma comparação cola URLs distintas); o espelho `proxy-url.ts` do FE foi **DELETADO**; o BE passou a normalizar o **override** (não o body) em `setups/service.ts:467` (POST) e `:559` (PATCH), depois do Zod e antes do `preserveStoredSecrets` — o no-op do body era bug pré-existente de `114bfbbb`. `originOf` do FE alinhado ao do BE (0 divergências em 20 vetores). Prova em prod: `grep normalizeOverrideURLs` no container → linhas 467/559; bundle `index-E37v4Tos.js` byte a byte idêntico ao build local (sha256 9eab727d…); marcador `sentSecretsOf` presente no chunk servido. **Falta o clique humano** para confirmar o efeito na tela.
+
+### Validação adversarial do deploy 038bcc3c (2026-10-21) — 5 agentes, revisor adversarial
+**[PROVADO]** `038bcc3c` nos três serviços (pendingUpdate null). No container de prod: `normalizeOverrideURLs` nas linhas **51 (import), 467 (POST), 559 (PATCH)**, na ordem Zod(444/524) → normalize(467/559) → `preserveStoredSecrets`(469/560) — conferido por `docker_exec`, não por leitura de código.
+**[PROVADO]** Agulhas de controle refeitas pelo revisor: BE — mutar para chamar com o body → **4 failed / 3 passed**; revertido → 7/7. Regressão ampliada `be/src/setups/` + `secret-origin-paridade` = **39/39**, 0 pulos, contra Postgres local real (5433) + Redis (6380) + `be/.env` com UUID válido. FE — mutação que neutraliza a conciliação → **19 failed** (assinatura exata: `expected saved / received dirty`); revertido → **330/330** em 35 arquivos, 0 pulos. Árvore dos dois lados limpa no fim (`git status --porcelain` vazio).
+**[PROVADO]** Bundle: **42/42 assets servidos byte-idênticos** ao build local (38 js + 4 css); `index-E37v4Tos.js` sha256 `9eab727d…`, `page-DD2QAS5j.js` sha256 `b2218d5…`; chunk velho `mount-BInVqvc8.js` → **404**, novo `mount-QsnF-y8g.js` → 200.
+**[PROVADO]** Runtime: 3.000 linhas de log do BE, **zero level≥50, zero 5xx**; `/healthz` 200, `/readyz` 200. Retenção: `mailboxUnconsumedDays:30` no boot log + deleção observada à 01:14.
+**[REFUTADO]** "Marcador `sentSecretsOf` ausente = falta a correção" — **FALSO**: a função **está** no bundle, só com identificador mangled (`function hr(e){let n=e.basic?.apiKey…}`). A causa é mangling, **não** tree-shaking. O marcador positivo `__url.` (só existe a partir de `038bcc3c`, `git grep` em `038bcc3c^` vazio) está presente **só** no chunk de setups.
+**[REFUTADO]** Contagens de marcadores publicadas (por linha, não por ocorrência): real no chunk servido = `__url.`=1, `basic.apiKey`=**4**, `context.compactor.apiKey`=**4**, `•••`=**14**, `hasStoredApiKey`=**10**. Local idêntico — a igualdade 42/42 continua de pé, os números publicados é que não.
+**[REFUTADO]** Status codes publicados (200×1454, 401×3): real = 200×1369, 201×5, 302×3, 401×5, 404×1; `/api/threads` = 632×200 + 3×201 + 2×401 (o "469, todas 200" é falso). E "3001 linhas parseadas como JSON" é falso: 3.000 linhas, 2.832 JSON + 168 texto.
+**[REFUTADO]** O aviso `REAPER_ENABLED!=1` **não está no log de produção** (0 ocorrências de `REAPER_ENABLED!=1`, `NENHUMA replica`, `orfaos de crash`; o único "reaper" é a rota `/api/system/reaper`). Veio do BE local da SB.
+**[NÃO PROVADO]** Suíte completa do BE (só os arquivos do commit; as 7 falhas pré-existentes do commit não foram reproduzidas — sem baseline).
+
+**Dois riscos de higiene (novos):**
+- **Dois lockfiles para o mesmo front:** raiz = react-query 5.101.2 / rolldown 1.2.11; `fe/` = 5.104.0 / 1.2.12 (md5 distintos). **Só o `fe/` reproduz o bundle de prod.** Qualquer verificação futura de "bundle local == servido" precisa do mesmo recipe do Docker (`npm ci` com `fe/package-lock.json`, `VITE_API_BASE=/`, `VITE_WS_BASE=/`, conteúdo integral do `fe/`) — o build com o `node_modules` da raiz produz 9 chunks divergentes (falso-negativo).
+- **SB `motor`: `be/.env` com `DEFAULT_ORG_ID` inválido ⇒ `url-matriz` falha com 7 SKIPPED** (verde falso). Sem sobrepor `DEFAULT_ORG_ID`/`DEFAULT_USER_ID` em UUID válido, a suíte não prova nada.
+
+### Deployados em 2026-10-18 (fa44a999 → bb7024b4, 3 merges)
+1. **`ce5ca6c1` — prompt agnóstico + seed v1** (`prompt-agnostico-1018` + `feat/seed-setups-padrao`): system-prompt.md reescrito agnóstico (famílias nativas 1-linha, sem catálogo hardcoded); `ensureStandardSetups` idempotente, roda no boot (fatal) + listSetups (best-effort). Seed v1 criou 6 setups na org default f2bde715.
+2. **`05d9686c` — SEM teto de tempo de turno** (`fix/subagent-sem-limite-tempo-1018`): `turnTimeoutMs: 60*60_000 → 0` (teto era **ÚNICO** e compartilhado entre chat e subagente — remover tirou dos dois, inseparável no desenho); watchdog de lease do MCP (`mcp-pool.ts`) teve teto fantasma de 5 min removido junto. Intactos: abort do usuário, heartbeat 25s, stall 5 min, TTL MCP 2 min. Rollback por env `AGENT_TURN_TIMEOUT_MS` > 0 sem código.
+3. **`bb7024b4` — setups v2 profissionais** (`feat/setups-v2-profissionais`): lineup de 9 (explorador/planejador/executor/revisor/pesquisador/debugger reescritos + testador/seguranca/documentador novos), prompts densos (protocolo, critérios de pronto, formato de entrega, damping de mercado), configOverride/subagentPolicy por papel (effort, maxStepsPerTurn, maxDepth — NUNCA basic.model, o .strict() rejeita). Migração por **fingerprint**: prompt gravado === texto v1 exato → migra conteúdo (preservando name/description/override customizados do operador, version++ DM-20, WHERE anti-TOCTOU com fingerprint completo); customizado → nunca toca. Fixture v1 hardcoded no teste com teste de deriva. Prova em prod (boot 23:37): 6 `migrated` + 3 `created`.
+
+### ⚠️ PENDENTE: rotação de credenciais do motor-be-ws
+Em 2026-10-18 um agente de deploy leu `/proc/1/environ` do container `minipanel-motor-be-ws` para caçar GIT_SHA — **as credenciais do conjunto (DATABASE_URL, AUTH_SECRET, SESSION_ENC_KEY, OIDC, etc.) foram para o transcript do agente**. Dono avisado; rotação é dele.
 
 ### 30 dias de retenção — APLICADO E PROVADO
-
 - Env criada no painel: `RETENTION_MAILBOX_UNCONSUMED_DAYS = "30"` (isSecret false), serviço worker, id `nHAPW8LiPwXqaAndQY49C`, 13:36:32.
 - Container recriado: deployment `6hk_7dJm8WS16IWBsJ9pN`, mesmo commit fa44a999, zero código trocado.
 - Boot 13:40:22 confirma `"mailboxUnconsumedDays":30` no bloco `"retention"` — linha literal conferida.
@@ -28,25 +54,23 @@
 - É a fila interna que avisa a thread-pai que um subagente terminou. `consumedAt IS NULL` = não entregue ainda. Drain atômico `UPDATE ... SET consumed_at = now() ... FOR UPDATE SKIP LOCKED` = exatamente-uma entrega entre réplicas. Postgres por escolha (não Redis): não pode perder mensagem, volume baixo.
 - O usuário NÃO vê UI de mailbox (zero tela/rota/métrica). Vê o efeito: linha do subagente virar `done` na timeline + mensagens digitadas durante turno rodando enfileirarem.
 - 6 produtores (ws/handler, orchestrator spawn, fim de subagente, reaper, notify-launcher, mid-turn-drain), 2 consumidores (drain no início do turno, drainNotifications mid-turn).
-- Bloco unconsumed só apaga órfãos: kind=subagent_result, consumedAt=null, mais velho que N dias, thread dona TERMINAL. Grava o texto em `events` da thread dona antes de apagar (3 escritas/linha). Consumidos seguem 7 dias.
+- Bloco unconsumed só apaga órfãos: kind=subagent_result, consumedAt=null, mais velho que N dias, thread dona TERMINAL. Grava o texto em `events` da thread dona antes de apagar (2 escritas/linha). Unconsumed seguem 7 dias.
 - Antes da aplicação: 1.255 mailbox_items, 5 unconsumed, `mailboxUnconsumedDeleted: 0` nos 4 ticks observados. Orçamento 10.000/tick → folga ~2.000×.
 
 ### Gaps de UI de subagentes (scout 2026-10-17)
-
 Todos com "fio pronto, falta ligar", mapeados em `fa44a999`:
 
 | # | Gap | Onde está o fio |
 |---|---|---|
 | 1 | Linha da timeline (SubagentBlock `blocks.tsx:417`) é beco sem saída — não abre a conversa do filho | Sidebar `SubagentSidebar.tsx:230` tem `onSelectSubagent`; `SubagentConversationDialog.tsx:57` |
-| 2 | `tokens` vem no `SubagentNotification` do WS mas `SubagentItem` (`types.ts:128-160`) nem declara o campo | Patch `timeline-live.ts:263-269` não copia `tokens`; workflow já mostra custo/tokens em `RunSummary.tsx:129,131` |
+| 2 | `tokens` vem do `SubagentNotification` do WS mas `SubagentItem` (`types.ts:128-160`) não declara o campo | Patch `timeline-live.ts:263-269` não copia `tokens`; workflow já mostra custo/tokens em `RunSummary.tsx:129,131` |
 | 3 | "Cancelado em cascata" × "cancelado" não diferenciam na tela | `rotuloDeCancelamento()` em `orphan-badge.ts:52-58`, só usada em teste; `abortKind` gravado em `timeline-live.ts:319` |
-| 4 | Órfão não marcado na timeline | `statusDeOrfao()` em `orphan-badge.ts:32` sem consumidor; sidebar usa `textoDeOrfao()` em `SubagentSidebar.tsx:98,102` |
-| 5 | Edge de merge do grafo estático, sem pulso | `SubagentGraph.tsx:239-240`, `graph-layout.ts:244`; gating `prefers-reduced-motion` já existe (`:41,487-493`) |
+| 4 | Órfão não marcado na timeline | `statusDeOrfao()` em `orphan-badge.ts:32` sem consumidor; sidebar usa `textoDeOrfao()` em `orphan-badge.ts:98,120` |
+| 5 | Edge de merge do grafo estático, sem pulso | `orphan-badge.ts:52-58`; gating `prefers-reduced-motion` já existe (`:41,487-493`) |
 
 **Workflow pausado** dos 5 gaps: `wf_77f293c5-072`, script salvo em `motor-ui-gaps-1017-wf_77f293c5-072.js`. Nenhum worktree criado ainda. Comando de retomada no `HANDOVER-motor-1017.md` na raiz do orquestrador. Quando der PRONTO: mockups → go do dono → deploy só do fe.
 
 ### VETO e histórico de correções (2026-10-16)
-
 Os 4 bloqueios do VETO fecharam: envs no compose (`compose.prod.yml:213-215`), cota antes do SELECT (`retention.ts:414`), cota com teste (`retention-cota-300-invariant.test.ts`), índice parcial (`20261016150000_mailbox_unconsumed_order`, `CREATE INDEX` comum, não CONCURRENTLY). A migração mediu 1.4–1.9s no local (1,22M itens, 101 666 unconsumed) e 704–1 151 ms pior espera de escrita durante o build. Em prod são 5 unconsumed.
 
 Lições gravadas na memória:
@@ -58,8 +82,22 @@ Lições gravadas na memória:
 - `CREATE INDEX CONCURRENTLY` é proibido (deadlock 40P01 que derrubou o Motor 5/5).
 - CJK caracteres corromperam um memory — verificar com grep antes de confiar.
 
-### Pendências do Motor
+### Retomar subagente parado — ANÁLISE de 2026-10-21 (nada executado)
+Pedido do dono: *"quando eu pego o agente principal e ele para, eu preciso que ele dê um toque no agente que estava parado… ele tem que conseguir ir lá e mandar uma mensagem para esse agente, para esse agente continuar."*
 
+**Veredito: dá pra fazer.** O motor **não tem barreira de status** para retomar — o dispatcher despacha por **fila** (o status é consequência, não causa); o único leitor de status é a guarda `filaDeSubagenteCancelado`, que descarta **só `subagent_result`**. A mensagem de pessoa passa e joga o turno. Padrão de código a copiar já existe: `orchestrator.ts:863-868` (`data: { notifiedParentAt: null, status: 'active' }`).
+
+**Os 3 bloqueios:** (1) o `status` nunca volta a `active` (só 2 escritas de `status:'active'` em produção, nenhuma em `runTurn`); (2) o pai nunca é avisado — o abort marca `notifiedParentAt` (`abort-cascata.ts:384`) e o `onTurnEnd` só notifica se for `NULL` → `claimed.count===0` → sai calado; (3) não há botão nem tool — as nativas são só `agent_spawn`/`agent_list`/`agent_status`/`agent_abort`, e o `MailboxKind.agent_message` existe no enum ("reservado") mas **nenhum código o usa** (e plugá-lo sem mexer no `toItem` faz a tool falhar em silêncio).
+
+**Bugs encontrados no caminho:**
+- **`agent_spawn` com o mesmo `toolCallId` anuncia "retomado" e NÃO retoma** — o predicado `isTerminalAndNotified` (`orchestrator.ts:374-377`) só olha `errored`/`aborted`, então `completed` (o caso normal) cai no `reused` → **retorna sem `dispatcher.submit`**. O pai acredita que retomou; o filho está morto. Nenhum teste cobre.
+- **`subagent_abort` não é persistido** — emitido só via WS (`orchestrator.ts:1202`), sem `appendEvent`. O `timeline-history.ts` (caminho do F5) não tem case para ele, e o `subagent_spawned` reabre com `status:'running'` hardcoded (`:167`) → **após F5 o bloco do subagente cancelado na conversa do pai volta a "trabalhando…"**. Provavelmente é o sintoma do dono. E o rótulo "cancelado em cascata" **nunca aparece em produção** (`rotuloDeCancelamento` só tem 1 consumidor, e é um teste).
+
+**Ordem recomendada (invertida pelo revisor adversarial):** (0) persistir o `subagent_abort` + case no `timeline-history.ts`; (1) o botão (`POST /api/threads/:id/resume`, 3–4 arquivos, **0 migração**) — o composer tem que ser componente novo, o `SubagentConversationDialog` está com teto **congelado em 415** na `SIZE_EXCEPTIONS`; (2) a tool `agent_send` (só se o PAI é que dá o toque). **Em qualquer fase: contador de retomadas** — `turnTimeoutMs=0` deixa o subagente retomado sem teto de duração, e o `turn-caps` é por turno.
+
+Relatório visual: `https://sb-agent-package-audit-p5173.mp.serendiped.com/retomar-subagente.html` · memória `motor-retomar-subagente-parado`.
+
+### Pendências do Motor
 - Doc debt `docs/_pendente-operacao-leak-mcp.md` (4 seções não coladas em `operacao.md`) — **adiada pelo dono**.
 - Comentário `retention.ts:197` diz "mata 5 testes" (real: 6); "8841 de 40015" não verificável (adv mediu 8753). Sem mudança de comportamento, não urgente.
 - `docs/typecheck-9-erros.md` alega "@fastify/busboy 2.1.1 é o que o runtime usa" de 57 pacotes divergentes — **nunca medido**, não virar fato sem medição.

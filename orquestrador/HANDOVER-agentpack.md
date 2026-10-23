@@ -18,7 +18,21 @@
 
 ---
 
-## 2. Último deploy confirmado (2026-10-14)
+## 2. Último deploy confirmado (2026-10-21)
+
+`main = abf8e399` no **frontend** `agentpack-frontend-ws` (`b0e_tBASjYIb_MOl7mADq`,
+container `97ce020830dd`, `pendingUpdate: null`). O backend segue em
+`bkPQ4WIaFbF140AZ0-3T1`.
+
+- **Correção dos cards de Projetos no ar** (2026-10-21): o card invadia o
+  vizinho (flex item sem `min-w-0`) e o 3 pontinhos não abria o menu. Commit
+  `2ac3ae5e` (correção) + `abf8e399` (gate reforçado, só teste). Bundle
+  `Home-luCh0W6u.js` (era `Home-HiFcmfBb.js`), sha256 `abafc741…`, **byte-idêntico
+  ao build local**. Gate: 3/3 rodadas verdes, mutantes M0–M5 todos morrem.
+  Relatório: https://sb-agent-package-audit-p5173.mp.serendiped.com/deploy-cards.html
+  Detalhe completo em `~/.claude/projects/-home-nommand-code-tmp/memory/agentpack-cards-projetos-min-w-0.md`.
+
+### Deploy anterior (2026-10-14) — ainda vale como baseline
 
 `main = 75af7df4` (backend `bkPQ4WIaFbF140AZ0-3T1` + frontend `Qf7awKX88ZWbHyiyR0S1r`, ambos `gitSha 75af7df4`). Verificado por curl e por auditor independente:
 

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "mypanel": {
+        "type": "remote",
+        "url": "https://painel.mp.serendiped.com/api/mcp",
+        "oauth": false,
+        "headers": {
+          "Authorization": "Bearer mp_MnGIvH3jWbmV8JybPTjCtV0msAt274Q_oCD4DYIhhDF3BgW7"
+        },
+        "protocol": "2026-07-28"
+      },
+      "agentpack-orq": {
+        "type": "remote",
+        "url": "https://agentpack-api.mp.serendiped.com/mcp",
+        "oauth": false,
+        "headers": {
+          "Authorization": "Bearer apk_8f6383ff8216_KoR7o_mTkVWfynmeMccJTOBxY2qnS4pwABSN2bX_cXk",
+          "X-AgentPack-Project": "0fc352ec-3d2b-4ce5-9e11-cee9c0d40156",
+          "X-AgentPack-Toolsets": "core,tasks,knowledge,skills,proxied,github"
+        },
+        "protocol": "auto"
+      },
+      "browsers": {
+        "type": "remote",
+        "url": "https://mco-browsers-browser-new.cloud.serendiped.com/mcp",
+        "oauth": false
+      }
+    }
+  }
+}

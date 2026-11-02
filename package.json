@@ -1,6 +1,6 @@
 {
   "name": "@nomad/ui",
-  "version": "1.14.0",
+  "version": "1.15.0",
   "description": "Kit, tema (11 paletas), barra Nomad, camada de dados e presets compartilhados pelos apps da Nomad. Base: kit do AgentPack.",
   "type": "module",
   "license": "UNLICENSED",
@@ -78,10 +78,12 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
+    "@types/lodash": "^4.17.27",
     "axios": "^1.20.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.48.0",
+    "recharts": "^2.15.4",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
     "zustand": "^5.0.15"

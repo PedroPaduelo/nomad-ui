@@ -15,6 +15,7 @@
    ─────────────────────────────────────────── */
 
 @import './globals.css';
+@import './chart.css';
 
 /* Classes usadas pelo pacote. Aponta para o código-fonte publicado junto
    (`files` inclui `src/`): funciona no app que instala (node_modules/@nomad/ui/src)

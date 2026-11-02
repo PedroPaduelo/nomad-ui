@@ -149,3 +149,32 @@ export { CodeBlock, highlightJson } from './CodeBlock'
 export type { CodeBlockProps } from './CodeBlock'
 export { StatusDot, statusDotVariants } from './StatusDot'
 export type { StatusDotProps, StatusDotTone } from './StatusDot'
+export {
+  Chart,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  LineChart,
+  AreaChart,
+  BarChart,
+  PieChart,
+  ChartSparkline,
+} from './Chart'
+export type {
+  ChartConfig,
+  ChartConfigEntry,
+  ChartSeries,
+  ChartVariant,
+  ChartSize,
+  ChartValueFormatter,
+  ChartRow,
+  ChartProps,
+  CartesianChartProps,
+  PieChartProps,
+  ChartContainerProps,
+  ChartSparklineProps,
+  ChartTooltipContentProps,
+  ChartLegendContentProps,
+} from './Chart'

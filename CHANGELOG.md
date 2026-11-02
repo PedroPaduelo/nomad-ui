@@ -3,6 +3,37 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.15.0] — 2026-11-02
+
+Minor. Gráficos de dados no kit, sobre recharts 2.15 como dependência do pacote.
+
+### Adicionado
+
+- **Gráficos (`Chart*`).** `LineChart`, `AreaChart` e `BarChart` recebem `data`, `xKey`, `xFormatter`, `categories` e `series` (com `dataKey`). `PieChart` recebe `data`, `dataKey`, `nameKey` e `donut`. Todos têm `ariaLabel` obrigatório, `variant` (`default` ou `gradient`), `size` (`sm`, `md`, `lg`, `xl`), `hideLegend` e `valueFormatter`. `ChartSparkline` recebe `data` como números ou como linhas, e sem `ariaLabel` é decorativo. `Chart` despacha pela prop `type`.
+- **Peças para gráfico próprio.** `ChartContainer` (leva a `config`), `ChartConfig`, `ChartTooltip` e `ChartLegend` (os do recharts), e o conteúdo do kit, `ChartTooltipContent` e `ChartLegendContent`.
+- **Cores por token de texto.** A rampa tem quatro slots, `--chart-1` a `--chart-4`, definidos em `src/theme/chart.css` a partir de `text-accent`, `text-primary`, `text-secondary` e `text-tertiary`. A paleta garante 4.5:1 para texto, e isso cobre o 3:1 que objeto gráfico exige. Não há hex em componente de gráfico, e um teste trava isso. Âmbar fica fora, porque é a cor do agente.
+- **Comportamento.** Ponto sem vizinho com valor vira marcador, para não sumir entre lacunas. Número em texto vira número. Valor ausente ou não finito aparece como traço no tooltip. Animação desligada com `prefers-reduced-motion`. Pizza sem foco de teclado no grupo.
+- **Marcador com chave.** O `dot` que o recharts renderiza como filho de lista devolve sempre um elemento com `key`, senão o React avisa de chave ausente no console do consumidor.
+- **Testes.** Unitários da regra de cor e das peças de tooltip e legenda. No navegador, axe em todas as paletas × claro/escuro, cor de série conferida no DOM real, pontos isolados, eixo X formatado e sparkline decorativo.
+
+### Dependências
+
+- `recharts` `^2.15.4` como dependência de runtime. O front e o load-balance usam a mesma linha, então o tipo do componente casa com o que o app consome.
+- `@types/lodash` `^4.17.27` como dependência. Os tipos públicos do recharts importam `lodash`, e sem ele um consumidor com `skipLibCheck` desligado recebe `TS7016`.
+- O lock do pacote passa de 594 para 632 entradas: recharts, o fecho dele (d3, victory-vendor, react-smooth) e `@types/lodash`.
+- **Atenção:** o registry marca recharts 2.x como deprecated (“1.x and 2.x branches are no longer active”). A linha 2.x fica para casar com os apps. A migração para 3.x é trabalho de uma versão própria.
+
+### Testes de infraestrutura
+
+- `vitest.a11y.config.ts` pré-otimiza `recharts` e as dependências que a coleta descobre. Sem isso, a suíte de navegador recarregava no meio e falhava com “Failed to fetch dynamically imported module”.
+
+### Fora deste release
+
+- Rampa categórica própria por paleta. Hoje são quatro slots de texto, sem cor de dado.
+- Recursos de gráfico que os apps usam e o kit ainda não tem: barras horizontais (`orientation`), cor por barra (`cellColors`), `yDomain`, `referenceY`, `pointAnnotation`, `stacked`, `showGrid`, `valueLabels`, `onRowClick` e largura de rótulo de categoria. Quem migra esses usos continua com o gráfico local até a próxima versão.
+- `StatTile` com valor de texto, dica e delta; `Meter`, `BarList` e `StackBar` (barras com cor por item); `EmptyState` sem altura fixa.
+- `Markdown` com tabelas e lista de tarefas; realce de código além do JSON; `target` e `rel` em links externos.
+
 ## [1.14.0] — 2026-11-01
 
 Minor. Adiciona peças ao kit (`MainLayout` com `topBar`, `MobileNavButton` exportado) e corrige a árvore de acessibilidade do `Sidebar` e a versão que o `check-lock` mostra.

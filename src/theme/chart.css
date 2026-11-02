@@ -1,0 +1,27 @@
+/* ── Gráficos (Chart*) ─────────────────────────────────────────────────────
+   Rampa categórica: cada slot aponta para um token de texto da paleta ativa.
+   A paleta garante 4.5:1 para texto sobre as superfícies, o que cobre o 3:1
+   que objeto gráfico exige. Nunca cor fixa, e âmbar fica de fora porque é a
+   cor do agente. Sem a rampa própria por paleta (pendente), há quatro slots. */
+
+:root {
+  --chart-1: var(--color-text-accent);
+  --chart-2: var(--color-text-primary);
+  --chart-3: var(--color-text-secondary);
+  --chart-4: var(--color-text-tertiary);
+}
+
+.nomad-chart .recharts-cartesian-grid line,
+.nomad-chart .recharts-cartesian-axis-line,
+.nomad-chart .recharts-cartesian-axis-tick-line {
+  stroke: var(--color-border);
+}
+
+.nomad-chart .recharts-text {
+  fill: var(--color-text-tertiary);
+}
+
+.nomad-chart .recharts-surface:focus,
+.nomad-chart .recharts-wrapper:focus {
+  outline: none;
+}

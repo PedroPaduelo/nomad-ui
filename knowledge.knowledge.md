@@ -114,6 +114,6 @@ de cada gate, e de quem é cada um, estão no documento.
 - Padrão completo: `link:repo:docs/padrao-frontend.md` — **a fonte da verdade**, é o que os apps copiam.
 - Casos por app: `link:repo:docs/auditoria-apps.md`.
 - Changelog do pacote: `link:repo:CHANGELOG.md`.
-- Vitrine (11 paletas × claro/escuro, todas as peças): https://sb-nomad-ui-app.mp.serendiped.com
+- Vitrine (11 paletas × claro/escuro): https://sb-nomad-ui-app.mp.serendiped.com
 - Como mudar o padrão: edite `docs/padrao-frontend.md` no repo, rode `node scripts/check-doc.mjs` e
   `node scripts/knowledge-page.mjs` para regerar esta página. Nunca edite o padrão nesta página.

@@ -29,6 +29,28 @@ export default defineConfig({
       // falham a importação com "Failed to fetch dynamically imported
       // module"). Vira um flake só na primeira rodada.
       'zod',
+      // `recharts` entra com o componente de gráfico (v1.15.0). Sem pré-otimizar,
+      // a primeira coleta do navegador descobre a dependência e recarrega a página
+      // no meio da suite, com o mesmo "Failed to fetch dynamically imported module".
+      'recharts',
+      // Dependências que a coleta a frio descobre varrendo o código do kit. Sem
+      // pré-otimizar, uma coleta quente as descobre no meio da suite e recarrega a
+      // página ("Failed to fetch dynamically imported module"). Os internos do
+      // vitest ficam de fora: é ele que os otimiza.
+      'react',
+      'react-dom',
+      'react/jsx-dev-runtime',
+      'react/jsx-runtime',
+      'axe-core',
+      'class-variance-authority',
+      'clsx',
+      'lucide-react',
+      'sonner',
+      'tailwind-merge',
+      'zustand',
+      'zustand/middleware',
+      '@testing-library/react',
+      '@testing-library/user-event',
     ],
   },
   test: {

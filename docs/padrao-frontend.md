@@ -38,7 +38,7 @@ Duas regras sobre o próprio documento, porque é ele que os quatro apps copiam:
 | Vite              | 8.3 (`@vitejs/plugin-react` 6)                                                                                                                                                                      |                                                                         |
 | TypeScript        | 6.0 (`~6.0.3`)                                                                                                                                                                                      | `strict`, `noUnusedLocals`, `noUnusedParameters`; sem `baseUrl`         |
 | Tailwind CSS      | 4.3 (`@tailwindcss/vite`)                                                                                                                                                                           | configuração em CSS (`@theme inline`), sem `tailwind.config.js`         |
-| Kit               | `@base-ui/react` 1.8, `class-variance-authority` 0.7, `tailwind-merge` 3.7, `clsx` 2, `lucide-react` 1.48                                                                                           | tudo via `@nomad/ui`                                                    |
+| Kit               | `@base-ui/react` 1.8, `class-variance-authority` 0.7, `tailwind-merge` 3.7, `clsx` 2, `lucide-react` 1.48, `recharts` 2.15                                                                                           | tudo via `@nomad/ui`                                                    |
 | Rotas             | `react-router-dom` 7.18                                                                                                                                                                             | data router (`createBrowserRouter`)                                     |
 | Dados             | `@tanstack/react-query` 5, `axios` 1, `zod` 4.6, `zustand` 5                                                                                                                                        | cliente gerado com `@hey-api/openapi-ts` onde o backend publica OpenAPI |
 | Testes            | `vitest` 5, Testing Library (react 16, user-event 14, jest-dom 7), `jsdom`, `msw` 2, `axe-core` 4, `@vitest/browser-playwright` 5                                                                   |                                                                         |
@@ -211,6 +211,27 @@ pacote; o hash dele entra no `script-src` da CSP. São `themeBootScript` (o scri
 `themeBootPlugin` (o plugin de Vite), do subpath `@nomad/ui/theme-boot` — os três exportados e construídos desde a
 `v1.0.0`.
 
+### Gráficos (`Chart*`)
+
+Os gráficos de dados vêm do barrel `@nomad/ui`, montados sobre recharts 2.15. O recharts é dependência do pacote, então o app não o instala. As cores vêm de tokens de texto da paleta ativa (`--chart-1` a `--chart-4`), e o app não escreve hex em gráfico.
+
+```tsx
+<LineChart ariaLabel="Requisições por dia" data={rows} xKey="dia" series={[{ dataKey: 'requests', label: 'Requisições' }]} />
+<AreaChart ariaLabel="Tokens por dia" data={rows} xKey="dia" categories={['tokens']} variant="gradient" />
+<BarChart ariaLabel="Erros por rota" data={rows} xKey="rota" categories={['erros']} hideLegend />
+<PieChart ariaLabel="Distribuição por modelo" data={rows} nameKey="modelo" dataKey="uso" donut />
+<ChartSparkline data={[1, 3, 2, 5]} /> {/* decorativo: sem ariaLabel */}
+```
+
+- `ariaLabel` é obrigatório nos gráficos de dados: é o nome do gráfico para leitor de tela. Vazio, o gráfico vira decorativo.
+- `xFormatter` formata o eixo X, e `valueFormatter` formata os valores.
+- `size` vai de `sm` a `xl`: 160 a 400 px nos gráficos, 24 a 72 px no sparkline.
+- `variant="gradient"` preenche áreas e barras. Em linha não tem efeito.
+- A legenda aparece por padrão. `hideLegend` a esconde.
+- Além de quatro séries as cores repetem. Linha e área se diferenciam pelo tracejado.
+- `Chart` despacha para o gráfico pela prop `type`. Gráfico próprio usa `ChartContainer` com `config`, mais `ChartTooltip`, `ChartLegend`, `ChartTooltipContent` e `ChartLegendContent`.
+- Âmbar fica fora da rampa, porque é a cor do agente.
+
 ### Versões publicadas (o que cada uma trouxe)
 
 | Tag      | Traz                                                                                                                                                                                                                                                                                                 | Apps devem                                                                                                       |
@@ -267,6 +288,7 @@ pacote; o hash dele entra no `script-src` da CSP. São `themeBootScript` (o scri
 | `v1.13.6` | **`ThemeSwitcher`: teclado e retorno de foco.** O seletor de paleta perdia o foco ao selecionar ou fechar, e as setas não navegavam. Agora usa o menu de rádio do Base UI sobre o `MenuLayer` do próprio pacote | nada a mudar no código; o painel continua igual, muda o teclado e o foco |
 | `v1.13.7` | Só documento: `docs/HANDOVER-SANDBOX.md`, o handover da recriação de sandbox. Nenhuma mudança de código | nada a mudar |
 | `v1.14.0` | **`MainLayout` aceita `topBar`** (barra do app no lugar do `Header` do kit, §8); `MobileNavButton` exportado; `Sidebar` tira do acessível o aside que não aparece no breakpoint; `check-lock` mostra a versão do `@nomad/ui`, não a do app | sem quebra: sem `topBar`, o `MainLayout` renderiza o `Header` de antes. Quem monta a própria barra passa `topBar` com o `MobileNavButton` no `leading` |
+| `v1.15.0` | **Gráficos de dados (`Chart*`)** sobre recharts 2.15, dependência do pacote: `LineChart`, `AreaChart`, `BarChart`, `PieChart`, `ChartSparkline`, `Chart` (despacha pela prop `type`), `ChartContainer`, `ChartTooltip`, `ChartLegend` e `ChartConfig`; cores por token de texto da paleta (`--chart-1` a `--chart-4`) | nada a mudar no código que não usa gráfico; gráfico novo exige `ariaLabel` |
 
 Tags nunca se movem: conteúdo corrigido sai em **versão nova**.
 

@@ -104,3 +104,37 @@ describe('MainLayout: axe a11y em todas as paletas × claro/escuro', () => {
     }
   }
 })
+
+describe('MainLayout: topBar e asides', () => {
+  it('topBar substitui o Header do kit', () => {
+    const { container, unmount } = render(
+      <Setup paletteId={PALETTES[0].id} mode="light">
+        <MainLayout
+          sidebar={sidebarProps}
+          sidebarCollapsed={false}
+          onToggleSidebar={() => {}}
+          topBar={<header data-testid="barra-do-app">Barra do app</header>}
+        >
+          <p>Conteúdo de exemplo.</p>
+        </MainLayout>
+      </Setup>,
+    )
+    expect(container.querySelectorAll('header')).toHaveLength(1)
+    expect(container.querySelector('[data-testid="barra-do-app"]')).not.toBeNull()
+    expect(container.textContent).not.toContain('Buscar ou ir para')
+    unmount()
+  })
+
+  it('só um aside fica exposto à árvore de acessibilidade', () => {
+    const { container, unmount } = render(
+      <Setup paletteId={PALETTES[0].id} mode="light">
+        <MainLayout sidebar={sidebarProps} sidebarCollapsed={false} onToggleSidebar={() => {}}>
+          <p>Conteúdo de exemplo.</p>
+        </MainLayout>
+      </Setup>,
+    )
+    expect(container.querySelectorAll('aside')).toHaveLength(2)
+    expect(container.querySelectorAll('aside[aria-hidden="true"]')).toHaveLength(1)
+    unmount()
+  })
+})

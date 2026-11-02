@@ -37,6 +37,12 @@ export interface MainLayoutProps {
 
   /** Props adicionais do Header (ações, brand, command bar, etc). */
   header?: Omit<HeaderProps, 'sidebarOpen' | 'onToggleSidebar'>
+  /**
+   * Barra superior do app, no lugar do `Header` do kit (§8 do padrão: `<TopBar>`
+   * de `@nomad/ui/topbar`). Quando passada, `header` é ignorado. `null` não
+   * renderiza barra; omitida, o kit monta o `Header`.
+   */
+  topBar?: ReactNode
 
   /**
    * Itens da breadcrumb (opcional). Se omitido, não renderiza trilha.
@@ -79,6 +85,7 @@ export function MainLayout({
   sidebarCollapsed,
   onToggleSidebar,
   header,
+  topBar,
   breadcrumb,
   breadcrumbHome,
   breadcrumbAriaLabel,
@@ -100,11 +107,11 @@ export function MainLayout({
 
       <div className="flex min-w-0 flex-1 flex-col">
         {beforeHeader}
-        <Header
-          {...header}
-          sidebarOpen={!sidebarCollapsed}
-          onToggleSidebar={onToggleSidebar}
-        />
+        {topBar === undefined ? (
+          <Header {...header} sidebarOpen={!sidebarCollapsed} onToggleSidebar={onToggleSidebar} />
+        ) : (
+          topBar
+        )}
         <main
           aria-label={mainAriaLabel}
           className={`min-h-0 flex-1 overflow-auto ${contentPadding === false ? '' : contentPadding}`}

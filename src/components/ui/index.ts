@@ -125,8 +125,8 @@ export type {
   SidebarItem,
   SidebarBrand,
 } from './Sidebar'
-export { Header } from './Header'
-export type { HeaderProps } from './Header'
+export { Header, MobileNavButton } from './Header'
+export type { HeaderProps, MobileNavButtonProps } from './Header'
 export { Breadcrumb } from './Breadcrumb'
 export type { BreadcrumbProps, BreadcrumbItem } from './Breadcrumb'
 export { HeaderUserMenu } from './HeaderUserMenu'

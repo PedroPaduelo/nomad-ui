@@ -16,13 +16,37 @@
  *
  * Sai com código 1 se algo estiver errado (para travar o gate).
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const problems = []
 
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'))
 const pkg = readJson('package.json')
 const lock = readJson('package-lock.json')
+
+/**
+ * Versão do @nomad/ui a que este script pertence. Não é o `package.json` do
+ * cwd: rodado de um app, esse é o do app, e o label dizia "@nomad/ui 0.1.0"
+ * com o app em 0.1.0. A âncora é o próprio arquivo, como no `publish.test.mjs`:
+ * sobe a partir de `scripts/` até achar o manifesto do `@nomad/ui`. Fora do
+ * pacote (cópia num app), devolve `null`.
+ */
+function versaoDoKit() {
+  let dir = dirname(fileURLToPath(import.meta.url))
+  for (let i = 0; i < 6; i++) {
+    const manifesto = join(dir, 'package.json')
+    if (existsSync(manifesto)) {
+      const p = readJson(manifesto)
+      if (p.name === '@nomad/ui') return p.version ?? null
+    }
+    const pai = dirname(dir)
+    if (pai === dir) break
+    dir = pai
+  }
+  return null
+}
 
 /**
  * O range do package.json contra a versão que o lock instala. Só o que o
@@ -371,5 +395,5 @@ if (problems.length) {
 console.log(
   `✓ package-lock.json — ok (${Object.keys(pkg.dependencies ?? {}).length} deps, ` +
     `${Object.keys(pkg.devDependencies ?? {}).length} devDeps, ${Object.keys(packages).length} no lock)` +
-    ` · @nomad/ui ${pkg.version ?? 'sem versão'} check-lock`,
+    ` · @nomad/ui ${versaoDoKit() ?? 'sem versão, script fora do pacote'} check-lock`,
 )

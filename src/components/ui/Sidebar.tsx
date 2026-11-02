@@ -291,11 +291,13 @@ export function Sidebar({
 
   return (
     <>
-      {/* Desktop — coluna in-flow (full-height à esquerda) */}
+      {/* Desktop — coluna in-flow (full-height à esquerda). Abaixo do breakpoint
+          o drawer é o visível e este aside tem o mesmo rótulo: fica aria-hidden. */}
       <aside
         className="hidden shrink-0 flex-col border-r border-border bg-surface-base p-2 pb-3 transition-[width] duration-200 ease-in-out lg:flex"
         style={{ width: collapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)' }}
         aria-label={ariaLabel}
+        aria-hidden={isMobile || undefined}
       >
         <SidebarBody
           collapsed={collapsed}
@@ -324,6 +326,7 @@ export function Sidebar({
           (collapsed ? '-translate-x-full' : 'translate-x-0')
         }
         aria-label={ariaLabel}
+        aria-hidden={isMobile ? undefined : true}
         inert={collapsed}
       >
         <SidebarBody

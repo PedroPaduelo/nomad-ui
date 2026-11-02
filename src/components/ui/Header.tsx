@@ -7,7 +7,7 @@
  * usuário à direita) mas desacoplado do produto: brand, command bar,
  * theme switcher, organization switcher e user menu são passados por slot.
  *
- * O hambúrguer é interno (controla o drawer da sidebar) e usa
+ * O hambúrguer é o `MobileNavButton` (exportado, para o app que monta a própria barra) e usa
  * `aria-controls={SIDEBAR_MOBILE_ID}` do pacote — pareando com o
  * `<aside id={SIDEBAR_MOBILE_ID}>` da `Sidebar`.
  *
@@ -60,6 +60,39 @@ export interface HeaderProps {
 
 const DEFAULT_SHORTCUT_LABEL = '⌘K'
 
+export interface MobileNavButtonProps {
+  /** Drawer da sidebar aberto (controla `aria-expanded`). Padrão: `false`. */
+  expanded?: boolean
+  /** Alterna o drawer da sidebar. */
+  onToggle?: () => void
+  /** `aria-label` do botão. Padrão: "Abrir navegação". */
+  label?: string
+}
+
+/**
+ * Botão de navegação do mobile (hambúrguer). Some a partir do `lg` e aponta
+ * para o drawer da `Sidebar` por `SIDEBAR_MOBILE_ID`. No app que monta a própria
+ * barra (`MainLayout` com `topBar`), vai no `leading` do `TopBar`.
+ */
+export function MobileNavButton({
+  expanded = false,
+  onToggle,
+  label = 'Abrir navegação',
+}: MobileNavButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={label}
+      aria-controls={SIDEBAR_MOBILE_ID}
+      aria-expanded={expanded}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary lg:hidden"
+    >
+      <MenuIcon className="h-5 w-5" strokeWidth={1.75} />
+    </button>
+  )
+}
+
 export function Header({
   brand,
   brandFallbackLabel = 'AgentPack',
@@ -77,16 +110,11 @@ export function Header({
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-surface-body px-4">
       {/* Hambúrguer — mobile, abre o drawer da sidebar */}
-      <button
-        type="button"
-        onClick={onToggleSidebar}
-        aria-label={ariaLabelHamburger}
-        aria-controls={SIDEBAR_MOBILE_ID}
-        aria-expanded={sidebarOpen}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary lg:hidden"
-      >
-        <MenuIcon className="h-5 w-5" strokeWidth={1.75} />
-      </button>
+      <MobileNavButton
+        expanded={sidebarOpen}
+        onToggle={onToggleSidebar}
+        label={ariaLabelHamburger}
+      />
 
       {/* Marca — mobile (no desktop a marca mora na sidebar) */}
       {brand ?? (

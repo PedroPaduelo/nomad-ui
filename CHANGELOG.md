@@ -3,6 +3,28 @@
 Todas as mudanças do `@nomad/ui`. Versões por tag semver na `main` (`vX.Y.Z`); os apps instalam por
 dependência git numa tag. Tag publicada nunca é movida nem apagada: correção sai em versão nova.
 
+## [1.14.0] — 2026-11-01
+
+Minor. Adiciona peças ao kit (`MainLayout` com `topBar`, `MobileNavButton` exportado) e corrige a árvore de acessibilidade do `Sidebar` e a versão que o `check-lock` mostra.
+
+### Adicionado
+
+- **`MainLayout`: prop `topBar`.** Substitui o `Header` do kit pela barra do app, como pede o §8 do padrão (`<TopBar>` de `@nomad/ui/topbar`). Com `topBar`, a prop `header` é ignorada. `null` não renderiza barra.
+- **`MobileNavButton` exportado** pelo barrel do kit. É o hambúrguer que abre o drawer da `Sidebar`, para ir no `leading` do `TopBar`. O `Header` do kit usa o mesmo componente, com a mesma marcação.
+
+### Corrigido
+
+- **`Sidebar`: o aside que não está visível no breakpoint sai da árvore de acessibilidade.** Desktop e drawer mobile têm o mesmo rótulo. Nos navegadores o CSS já esconde um deles; a mudança vale para quem ignora CSS, como os testes em jsdom.
+- **`check-lock`: a linha de sucesso mostra a versão do `@nomad/ui`.** Antes mostrava a versão do `package.json` do app: rodado num app de versão 0.1.0, dizia `@nomad/ui 0.1.0`. Agora lê o manifesto do próprio pacote. Cópia fora do pacote imprime `sem versão, script fora do pacote`.
+
+### Documentado
+
+- §3 do padrão: a tabela de versões ganha v1.13.6, v1.13.7 e v1.14.0. Ela parava na v1.13.5.
+
+### Compatibilidade
+
+Sem quebra de API. `MainLayout` sem `topBar` renderiza o mesmo `Header` de antes.
+
 ## [1.13.7] — 2026-10-04
 
 Patch (`[NUI] THEMESWITCHER-A11Y-01`, `a1a036e`). **Documento: o handover da recriação de sandbox.**
